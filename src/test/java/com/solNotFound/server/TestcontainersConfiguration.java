@@ -1,4 +1,4 @@
-package com.solNotFound.server;
+package com.solnotfound.server;
 
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
@@ -9,10 +9,9 @@ import org.testcontainers.utility.DockerImageName;
 @TestConfiguration(proxyBeanMethods = false)
 class TestcontainersConfiguration {
 
-	@Bean
-	@ServiceConnection
-	MongoDBContainer mongoDbContainer() {
-		return new MongoDBContainer(DockerImageName.parse("mongo:latest"));
-	}
-
+  @Bean
+  @ServiceConnection
+  MongoDBContainer mongoDbContainer() {
+    return new MongoDBContainer(DockerImageName.parse("mongo:latest"));
+  }
 }
