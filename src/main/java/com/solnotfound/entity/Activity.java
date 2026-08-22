@@ -17,6 +17,7 @@ public class Activity {
   private Integer minParticipants;
   private Integer maxParticipants;
   private List<WeatherCondition> weatherConditions = List.of();
+  private Integer anticipationWindow;// hecho en horas, cantidad de tiempo antes de la actividad para chequear las condiciones del clima y avisar a los usuarios
 
   public List<WeatherCondition> getWeatherConditions() {
     return List.copyOf(weatherConditions);
@@ -24,5 +25,10 @@ public class Activity {
 
   public void setWeatherConditions(List<WeatherCondition> weatherConditions) {
     this.weatherConditions = List.copyOf(weatherConditions);
+  }
+
+  public boolean isTimeToCheckWeatherConditions() {
+    LocalDateTime now = LocalDateTime.now();
+    return dateTime.minusHours(anticipationWindow).isBefore(now) && dateTime.isAfter(now);
   }
 }
