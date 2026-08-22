@@ -16,4 +16,5 @@ public record CreateActivityRequest(
     @NotNull @Future LocalDateTime dateTime,
     @NotNull @Min(1) Integer minParticipants,
     @NotNull @Min(1) Integer maxParticipants,
-    @NotNull @Valid WeatherConditionsDTO weatherConditions) {}
+    @NotNull @Valid WeatherConditionsDTO weatherConditions,
+    @NotNull Integer anticipationWindow) {}
