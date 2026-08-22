@@ -1,0 +1,43 @@
+package com.solnotfound.controller;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.solnotfound.dto.ActivityResponse;
+import com.solnotfound.dto.CreateActivityRequest;
+import com.solnotfound.dto.LocationDTO;
+import com.solnotfound.dto.WeatherConditionsDTO;
+import com.solnotfound.entity.ActivityType;
+import com.solnotfound.repository.ActivityRepository;
+import com.solnotfound.service.ActivityService;
+import java.net.URI;
+import java.time.LocalDateTime;
+import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+
+class ActivityControllerTest {
+
+  @Test
+  void respondsCreatedWithResourceLocation() {
+    ActivityController controller =
+        new ActivityController(new ActivityService(new ActivityRepository()));
+    LocationDTO location = new LocationDTO("Buenos Aires", null, null);
+    CreateActivityRequest request =
+        new CreateActivityRequest(
+            "Football match",
+            "Friendly match",
+            ActivityType.OUTDOOR,
+            location,
+            LocalDateTime.now().plusDays(1),
+            10,
+            20,
+            new WeatherConditionsDTO(30, 10, 28, 25.0));
+
+    ResponseEntity<ActivityResponse> response = controller.create(request);
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+    assertThat(response.getBody()).isNotNull();
+    assertThat(response.getHeaders().getLocation())
+        .isEqualTo(URI.create("/activities/" + response.getBody().id()));
+  }
+}
