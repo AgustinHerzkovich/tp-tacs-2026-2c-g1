@@ -38,6 +38,7 @@ public class ActivityService {
     activity.setMinParticipants(request.minParticipants());
     activity.setMaxParticipants(request.maxParticipants());
     activity.setWeatherConditions(toWeatherConditions(request.weatherConditions()));
+    activity.setAnticipationWindow(request.anticipationWindow());
 
     activityRepository.save(activity);
 

@@ -2,7 +2,7 @@ package com.solnotfound.entity;
 
 import java.time.LocalDateTime;
 
-public class Climate {
+public class Weather {
   private LocalDateTime datetime;
   private Float temprature;
   private Float chanceOfRain;
