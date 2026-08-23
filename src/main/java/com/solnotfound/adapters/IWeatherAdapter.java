@@ -1,8 +1,7 @@
 package com.solnotfound.adapters;
 
-import com.solnotfound.entity.Weather;
 import com.solnotfound.entity.Location;
-
+import com.solnotfound.entity.Weather;
 import java.time.LocalDateTime;
 
 public interface IWeatherAdapter {
@@ -12,7 +11,3 @@ public interface IWeatherAdapter {
 
   Weather getFutureClimate(Location location, LocalDateTime dateTime);
 }
-
-
-
-

@@ -3,12 +3,11 @@ package com.solnotfound.service.schedulers;
 import com.solnotfound.adapters.IWeatherAdapter;
 import com.solnotfound.entity.*;
 import com.solnotfound.repository.ActivityRepository;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-
-import java.util.List;
 
 @Slf4j
 @Component
@@ -25,21 +24,22 @@ public class ActivityAnticipationCheckScheduler {
 
     List<Activity> activities = activityRepository.findAll();
 
-    List<Activity> activitiesToCheck= activities.stream()
-      .filter(Activity::isTimeToCheckWeatherConditions)
-      .toList();
+    List<Activity> activitiesToCheck =
+        activities.stream().filter(Activity::isTimeToCheckWeatherConditions).toList();
 
-    activitiesToCheck.forEach(activity -> {
-      Location location = activity.getLocation();
-      try {
-        Weather weather = weatherAdapter.getFutureClimate(location, activity.getDateTime());
-        if(badWeatherChecker.isBadWeather(weather)){
-          notificationFacade.notifyBadWeather(activity, weather);
-        }
+    activitiesToCheck.forEach(
+        activity -> {
+          Location location = activity.getLocation();
+          try {
+            Weather weather = weatherAdapter.getFutureClimate(location, activity.getDateTime());
+            if (badWeatherChecker.isBadWeather(weather)) {
+              notificationFacade.notifyBadWeather(activity, weather);
+            }
 
-      } catch (Exception e) {
-        log.error("Could not obtain activitie's climate {}: {}", activity.getId(), e.getMessage());
-      }
-    });
+          } catch (Exception e) {
+            log.error(
+                "Could not obtain activitie's climate {}: {}", activity.getId(), e.getMessage());
+          }
+        });
   }
 }

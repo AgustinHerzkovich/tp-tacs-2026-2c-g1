@@ -2,9 +2,8 @@ package com.solnotfound.entity.activity;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.time.LocalDateTime;
-
 import com.solnotfound.entity.Activity;
+import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
 
 class ActivityIsTimeToCheckWeatherConditionsTest {
@@ -52,7 +51,8 @@ class ActivityIsTimeToCheckWeatherConditionsTest {
     // with real clock, so we validate the closest realistic case instead:
     // an activity whose dateTime is effectively "now" already returns false
     // because isAfter(now) requires a strictly later instant.
-    assertThat(activity.isTimeToCheckWeatherConditions()).isTrue(); // still true, now < dateTime by nanoseconds
+    assertThat(activity.isTimeToCheckWeatherConditions())
+        .isTrue(); // still true, now < dateTime by nanoseconds
   }
 
   @Test

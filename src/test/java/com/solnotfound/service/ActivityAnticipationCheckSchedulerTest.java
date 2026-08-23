@@ -8,10 +8,9 @@ import static org.mockito.Mockito.*;
 import com.solnotfound.adapters.IWeatherAdapter;
 import com.solnotfound.entity.*;
 import com.solnotfound.repository.ActivityRepository;
+import com.solnotfound.service.schedulers.ActivityAnticipationCheckScheduler;
 import java.time.LocalDateTime;
 import java.util.List;
-
-import com.solnotfound.service.schedulers.ActivityAnticipationCheckScheduler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,20 +22,15 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class ActivityAnticipationCheckSchedulerTest {
 
-  @Mock
-  private ActivityRepository activityRepository;
+  @Mock private ActivityRepository activityRepository;
 
-  @Mock
-  private IWeatherAdapter weatherAdapter;
+  @Mock private IWeatherAdapter weatherAdapter;
 
-  @Mock
-  private IBadWeatherChecker badWeatherChecker;
+  @Mock private IBadWeatherChecker badWeatherChecker;
 
-  @Mock
-  private INotificationFacade notificationFacade;
+  @Mock private INotificationFacade notificationFacade;
 
-  @InjectMocks
-  private ActivityAnticipationCheckScheduler scheduler;
+  @InjectMocks private ActivityAnticipationCheckScheduler scheduler;
 
   private Activity activityToCheck;
   private Activity activityNotToCheck;
@@ -61,8 +55,7 @@ class ActivityAnticipationCheckSchedulerTest {
 
   @Test
   void onlyChecksWeatherForActivitiesThatAreDueForCheck() throws Exception {
-    when(activityRepository.findAll())
-      .thenReturn(List.of(activityToCheck, activityNotToCheck));
+    when(activityRepository.findAll()).thenReturn(List.of(activityToCheck, activityNotToCheck));
     when(weatherAdapter.getFutureClimate(location, dateTime)).thenReturn(weather);
     when(badWeatherChecker.isBadWeather(weather)).thenReturn(false);
 
@@ -86,7 +79,7 @@ class ActivityAnticipationCheckSchedulerTest {
     ArgumentCaptor<Activity> activityCaptor = ArgumentCaptor.forClass(Activity.class);
     ArgumentCaptor<Weather> weatherCaptor = ArgumentCaptor.forClass(Weather.class);
     verify(notificationFacade, times(1))
-      .notifyBadWeather(activityCaptor.capture(), weatherCaptor.capture());
+        .notifyBadWeather(activityCaptor.capture(), weatherCaptor.capture());
 
     assertThat(activityCaptor.getValue()).isEqualTo(activityToCheck);
     assertThat(weatherCaptor.getValue()).isEqualTo(weather);
@@ -125,23 +118,22 @@ class ActivityAnticipationCheckSchedulerTest {
     when(anotherActivity.getLocation()).thenReturn(anotherLocation);
     when(anotherActivity.getDateTime()).thenReturn(anotherDateTime);
 
-    when(activityRepository.findAll())
-      .thenReturn(List.of(activityToCheck, anotherActivity));
+    when(activityRepository.findAll()).thenReturn(List.of(activityToCheck, anotherActivity));
 
     // First activity throws while fetching the weather
     when(weatherAdapter.getFutureClimate(location, dateTime))
-      .thenThrow(new RuntimeException("Error fetching weather"));
+        .thenThrow(new RuntimeException("Error fetching weather"));
 
     // Second activity should still be processed normally
     when(weatherAdapter.getFutureClimate(anotherLocation, anotherDateTime))
-      .thenReturn(anotherWeather);
+        .thenReturn(anotherWeather);
     when(badWeatherChecker.isBadWeather(anotherWeather)).thenReturn(true);
 
     scheduler.revisarClimaDeActividades();
 
     ArgumentCaptor<Activity> activityCaptor = ArgumentCaptor.forClass(Activity.class);
     verify(notificationFacade, times(1))
-      .notifyBadWeather(activityCaptor.capture(), eq(anotherWeather));
+        .notifyBadWeather(activityCaptor.capture(), eq(anotherWeather));
 
     assertThat(activityCaptor.getValue()).isEqualTo(anotherActivity);
   }

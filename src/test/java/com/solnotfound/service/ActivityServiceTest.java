@@ -44,7 +44,8 @@ class ActivityServiceTest {
             LocalDateTime.now().plusDays(1),
             20,
             10,
-            validWeatherConditions());
+            validWeatherConditions(),
+            15);
 
     assertThatThrownBy(() -> activityService.create(request))
         .isInstanceOf(InvalidActivityException.class)
@@ -62,7 +63,8 @@ class ActivityServiceTest {
             LocalDateTime.now().plusDays(1),
             10,
             20,
-            new WeatherConditionsDTO(30, 10, null, 25.0));
+            new WeatherConditionsDTO(30, 10, null, 25.0),
+            3);
 
     assertThatThrownBy(() -> activityService.create(request))
         .isInstanceOf(InvalidActivityException.class)
@@ -80,7 +82,8 @@ class ActivityServiceTest {
             LocalDateTime.now().plusDays(1),
             10,
             20,
-            new WeatherConditionsDTO(30, 28, 10, 25.0));
+            new WeatherConditionsDTO(30, 28, 10, 25.0),
+            4);
 
     assertThatThrownBy(() -> activityService.create(request))
         .isInstanceOf(InvalidActivityException.class)
@@ -98,7 +101,8 @@ class ActivityServiceTest {
             LocalDateTime.now().plusDays(1),
             10,
             20,
-            validWeatherConditions());
+            validWeatherConditions(),
+            3);
 
     assertThatThrownBy(() -> activityService.create(request))
         .isInstanceOf(InvalidActivityException.class)
@@ -116,7 +120,8 @@ class ActivityServiceTest {
             LocalDateTime.now().plusDays(1),
             10,
             20,
-            validWeatherConditions());
+            validWeatherConditions(),
+            2);
 
     assertThatThrownBy(() -> activityService.create(request))
         .isInstanceOf(InvalidActivityException.class)
@@ -132,7 +137,8 @@ class ActivityServiceTest {
         LocalDateTime.now().plusDays(1),
         10,
         20,
-        validWeatherConditions());
+        validWeatherConditions(),
+        4);
   }
 
   private LocationDTO cityLocation() {
