@@ -38,7 +38,7 @@ public class ActivityAnticipationCheckScheduler {
         }
 
       } catch (Exception e) {
-        //Todo loggear error
+        log.error("Could not obtain activitie's climate {}: {}", activity.getId(), e.getMessage());
       }
     });
   }
