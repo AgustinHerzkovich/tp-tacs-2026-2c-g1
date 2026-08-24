@@ -20,6 +20,7 @@ public class Activity {
   private Integer
       anticipationWindow; // hecho en horas, cantidad de tiempo antes de la actividad para chequear
   private Boolean wasNotificated = false;
+  private ReprogramationRange reprogramationRange;
 
   // las condiciones del clima y avisar a los usuarios
 

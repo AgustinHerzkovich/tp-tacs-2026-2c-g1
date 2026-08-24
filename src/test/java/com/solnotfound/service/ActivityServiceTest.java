@@ -6,11 +6,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.solnotfound.dto.ActivityResponse;
 import com.solnotfound.dto.CreateActivityRequest;
 import com.solnotfound.dto.LocationDTO;
+import com.solnotfound.dto.ReprogramationRangeDTO;
 import com.solnotfound.dto.WeatherConditionsDTO;
 import com.solnotfound.entity.ActivityType;
 import com.solnotfound.exception.InvalidActivityException;
 import com.solnotfound.repository.ActivityRepository;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -30,7 +32,28 @@ class ActivityServiceTest {
     assertThat(created.id()).isNotBlank();
     assertThat(created.title()).isEqualTo("Football match");
     assertThat(created.weatherConditions()).isEqualTo(new WeatherConditionsDTO(30, 10, 28, 25.0));
+    assertThat(created.reprogramationRange()).isEqualTo(validReprogramationRange());
     assertThat(activityService.getById(created.id())).isEqualTo(created);
+  }
+
+  @Test
+  void rejectsReprogramationRangeWithInitialHourAfterFinalHour() {
+    CreateActivityRequest request =
+        new CreateActivityRequest(
+            "Football match",
+            "Friendly match",
+            ActivityType.OUTDOOR,
+            cityLocation(),
+            LocalDateTime.now().plusDays(1),
+            10,
+            20,
+            validWeatherConditions(),
+            4,
+            new ReprogramationRangeDTO(3, LocalTime.of(20, 0), LocalTime.of(10, 0)));
+
+    assertThatThrownBy(() -> activityService.create(request))
+        .isInstanceOf(InvalidActivityException.class)
+        .hasMessage("Reprogramation range initial hour must not be after final hour");
   }
 
   @Test
@@ -45,7 +68,8 @@ class ActivityServiceTest {
             20,
             10,
             validWeatherConditions(),
-            15);
+            15,
+            validReprogramationRange());
 
     assertThatThrownBy(() -> activityService.create(request))
         .isInstanceOf(InvalidActivityException.class)
@@ -64,7 +88,8 @@ class ActivityServiceTest {
             10,
             20,
             new WeatherConditionsDTO(30, 10, null, 25.0),
-            3);
+            3,
+            validReprogramationRange());
 
     assertThatThrownBy(() -> activityService.create(request))
         .isInstanceOf(InvalidActivityException.class)
@@ -83,7 +108,8 @@ class ActivityServiceTest {
             10,
             20,
             new WeatherConditionsDTO(30, 28, 10, 25.0),
-            4);
+            4,
+            validReprogramationRange());
 
     assertThatThrownBy(() -> activityService.create(request))
         .isInstanceOf(InvalidActivityException.class)
@@ -102,7 +128,8 @@ class ActivityServiceTest {
             10,
             20,
             validWeatherConditions(),
-            3);
+            3,
+            validReprogramationRange());
 
     assertThatThrownBy(() -> activityService.create(request))
         .isInstanceOf(InvalidActivityException.class)
@@ -121,7 +148,8 @@ class ActivityServiceTest {
             10,
             20,
             validWeatherConditions(),
-            2);
+            2,
+            validReprogramationRange());
 
     assertThatThrownBy(() -> activityService.create(request))
         .isInstanceOf(InvalidActivityException.class)
@@ -138,7 +166,8 @@ class ActivityServiceTest {
         10,
         20,
         validWeatherConditions(),
-        4);
+        4,
+        validReprogramationRange());
   }
 
   private LocationDTO cityLocation() {
@@ -147,5 +176,9 @@ class ActivityServiceTest {
 
   private WeatherConditionsDTO validWeatherConditions() {
     return new WeatherConditionsDTO(30, 10, 28, 25.0);
+  }
+
+  private ReprogramationRangeDTO validReprogramationRange() {
+    return new ReprogramationRangeDTO(3, LocalTime.of(10, 0), LocalTime.of(20, 0));
   }
 }

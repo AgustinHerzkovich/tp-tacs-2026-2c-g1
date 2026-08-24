@@ -13,4 +13,5 @@ public record ActivityResponse(
     Integer minParticipants,
     Integer maxParticipants,
     WeatherConditionsDTO weatherConditions,
-    Integer anticipationWindow) {}
+    Integer anticipationWindow,
+    ReprogramationRangeDTO reprogramationRange) {}

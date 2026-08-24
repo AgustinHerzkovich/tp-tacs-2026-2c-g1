@@ -5,12 +5,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.solnotfound.dto.ActivityResponse;
 import com.solnotfound.dto.CreateActivityRequest;
 import com.solnotfound.dto.LocationDTO;
+import com.solnotfound.dto.ReprogramationRangeDTO;
 import com.solnotfound.dto.WeatherConditionsDTO;
 import com.solnotfound.entity.ActivityType;
 import com.solnotfound.repository.ActivityRepository;
 import com.solnotfound.service.ActivityService;
 import java.net.URI;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -32,7 +34,8 @@ class ActivityControllerTest {
             10,
             20,
             new WeatherConditionsDTO(30, 10, 28, 25.0),
-            15);
+            15,
+            new ReprogramationRangeDTO(3, LocalTime.of(10, 0), LocalTime.of(20, 0)));
 
     ResponseEntity<ActivityResponse> response = controller.create(request);
 

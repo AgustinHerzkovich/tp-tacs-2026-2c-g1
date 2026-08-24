@@ -3,11 +3,13 @@ package com.solnotfound.service;
 import com.solnotfound.dto.ActivityResponse;
 import com.solnotfound.dto.CreateActivityRequest;
 import com.solnotfound.dto.LocationDTO;
+import com.solnotfound.dto.ReprogramationRangeDTO;
 import com.solnotfound.dto.WeatherConditionsDTO;
 import com.solnotfound.entity.Activity;
 import com.solnotfound.entity.Location;
 import com.solnotfound.entity.MaxRainProbabilityCondition;
 import com.solnotfound.entity.MaxWindCondition;
+import com.solnotfound.entity.ReprogramationRange;
 import com.solnotfound.entity.TemperatureRangeCondition;
 import com.solnotfound.entity.WeatherCondition;
 import com.solnotfound.exception.InvalidActivityException;
@@ -39,6 +41,7 @@ public class ActivityService {
     activity.setMaxParticipants(request.maxParticipants());
     activity.setWeatherConditions(toWeatherConditions(request.weatherConditions()));
     activity.setAnticipationWindow(request.anticipationWindow());
+    activity.setReprogramationRange(toReprogramationRange(request.reprogramationRange()));
 
     activityRepository.save(activity);
 
@@ -64,6 +67,7 @@ public class ActivityService {
 
     validateLocation(request.location());
     validateWeatherConditions(request.weatherConditions());
+    validateReprogramationRange(request.reprogramationRange());
   }
 
   private void validateLocation(LocationDTO location) {
@@ -95,8 +99,24 @@ public class ActivityService {
     }
   }
 
+  private void validateReprogramationRange(ReprogramationRangeDTO range) {
+    if (range.initialHour().isAfter(range.finalHour())) {
+      throw new InvalidActivityException(
+          "Reprogramation range initial hour must not be after final hour");
+    }
+  }
+
   private Location toLocation(LocationDTO dto) {
     return new Location(dto.city(), dto.latitude(), dto.longitude());
+  }
+
+  private ReprogramationRange toReprogramationRange(ReprogramationRangeDTO dto) {
+    return new ReprogramationRange(dto.maxDays(), dto.initialHour(), dto.finalHour());
+  }
+
+  private ReprogramationRangeDTO toReprogramationRangeDTO(ReprogramationRange range) {
+    return new ReprogramationRangeDTO(
+        range.getMaxDays(), range.getInitialHour(), range.getFinalHour());
   }
 
   private List<WeatherCondition> toWeatherConditions(WeatherConditionsDTO conditions) {
@@ -133,7 +153,8 @@ public class ActivityService {
         activity.getMinParticipants(),
         activity.getMaxParticipants(),
         toWeatherConditionsDTO(activity.getWeatherConditions()),
-        activity.getAnticipationWindow());
+        activity.getAnticipationWindow(),
+        toReprogramationRangeDTO(activity.getReprogramationRange()));
   }
 
   private LocationDTO toLocationDTO(Location location) {

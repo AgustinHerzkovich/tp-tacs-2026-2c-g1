@@ -14,4 +14,5 @@ public record CreateActivityRequest(
     @NotNull @Min(1) Integer minParticipants,
     @NotNull @Min(1) Integer maxParticipants,
     @NotNull @Valid WeatherConditionsDTO weatherConditions,
-    @NotNull @PositiveOrZero Integer anticipationWindow) {}
+    @NotNull @PositiveOrZero Integer anticipationWindow,
+    @NotNull @Valid ReprogramationRangeDTO reprogramationRange) {}
