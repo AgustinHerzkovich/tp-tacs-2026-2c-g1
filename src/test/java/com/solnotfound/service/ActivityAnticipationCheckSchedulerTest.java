@@ -36,13 +36,13 @@ class ActivityAnticipationCheckSchedulerTest {
   private Activity activityNotToCheck;
   private Location location;
   private LocalDateTime dateTime;
-  private Weather weather;
+  private WeatherForecast weather;
 
   @BeforeEach
   void setUp() {
     location = mock(Location.class);
     dateTime = LocalDateTime.now().plusHours(2);
-    weather = mock(Weather.class);
+    weather = mock(WeatherForecast.class);
 
     activityToCheck = mock(Activity.class);
     lenient().when(activityToCheck.isTimeToCheckWeatherConditions()).thenReturn(true);
@@ -57,7 +57,7 @@ class ActivityAnticipationCheckSchedulerTest {
   void onlyChecksWeatherForActivitiesThatAreDueForCheck() throws Exception {
     when(activityRepository.findAll()).thenReturn(List.of(activityToCheck, activityNotToCheck));
     when(weatherAdapter.getFutureClimate(location, dateTime)).thenReturn(weather);
-    when(badWeatherChecker.isBadWeather(weather)).thenReturn(false);
+    when(badWeatherChecker.isBadWeatherForActivity(weather, activityToCheck)).thenReturn(false);
 
     scheduler.checkActivitiesClimate();
 
@@ -72,12 +72,12 @@ class ActivityAnticipationCheckSchedulerTest {
   void notifiesWhenWeatherIsBad() throws Exception {
     when(activityRepository.findAll()).thenReturn(List.of(activityToCheck));
     when(weatherAdapter.getFutureClimate(location, dateTime)).thenReturn(weather);
-    when(badWeatherChecker.isBadWeather(weather)).thenReturn(true);
+    when(badWeatherChecker.isBadWeatherForActivity(weather, activityToCheck)).thenReturn(true);
 
     scheduler.checkActivitiesClimate();
 
     ArgumentCaptor<Activity> activityCaptor = ArgumentCaptor.forClass(Activity.class);
-    ArgumentCaptor<Weather> weatherCaptor = ArgumentCaptor.forClass(Weather.class);
+    ArgumentCaptor<WeatherForecast> weatherCaptor = ArgumentCaptor.forClass(WeatherForecast.class);
     verify(notificationFacade, times(1))
         .notifyBadWeather(activityCaptor.capture(), weatherCaptor.capture());
 
@@ -89,7 +89,7 @@ class ActivityAnticipationCheckSchedulerTest {
   void doesNotNotifyWhenWeatherIsGood() throws Exception {
     when(activityRepository.findAll()).thenReturn(List.of(activityToCheck));
     when(weatherAdapter.getFutureClimate(location, dateTime)).thenReturn(weather);
-    when(badWeatherChecker.isBadWeather(weather)).thenReturn(false);
+    when(badWeatherChecker.isBadWeatherForActivity(weather, activityToCheck)).thenReturn(false);
 
     scheduler.checkActivitiesClimate();
 
@@ -112,7 +112,7 @@ class ActivityAnticipationCheckSchedulerTest {
     Activity anotherActivity = mock(Activity.class);
     Location anotherLocation = mock(Location.class);
     LocalDateTime anotherDateTime = LocalDateTime.now().plusHours(3);
-    Weather anotherWeather = mock(Weather.class);
+    WeatherForecast anotherWeather = mock(WeatherForecast.class);
 
     when(anotherActivity.isTimeToCheckWeatherConditions()).thenReturn(true);
     when(anotherActivity.getLocation()).thenReturn(anotherLocation);
@@ -127,7 +127,7 @@ class ActivityAnticipationCheckSchedulerTest {
     // Second activity should still be processed normally
     when(weatherAdapter.getFutureClimate(anotherLocation, anotherDateTime))
         .thenReturn(anotherWeather);
-    when(badWeatherChecker.isBadWeather(anotherWeather)).thenReturn(true);
+    when(badWeatherChecker.isBadWeatherForActivity(anotherWeather, activityToCheck)).thenReturn(true);
 
     scheduler.checkActivitiesClimate();
 

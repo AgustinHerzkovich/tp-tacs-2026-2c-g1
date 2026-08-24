@@ -42,7 +42,7 @@ class ActivityIsTimeToCheckWeatherConditionsTest {
   }
 
   @Test
-  void returnsFalseWhenNowIsExactlyAtTheActivityDateTime() {
+  void returnsTrueWhenNowIsExactlyAtTheActivityDateTime() {
     // dateTime.isAfter(now) is false when they are equal
     LocalDateTime fixedNow = LocalDateTime.now().plusHours(1);
     Activity activity = buildActivity(fixedNow, 2);
