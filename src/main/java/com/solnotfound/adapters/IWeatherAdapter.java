@@ -1,13 +1,13 @@
 package com.solnotfound.adapters;
 
 import com.solnotfound.entity.Location;
-import com.solnotfound.entity.Weather;
+import com.solnotfound.entity.WeatherForecast;
 import java.time.LocalDateTime;
 
 public interface IWeatherAdapter {
-  public String getWeather(Location location);
+  public WeatherForecast getWeather(Location location);
 
-  Weather getClimate(Location location);
+  WeatherForecast getClimate(Location location);
 
-  Weather getFutureClimate(Location location, LocalDateTime dateTime);
+  WeatherForecast getFutureClimate(Location location, LocalDateTime dateTime);
 }
