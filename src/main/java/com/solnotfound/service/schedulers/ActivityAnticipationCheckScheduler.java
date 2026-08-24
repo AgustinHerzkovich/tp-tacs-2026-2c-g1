@@ -20,7 +20,7 @@ public class ActivityAnticipationCheckScheduler {
   private final INotificationFacade notificationFacade;
 
   @Scheduled(cron = "0 0 * * * *")
-  public void revisarClimaDeActividades() {
+  public void checkActivitiesClimate() {
 
     List<Activity> activities = activityRepository.findAll();
 
@@ -34,6 +34,7 @@ public class ActivityAnticipationCheckScheduler {
             Weather weather = weatherAdapter.getFutureClimate(location, activity.getDateTime());
             if (badWeatherChecker.isBadWeather(weather)) {
               notificationFacade.notifyBadWeather(activity, weather);
+              activity.setWasNotificated(true);
             }
 
           } catch (Exception e) {
