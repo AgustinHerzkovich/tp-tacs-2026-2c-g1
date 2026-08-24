@@ -24,7 +24,8 @@ class CreateActivityRequestValidationTest {
             LocalDateTime.now().plusDays(1),
             1,
             10,
-            new WeatherConditionsDTO(30, 10, 28, 25.0));
+            new WeatherConditionsDTO(30, 10, 28, 25.0),
+            15);
 
     assertThat(validator.validate(request))
         .extracting(violation -> violation.getPropertyPath().toString())

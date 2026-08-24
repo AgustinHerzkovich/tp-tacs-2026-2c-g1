@@ -2,10 +2,7 @@ package com.solnotfound.dto;
 
 import com.solnotfound.entity.ActivityType;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Future;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.*;
 import java.time.LocalDateTime;
 
 public record CreateActivityRequest(
@@ -16,4 +13,5 @@ public record CreateActivityRequest(
     @NotNull @Future LocalDateTime dateTime,
     @NotNull @Min(1) Integer minParticipants,
     @NotNull @Min(1) Integer maxParticipants,
-    @NotNull @Valid WeatherConditionsDTO weatherConditions) {}
+    @NotNull @Valid WeatherConditionsDTO weatherConditions,
+    @NotNull @PositiveOrZero Integer anticipationWindow) {}

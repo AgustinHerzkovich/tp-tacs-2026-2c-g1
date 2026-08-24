@@ -31,7 +31,8 @@ class ActivityControllerTest {
             LocalDateTime.now().plusDays(1),
             10,
             20,
-            new WeatherConditionsDTO(30, 10, 28, 25.0));
+            new WeatherConditionsDTO(30, 10, 28, 25.0),
+            15);
 
     ResponseEntity<ActivityResponse> response = controller.create(request);
 
