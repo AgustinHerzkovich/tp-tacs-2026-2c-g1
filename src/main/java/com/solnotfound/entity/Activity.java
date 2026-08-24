@@ -18,7 +18,8 @@ public class Activity {
   private Integer maxParticipants;
   private List<WeatherCondition> weatherConditions = List.of();
   private Integer
-      anticipationWindow; // hecho en horas, cantidad de tiempo antes de la actividad para chequear
+      anticipationWindow;// hecho en horas, cantidad de tiempo antes de la actividad para chequear
+  private Boolean wasNotificated = false;
 
   // las condiciones del clima y avisar a los usuarios
 
@@ -34,6 +35,6 @@ public class Activity {
     LocalDateTime now = LocalDateTime.now();
     return (dateTime.minusHours(anticipationWindow).isBefore(now)
             || dateTime.minusHours(anticipationWindow).isEqual(now))
-        && dateTime.isAfter(now);
+        && dateTime.isAfter(now) && !wasNotificated;
   }
 }

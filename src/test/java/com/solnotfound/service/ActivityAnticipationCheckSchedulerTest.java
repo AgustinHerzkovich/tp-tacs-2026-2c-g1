@@ -59,7 +59,7 @@ class ActivityAnticipationCheckSchedulerTest {
     when(weatherAdapter.getFutureClimate(location, dateTime)).thenReturn(weather);
     when(badWeatherChecker.isBadWeather(weather)).thenReturn(false);
 
-    scheduler.revisarClimaDeActividades();
+    scheduler.checkActivitiesClimate();
 
     ArgumentCaptor<Location> locationCaptor = ArgumentCaptor.forClass(Location.class);
     verify(weatherAdapter, times(1)).getFutureClimate(locationCaptor.capture(), eq(dateTime));
@@ -74,7 +74,7 @@ class ActivityAnticipationCheckSchedulerTest {
     when(weatherAdapter.getFutureClimate(location, dateTime)).thenReturn(weather);
     when(badWeatherChecker.isBadWeather(weather)).thenReturn(true);
 
-    scheduler.revisarClimaDeActividades();
+    scheduler.checkActivitiesClimate();
 
     ArgumentCaptor<Activity> activityCaptor = ArgumentCaptor.forClass(Activity.class);
     ArgumentCaptor<Weather> weatherCaptor = ArgumentCaptor.forClass(Weather.class);
@@ -91,7 +91,7 @@ class ActivityAnticipationCheckSchedulerTest {
     when(weatherAdapter.getFutureClimate(location, dateTime)).thenReturn(weather);
     when(badWeatherChecker.isBadWeather(weather)).thenReturn(false);
 
-    scheduler.revisarClimaDeActividades();
+    scheduler.checkActivitiesClimate();
 
     verify(notificationFacade, never()).notifyBadWeather(any(), any());
   }
@@ -100,7 +100,7 @@ class ActivityAnticipationCheckSchedulerTest {
   void skipsActivitiesThatAreNotDueForCheck() {
     when(activityRepository.findAll()).thenReturn(List.of(activityNotToCheck));
 
-    scheduler.revisarClimaDeActividades();
+    scheduler.checkActivitiesClimate();
 
     verifyNoInteractions(weatherAdapter);
     verifyNoInteractions(badWeatherChecker);
@@ -129,7 +129,7 @@ class ActivityAnticipationCheckSchedulerTest {
         .thenReturn(anotherWeather);
     when(badWeatherChecker.isBadWeather(anotherWeather)).thenReturn(true);
 
-    scheduler.revisarClimaDeActividades();
+    scheduler.checkActivitiesClimate();
 
     ArgumentCaptor<Activity> activityCaptor = ArgumentCaptor.forClass(Activity.class);
     verify(notificationFacade, times(1))
@@ -142,7 +142,7 @@ class ActivityAnticipationCheckSchedulerTest {
   void doesNothingWhenThereAreNoActivities() {
     when(activityRepository.findAll()).thenReturn(List.of());
 
-    scheduler.revisarClimaDeActividades();
+    scheduler.checkActivitiesClimate();
 
     verifyNoInteractions(weatherAdapter, badWeatherChecker, notificationFacade);
   }
