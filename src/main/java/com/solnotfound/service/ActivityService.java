@@ -132,7 +132,8 @@ public class ActivityService {
         activity.getDateTime(),
         activity.getMinParticipants(),
         activity.getMaxParticipants(),
-        toWeatherConditionsDTO(activity.getWeatherConditions()));
+        toWeatherConditionsDTO(activity.getWeatherConditions()),
+        activity.getAnticipationWindow());
   }
 
   private LocationDTO toLocationDTO(Location location) {

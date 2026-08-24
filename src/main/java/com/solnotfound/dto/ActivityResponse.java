@@ -12,4 +12,5 @@ public record ActivityResponse(
     LocalDateTime dateTime,
     Integer minParticipants,
     Integer maxParticipants,
-    WeatherConditionsDTO weatherConditions) {}
+    WeatherConditionsDTO weatherConditions,
+    Integer anticipationWindow) {}
