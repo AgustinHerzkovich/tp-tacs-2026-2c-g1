@@ -127,7 +127,8 @@ class ActivityAnticipationCheckSchedulerTest {
     // Second activity should still be processed normally
     when(weatherAdapter.getFutureClimate(anotherLocation, anotherDateTime))
         .thenReturn(anotherWeather);
-    when(badWeatherChecker.isBadWeatherForActivity(anotherWeather, activityToCheck)).thenReturn(true);
+    when(badWeatherChecker.isBadWeatherForActivity(anotherWeather, anotherActivity))
+        .thenReturn(true);
 
     scheduler.checkActivitiesClimate();
 

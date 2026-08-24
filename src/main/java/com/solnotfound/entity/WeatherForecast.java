@@ -1,8 +1,7 @@
 package com.solnotfound.entity;
 
-import lombok.AllArgsConstructor;
-
 import java.time.LocalDateTime;
+import lombok.AllArgsConstructor;
 
 @AllArgsConstructor
 public class WeatherForecast {
