@@ -1,5 +1,6 @@
 package com.solnotfound.service;
 
+import com.solnotfound.dto.ActivityFilterDTO;
 import com.solnotfound.dto.ActivityResponse;
 import com.solnotfound.dto.CreateActivityRequest;
 import com.solnotfound.dto.LocationDTO;
@@ -50,6 +51,36 @@ public class ActivityService {
 
   public List<ActivityResponse> getAll() {
     return activityRepository.findAll().stream().map(this::toResponse).toList();
+  }
+
+  public List<ActivityResponse> search(ActivityFilterDTO filter) {
+    return activityRepository.findAll().stream()
+        .filter(activity -> matches(activity, filter))
+        .map(this::toResponse)
+        .toList();
+  }
+
+  private boolean matches(Activity activity, ActivityFilterDTO filter) {
+    if (filter.type() != null && filter.type() != activity.getType()) {
+      return false;
+    }
+
+    if (filter.city() != null
+        && !filter.city().isBlank()
+        && !filter.city().equalsIgnoreCase(activity.getLocation().city())) {
+      return false;
+    }
+
+    if (filter.availability() != null
+        && !filter.availability().equals(activity.getAvailability())) {
+      return false;
+    }
+
+    if (filter.dateFrom() != null && activity.getDateTime().isBefore(filter.dateFrom())) {
+      return false;
+    }
+
+    return filter.dateTo() == null || !activity.getDateTime().isAfter(filter.dateTo());
   }
 
   public ActivityResponse getById(String id) {
@@ -150,6 +181,7 @@ public class ActivityService {
         activity.getType(),
         toLocationDTO(activity.getLocation()),
         activity.getDateTime(),
+        activity.getAvailability(),
         activity.getMinParticipants(),
         activity.getMaxParticipants(),
         toWeatherConditionsDTO(activity.getWeatherConditions()),

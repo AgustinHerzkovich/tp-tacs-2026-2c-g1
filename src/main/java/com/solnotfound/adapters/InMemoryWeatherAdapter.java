@@ -1,11 +1,9 @@
 package com.solnotfound.adapters;
 
-import java.time.LocalDateTime;
-
-import org.springframework.stereotype.Component;
-
 import com.solnotfound.entity.Location;
 import com.solnotfound.entity.WeatherForecast;
+import java.time.LocalDateTime;
+import org.springframework.stereotype.Component;
 
 // se hace esre in memory weather adapter ya que sino spring no buildea el docker
 @Component

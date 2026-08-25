@@ -3,6 +3,7 @@ package com.solnotfound.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.solnotfound.dto.ActivityFilterDTO;
 import com.solnotfound.dto.ActivityResponse;
 import com.solnotfound.dto.CreateActivityRequest;
 import com.solnotfound.dto.LocationDTO;
@@ -13,16 +14,19 @@ import com.solnotfound.exception.InvalidActivityException;
 import com.solnotfound.repository.ActivityRepository;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class ActivityServiceTest {
 
   private ActivityService activityService;
+  private ActivityRepository activityRepository;
 
   @BeforeEach
   void setUp() {
-    activityService = new ActivityService(new ActivityRepository());
+    activityRepository = new ActivityRepository();
+    activityService = new ActivityService(activityRepository);
   }
 
   @Test
@@ -154,6 +158,90 @@ class ActivityServiceTest {
     assertThatThrownBy(() -> activityService.create(request))
         .isInstanceOf(InvalidActivityException.class)
         .hasMessage("Latitude and longitude must be provided together");
+  }
+
+  @Test
+  void searchWithNoFiltersReturnsEveryActivity() {
+    activityService.create(validRequest());
+    activityService.create(
+        requestWith(ActivityType.INDOOR, "Cordoba", LocalDateTime.now().plusDays(5)));
+
+    assertThat(activityService.search(new ActivityFilterDTO(null, null, null, null, null)))
+        .hasSize(2);
+  }
+
+  @Test
+  void searchFiltersByType() {
+    activityService.create(
+        requestWith(ActivityType.OUTDOOR, "Buenos Aires", LocalDateTime.now().plusDays(1)));
+    activityService.create(
+        requestWith(ActivityType.INDOOR, "Buenos Aires", LocalDateTime.now().plusDays(1)));
+
+    List<ActivityResponse> results =
+        activityService.search(new ActivityFilterDTO(ActivityType.INDOOR, null, null, null, null));
+
+    assertThat(results).extracting(ActivityResponse::type).containsExactly(ActivityType.INDOOR);
+  }
+
+  @Test
+  void searchFiltersByCityCaseInsensitively() {
+    activityService.create(
+        requestWith(ActivityType.OUTDOOR, "Buenos Aires", LocalDateTime.now().plusDays(1)));
+    activityService.create(
+        requestWith(ActivityType.OUTDOOR, "Cordoba", LocalDateTime.now().plusDays(1)));
+
+    List<ActivityResponse> results =
+        activityService.search(new ActivityFilterDTO(null, "buenos aires", null, null, null));
+
+    assertThat(results)
+        .extracting(response -> response.location().city())
+        .containsExactly("Buenos Aires");
+  }
+
+  @Test
+  void searchFiltersByDateRange() {
+    LocalDateTime soon = LocalDateTime.now().plusDays(1);
+    LocalDateTime farAway = LocalDateTime.now().plusDays(10);
+    activityService.create(requestWith(ActivityType.OUTDOOR, "Buenos Aires", soon));
+    activityService.create(requestWith(ActivityType.OUTDOOR, "Buenos Aires", farAway));
+
+    List<ActivityResponse> results =
+        activityService.search(
+            new ActivityFilterDTO(
+                null, null, LocalDateTime.now(), LocalDateTime.now().plusDays(3), null));
+
+    assertThat(results).extracting(ActivityResponse::dateTime).containsExactly(soon);
+  }
+
+  @Test
+  void searchFiltersByAvailability() {
+    ActivityResponse available =
+        activityService.create(
+            requestWith(ActivityType.OUTDOOR, "Buenos Aires", LocalDateTime.now().plusDays(1)));
+    activityRepository.findById(available.id()).setAvailability(true);
+
+    activityService.create(
+        requestWith(ActivityType.OUTDOOR, "Buenos Aires", LocalDateTime.now().plusDays(1)));
+
+    List<ActivityResponse> results =
+        activityService.search(new ActivityFilterDTO(null, null, null, null, true));
+
+    assertThat(results).extracting(ActivityResponse::id).containsExactly(available.id());
+  }
+
+  private CreateActivityRequest requestWith(
+      ActivityType type, String city, LocalDateTime dateTime) {
+    return new CreateActivityRequest(
+        "Football match",
+        "Friendly match",
+        type,
+        new LocationDTO(city, null, null),
+        dateTime,
+        10,
+        20,
+        validWeatherConditions(),
+        4,
+        validReprogramationRange());
   }
 
   private CreateActivityRequest validRequest() {

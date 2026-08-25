@@ -5,6 +5,34 @@
 La aplicación queda disponible en `http://localhost:8080` y su API de actividades en
 `http://localhost:8080/activities`.
 
+Ejemplo de request para generar actividad
+POST http://localhost:8080/activities
+{
+    "title": "Asado en la plaza",
+    "description": "Junta con amigos, llevar sillas",
+    "type": "OUTDOOR",
+    "location": {
+      "city": "Buenos Aires",
+      "latitude": null,
+      "longitude": null
+    },
+    "dateTime": "2026-08-25T18:00:00",
+    "minParticipants": 4,
+    "maxParticipants": 15,
+    "weatherConditions": {
+      "maxRainProbability": 30,
+      "minTemperature": 10,
+      "maxTemperature": 30,
+      "maxWindSpeed": 25.0
+    },
+    "anticipationWindow": 24,
+    "reprogramationRange": {
+      "maxDays": 3,
+      "initialHour": "10:00:00",
+      "finalHour": "20:00:00"
+    }
+  }
+
 ### Con Docker
 
 Se requiere Docker con Docker Compose. Desde la raíz del proyecto, ejecutar:

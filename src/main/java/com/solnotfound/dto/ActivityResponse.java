@@ -10,6 +10,7 @@ public record ActivityResponse(
     ActivityType type,
     LocationDTO location,
     LocalDateTime dateTime,
+    Boolean availability,
     Integer minParticipants,
     Integer maxParticipants,
     WeatherConditionsDTO weatherConditions,
