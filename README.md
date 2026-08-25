@@ -58,6 +58,37 @@ Maven. Desde la raíz del proyecto, ejecutar:
 
 Actualmente los datos se almacenan en memoria y se pierden al reiniciar la aplicación.
 
+## Calidad de código
+
+El proyecto incluye Maven Wrapper. Para aplicar el formato, comprobarlo y ejecutar la verificación
+completa:
+
+```bash
+# Windows
+./mvnw.cmd spotless:apply
+./mvnw.cmd spotless:check
+./mvnw.cmd verify
+
+# Linux/macOS
+./mvnw spotless:apply
+./mvnw spotless:check
+./mvnw verify
+```
+
+`verify` ejecuta los tests y las validaciones de Spotless, Checkstyle y SpotBugs.
+
+### Pre-commit
+
+El repositorio incluye un hook que localiza un JDK 21 instalado y ejecuta `clean verify` antes de
+cada commit. Para activarlo una sola vez por clonación:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+El error `class file version 65.0 ... up to 61.0` indica que el código fue compilado con Java 21,
+pero se intentó ejecutar con Java 17. El hook evita esa mezcla configurando Java 21 antes de Maven.
+
 ## Git flow
 
 ![Diagrama de Git flow](src/main/resources/static/gitflow.png)
