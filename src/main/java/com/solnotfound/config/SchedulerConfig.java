@@ -9,7 +9,7 @@ public class SchedulerConfig {
   @Bean
   public ThreadPoolTaskScheduler taskScheduler() {
     ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
-    scheduler.setPoolSize(5);
+    scheduler.setPoolSize(1);
     scheduler.setThreadNamePrefix("scheduled-task-");
     return scheduler;
   }
