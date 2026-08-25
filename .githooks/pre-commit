@@ -1,0 +1,39 @@
+#!/bin/sh
+
+java_major() {
+  "$1" -version 2>&1 | sed -n '1s/.*version "\([0-9][0-9]*\).*/\1/p'
+}
+
+if [ -n "$JAVA_HOME" ] && [ -x "$JAVA_HOME/bin/java.exe" ] \
+    && [ "$(java_major "$JAVA_HOME/bin/java.exe")" = "21" ]; then
+  java_home=$JAVA_HOME
+elif [ -n "$JAVA_HOME" ] && [ -x "$JAVA_HOME/bin/java" ] \
+    && [ "$(java_major "$JAVA_HOME/bin/java")" = "21" ]; then
+  java_home=$JAVA_HOME
+elif [ "$(java_major java)" = "21" ]; then
+  java_home=
+else
+  for candidate in "$HOME"/.jdks/*21* /c/Program\ Files/Java/*21* \
+      /c/Program\ Files/Microsoft/jdk-21* /c/Program\ Files/Eclipse\ Adoptium/jdk-21*; do
+    if [ -x "$candidate/bin/java.exe" ] && [ "$(java_major "$candidate/bin/java.exe")" = "21" ]; then
+      java_home=$candidate
+      break
+    fi
+  done
+
+  if [ -z "$java_home" ]; then
+    echo "Pre-commit requires Java 21 and could not find a local JDK 21." >&2
+    exit 1
+  fi
+fi
+
+if [ -n "$java_home" ]; then
+  export JAVA_HOME="$java_home"
+  export PATH="$JAVA_HOME/bin:$PATH"
+fi
+
+if [ -f ./mvnw.cmd ]; then
+  ./mvnw.cmd clean verify
+else
+  ./mvnw clean verify
+fi

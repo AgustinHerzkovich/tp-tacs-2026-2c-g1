@@ -6,6 +6,7 @@ import com.solnotfound.entity.ActivityType;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import org.junit.jupiter.api.Test;
 
 class CreateActivityRequestValidationTest {
@@ -25,7 +26,8 @@ class CreateActivityRequestValidationTest {
             1,
             10,
             new WeatherConditionsDTO(30, 10, 28, 25.0),
-            15);
+            15,
+            new ReprogramationRangeDTO(3, LocalTime.of(10, 0), LocalTime.of(20, 0)));
 
     assertThat(validator.validate(request))
         .extracting(violation -> violation.getPropertyPath().toString())
