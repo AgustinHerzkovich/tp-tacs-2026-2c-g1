@@ -35,8 +35,8 @@ public class ActivityAnticipationCheckScheduler {
                 weatherAdapter.getFutureClimate(location, activity.getDateTime());
             if (badWeatherChecker.isBadWeatherForActivity(weather, activity)) {
               notificationFacade.notifyBadWeather(activity, weather);
-              activity.setWasNotificated(true);
             }
+            activity.setWasNotificated(true);
 
           } catch (Exception e) {
             log.error(
