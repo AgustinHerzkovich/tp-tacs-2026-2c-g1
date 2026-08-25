@@ -10,6 +10,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -33,6 +34,17 @@ public class GlobalExceptionHandler {
     ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
     problem.setTitle("Request validation failed");
     problem.setProperty("errors", errors);
+    return ResponseEntity.badRequest().body(problem);
+  }
+
+  @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+  public ResponseEntity<ProblemDetail> handleTypeMismatch(
+      MethodArgumentTypeMismatchException exception) {
+    ProblemDetail problem =
+        ProblemDetail.forStatusAndDetail(
+            HttpStatus.BAD_REQUEST, "Invalid value for parameter '" + exception.getName() + "'");
+    problem.setTitle("Invalid request parameter");
+    problem.setProperty("parameter", exception.getName());
     return ResponseEntity.badRequest().body(problem);
   }
 }

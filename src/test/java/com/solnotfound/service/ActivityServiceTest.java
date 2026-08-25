@@ -214,6 +214,17 @@ class ActivityServiceTest {
   }
 
   @Test
+  void searchRejectsInvertedDateRange() {
+    LocalDateTime dateFrom = LocalDateTime.of(2026, 9, 10, 0, 0);
+    LocalDateTime dateTo = LocalDateTime.of(2026, 9, 1, 0, 0);
+
+    assertThatThrownBy(
+            () -> activityService.search(new ActivityFilterDTO(null, null, dateFrom, dateTo, null)))
+        .isInstanceOf(InvalidActivityException.class)
+        .hasMessage("Search start date cannot be after end date");
+  }
+
+  @Test
   void searchFiltersByAvailability() {
     ActivityResponse available =
         activityService.create(

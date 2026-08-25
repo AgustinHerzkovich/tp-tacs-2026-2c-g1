@@ -54,6 +54,12 @@ public class ActivityService {
   }
 
   public List<ActivityResponse> search(ActivityFilterDTO filter) {
+    if (filter.dateFrom() != null
+        && filter.dateTo() != null
+        && filter.dateFrom().isAfter(filter.dateTo())) {
+      throw new InvalidActivityException("Search start date cannot be after end date");
+    }
+
     return activityRepository.findAll().stream()
         .filter(activity -> matches(activity, filter))
         .map(this::toResponse)
