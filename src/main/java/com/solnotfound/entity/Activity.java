@@ -21,7 +21,7 @@ public class Activity {
       anticipationWindow; // hecho en horas, cantidad de tiempo antes de la actividad para chequear
   private ReprogramationRange reprogramationRange;
   private Boolean availability = false;
-  private Boolean couldNotCheckWeatherConditionsPriorToActivity = false;
+  private Boolean weatherChecked = false;
 
   // las condiciones del clima y avisar a los usuarios
 
@@ -33,18 +33,20 @@ public class Activity {
     this.weatherConditions = List.copyOf(weatherConditions);
   }
 
+
+
   public boolean isTimeToCheckWeatherConditions() {
     LocalDateTime now = LocalDateTime.now();
-    return ((dateTime.minusHours(anticipationWindow).isBefore(now)
-            || dateTime.minusHours(anticipationWindow).isEqual(now))
-        && dateTime.isAfter(now)
-        && dateTime.minusHours(anticipationWindow - 1).isAfter(now)) || couldNotCheckWeatherConditionsPriorToActivity;
+    LocalDateTime windowStart = dateTime.minusHours(anticipationWindow);
+
+    boolean withinAnticipationWindow =
+      !windowStart.isAfter(now) && !dateTime.isBefore(now);
+
+    return (withinAnticipationWindow && !weatherChecked);
   }
 
-  public void couldNotCheckWeatherPriorToActivity() {
-    this.couldNotCheckWeatherConditionsPriorToActivity = true;
+  public void markWeatherChecked() {
+    this.weatherChecked = true;
   }
-  public void couldCheckWeatherPriorToActivity() {
-    this.couldNotCheckWeatherConditionsPriorToActivity = false;
-  }
+
 }
