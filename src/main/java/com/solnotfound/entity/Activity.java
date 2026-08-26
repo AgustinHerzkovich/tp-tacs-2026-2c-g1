@@ -33,14 +33,11 @@ public class Activity {
     this.weatherConditions = List.copyOf(weatherConditions);
   }
 
-
-
   public boolean isTimeToCheckWeatherConditions() {
     LocalDateTime now = LocalDateTime.now();
     LocalDateTime windowStart = dateTime.minusHours(anticipationWindow);
 
-    boolean withinAnticipationWindow =
-      !windowStart.isAfter(now) && !dateTime.isBefore(now);
+    boolean withinAnticipationWindow = !windowStart.isAfter(now) && !dateTime.isBefore(now);
 
     return (withinAnticipationWindow && !weatherChecked);
   }
@@ -48,5 +45,4 @@ public class Activity {
   public void markWeatherChecked() {
     this.weatherChecked = true;
   }
-
 }

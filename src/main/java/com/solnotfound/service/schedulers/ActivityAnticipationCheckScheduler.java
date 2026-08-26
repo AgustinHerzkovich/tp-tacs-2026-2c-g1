@@ -39,7 +39,8 @@ public class ActivityAnticipationCheckScheduler {
             activity.markWeatherChecked();
 
           } catch (Exception e) {
-            //no se marca la actividad como revisada, para que se vuelva a intentar en el siguiente ciclo dentro de 1 hora
+            // no se marca la actividad como revisada, para que se vuelva a intentar en el siguiente
+            // ciclo dentro de 1 hora
             log.error(
                 "Could not obtain activitie's climate {}: {}", activity.getId(), e.getMessage());
           }

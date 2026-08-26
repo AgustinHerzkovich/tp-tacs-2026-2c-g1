@@ -14,7 +14,9 @@ class ActivityIsTimeToCheckWeatherConditionsTest {
     activity.setAnticipationWindow(anticipationWindow);
     return activity;
   }
-  private Activity buildActivity(LocalDateTime dateTime, Integer anticipationWindow, Boolean wasChecked) {
+
+  private Activity buildActivity(
+      LocalDateTime dateTime, Integer anticipationWindow, Boolean wasChecked) {
     Activity activity = new Activity();
     activity.setDateTime(dateTime);
     activity.setAnticipationWindow(anticipationWindow);

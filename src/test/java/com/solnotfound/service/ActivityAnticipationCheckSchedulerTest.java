@@ -153,12 +153,13 @@ class ActivityAnticipationCheckSchedulerTest {
     when(activityRepository.findAll()).thenReturn(List.of(activityToCheck));
 
     when(weatherAdapter.getFutureClimate(location, dateTime))
-      .thenThrow(new RuntimeException("Error fetching weather"))//first method call throws exception.
-      .thenReturn(weather);//second method call returns weather.
+        .thenThrow(
+            new RuntimeException("Error fetching weather")) // first method call throws exception.
+        .thenReturn(weather); // second method call returns weather.
 
     when(badWeatherChecker.isBadWeatherForActivity(weather, activityToCheck)).thenReturn(true);
 
-    //first scheduler run: the weather check fails, so no notification is sent
+    // first scheduler run: the weather check fails, so no notification is sent
     scheduler.checkActivitiesClimate();
     verifyNoInteractions(notificationFacade);
 
@@ -171,7 +172,7 @@ class ActivityAnticipationCheckSchedulerTest {
     ArgumentCaptor<Activity> activityCaptor = ArgumentCaptor.forClass(Activity.class);
     ArgumentCaptor<WeatherForecast> weatherCaptor = ArgumentCaptor.forClass(WeatherForecast.class);
     verify(notificationFacade, times(1))
-      .notifyBadWeather(activityCaptor.capture(), weatherCaptor.capture());
+        .notifyBadWeather(activityCaptor.capture(), weatherCaptor.capture());
 
     assertThat(activityCaptor.getValue()).isEqualTo(activityToCheck);
     assertThat(weatherCaptor.getValue()).isEqualTo(weather);
