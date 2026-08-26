@@ -36,9 +36,10 @@ public class ActivityAnticipationCheckScheduler {
             if (badWeatherChecker.isBadWeatherForActivity(weather, activity)) {
               notificationFacade.notifyBadWeather(activity, weather);
             }
-            activity.setWasNotificated(true);
+            activity.couldCheckWeatherPriorToActivity();
 
           } catch (Exception e) {
+            activity.couldNotCheckWeatherPriorToActivity();
             log.error(
                 "Could not obtain activitie's climate {}: {}", activity.getId(), e.getMessage());
           }

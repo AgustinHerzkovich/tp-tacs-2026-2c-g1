@@ -19,9 +19,9 @@ public class Activity {
   private List<WeatherCondition> weatherConditions = List.of();
   private Integer
       anticipationWindow; // hecho en horas, cantidad de tiempo antes de la actividad para chequear
-  private Boolean wasNotificated = false;
   private ReprogramationRange reprogramationRange;
   private Boolean availability = false;
+  private Boolean couldNotCheckWeatherConditionsPriorToActivity = false;
 
   // las condiciones del clima y avisar a los usuarios
 
@@ -35,9 +35,16 @@ public class Activity {
 
   public boolean isTimeToCheckWeatherConditions() {
     LocalDateTime now = LocalDateTime.now();
-    return (dateTime.minusHours(anticipationWindow).isBefore(now)
+    return ((dateTime.minusHours(anticipationWindow).isBefore(now)
             || dateTime.minusHours(anticipationWindow).isEqual(now))
         && dateTime.isAfter(now)
-        && !wasNotificated;
+        && dateTime.minusHours(anticipationWindow - 1).isAfter(now)) || couldNotCheckWeatherConditionsPriorToActivity;
+  }
+
+  public void couldNotCheckWeatherPriorToActivity() {
+    this.couldNotCheckWeatherConditionsPriorToActivity = true;
+  }
+  public void couldCheckWeatherPriorToActivity() {
+    this.couldNotCheckWeatherConditionsPriorToActivity = false;
   }
 }
