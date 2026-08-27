@@ -40,7 +40,7 @@ class ActivityAnticipationCheckSchedulerTest {
 
   @BeforeEach
   void setUp() {
-    location = mock(Location.class);
+    location = new Location("Buenos Aires", -34.6037, -58.3816);
     dateTime = LocalDateTime.now().plusHours(2);
     weather = mock(WeatherForecast.class);
 
@@ -110,7 +110,7 @@ class ActivityAnticipationCheckSchedulerTest {
   @Test
   void continuesProcessingRemainingActivitiesWhenWeatherAdapterThrows() throws Exception {
     Activity anotherActivity = mock(Activity.class);
-    Location anotherLocation = mock(Location.class);
+    Location anotherLocation = new Location("Cordoba", -31.4201, -64.1888);
     LocalDateTime anotherDateTime = LocalDateTime.now().plusHours(3);
     WeatherForecast anotherWeather = mock(WeatherForecast.class);
 
