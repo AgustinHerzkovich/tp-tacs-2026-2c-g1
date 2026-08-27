@@ -4,15 +4,19 @@ import com.solnotfound.dto.ActivityFilterDTO;
 import com.solnotfound.dto.ActivityResponse;
 import com.solnotfound.dto.CreateActivityRequest;
 import com.solnotfound.dto.LocationDTO;
+import com.solnotfound.dto.ParticipantDTO;
+import com.solnotfound.dto.ParticipantRequest;
 import com.solnotfound.dto.ReprogramationRangeDTO;
 import com.solnotfound.dto.WeatherConditionsDTO;
 import com.solnotfound.entity.Activity;
 import com.solnotfound.entity.Location;
 import com.solnotfound.entity.MaxRainProbabilityCondition;
 import com.solnotfound.entity.MaxWindCondition;
+import com.solnotfound.entity.Participant;
 import com.solnotfound.entity.ReprogramationRange;
 import com.solnotfound.entity.TemperatureRangeCondition;
 import com.solnotfound.entity.WeatherCondition;
+import com.solnotfound.exception.ActivityNotFoundException;
 import com.solnotfound.exception.InvalidActivityException;
 import com.solnotfound.repository.ActivityRepository;
 import java.util.ArrayList;
@@ -94,6 +98,26 @@ public class ActivityService {
     if (activity == null) {
       return null;
     }
+    return toResponse(activity);
+  }
+
+  public ActivityResponse join(String activityId, ParticipantRequest request) {
+    Activity activity = findActivityOrThrow(activityId);
+
+    activity.addParticipant(request.userId());
+
+    activityRepository.save(activity);
+
+    return toResponse(activity);
+  }
+
+  public ActivityResponse leave(String activityId, String userId) {
+    Activity activity = findActivityOrThrow(activityId);
+
+    activity.removeParticipant(userId);
+
+    activityRepository.save(activity);
+
     return toResponse(activity);
   }
 
@@ -190,9 +214,12 @@ public class ActivityService {
         activity.getAvailability(),
         activity.getMinParticipants(),
         activity.getMaxParticipants(),
+        activity.getParticipants().size(),
+        toParticipantsDTO(activity.getParticipants()),
         toWeatherConditionsDTO(activity.getWeatherConditions()),
         activity.getAnticipationWindow(),
-        toReprogramationRangeDTO(activity.getReprogramationRange()));
+        toReprogramationRangeDTO(activity.getReprogramationRange()),
+        activity.getStatus());
   }
 
   private LocationDTO toLocationDTO(Location location) {
@@ -218,5 +245,21 @@ public class ActivityService {
 
     return new WeatherConditionsDTO(
         maxRainProbability, minTemperature, maxTemperature, maxWindSpeed);
+  }
+
+  private List<ParticipantDTO> toParticipantsDTO(List<Participant> participants) {
+    return participants.stream()
+        .map(participant -> new ParticipantDTO(participant.getUserId()))
+        .toList();
+  }
+
+  private Activity findActivityOrThrow(String activityId) {
+    Activity activity = activityRepository.findById(activityId);
+
+    if (activity == null) {
+      throw new ActivityNotFoundException("Activity not found: " + activityId);
+    }
+
+    return activity;
   }
 }

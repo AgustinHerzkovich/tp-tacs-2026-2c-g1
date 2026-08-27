@@ -1,7 +1,9 @@
 package com.solnotfound.dto;
 
+import com.solnotfound.entity.ActivityStatus;
 import com.solnotfound.entity.ActivityType;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record ActivityResponse(
     String id,
@@ -13,6 +15,14 @@ public record ActivityResponse(
     Boolean availability,
     Integer minParticipants,
     Integer maxParticipants,
+    Integer participantCount,
+    List<ParticipantDTO> participants,
     WeatherConditionsDTO weatherConditions,
     Integer anticipationWindow,
-    ReprogramationRangeDTO reprogramationRange) {}
+    ReprogramationRangeDTO reprogramationRange,
+    ActivityStatus status) {
+
+  public ActivityResponse {
+    participants = List.copyOf(participants);
+  }
+}

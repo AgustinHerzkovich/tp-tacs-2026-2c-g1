@@ -37,6 +37,7 @@ public class ActivityAnticipationCheckScheduler {
               notificationFacade.notifyBadWeather(activity, weather);
             }
             activity.setWasNotificated(true);
+            activityRepository.save(activity);
 
           } catch (Exception e) {
             log.error(

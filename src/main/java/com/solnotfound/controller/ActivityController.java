@@ -3,6 +3,7 @@ package com.solnotfound.controller;
 import com.solnotfound.dto.ActivityFilterDTO;
 import com.solnotfound.dto.ActivityResponse;
 import com.solnotfound.dto.CreateActivityRequest;
+import com.solnotfound.dto.ParticipantRequest;
 import com.solnotfound.entity.ActivityType;
 import com.solnotfound.service.ActivityService;
 import jakarta.validation.Valid;
@@ -12,6 +13,7 @@ import java.util.List;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -57,5 +59,19 @@ public class ActivityController {
       return ResponseEntity.notFound().build();
     }
     return ResponseEntity.ok(activity);
+  }
+
+  @PatchMapping("/{id}/participants")
+  public ResponseEntity<ActivityResponse> join(
+      @PathVariable String id, @Valid @RequestBody ParticipantRequest request) {
+
+    return ResponseEntity.ok(activityService.join(id, request));
+  }
+
+  @PatchMapping("/{id}/participants/{userId}")
+  public ResponseEntity<ActivityResponse> leave(
+      @PathVariable String id, @PathVariable String userId) {
+
+    return ResponseEntity.ok(activityService.leave(id, userId));
   }
 }
