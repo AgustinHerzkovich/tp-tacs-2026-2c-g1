@@ -15,11 +15,29 @@ class ActivityIsTimeToCheckWeatherConditionsTest {
     return activity;
   }
 
+  private Activity buildActivity(
+      LocalDateTime dateTime, Integer anticipationWindow, Boolean wasChecked) {
+    Activity activity = new Activity();
+    activity.setDateTime(dateTime);
+    activity.setAnticipationWindow(anticipationWindow);
+    activity.setWeatherChecked(wasChecked);
+    return activity;
+  }
+
   @Test
   void returnsTrueWhenNowIsWithinTheAnticipationWindow() {
     // Activity starts in 1 hour, anticipation window is 2 hours
     // -> window opened 1 hour ago, so "now" falls inside it
     Activity activity = buildActivity(LocalDateTime.now().plusHours(1), 2);
+
+    assertThat(activity.isTimeToCheckWeatherConditions()).isTrue();
+  }
+
+  @Test
+  void returnsTrueWhenActivitiesWeatherCouldNotBeCheckedYet() {
+    // Activity starts in 1 hour, anticipation window is 3 hours
+    // -> window opened 3 hour ago, so "now" does not fall inside it
+    Activity activity = buildActivity(LocalDateTime.now().plusHours(1), 3, false);
 
     assertThat(activity.isTimeToCheckWeatherConditions()).isTrue();
   }
