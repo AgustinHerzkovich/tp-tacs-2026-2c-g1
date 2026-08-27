@@ -36,10 +36,12 @@ public class ActivityAnticipationCheckScheduler {
             if (badWeatherChecker.isBadWeatherForActivity(weather, activity)) {
               notificationFacade.notifyBadWeather(activity, weather);
             }
-            activity.setWasNotificated(true);
+            activity.markWeatherChecked();
             activityRepository.save(activity);
 
           } catch (Exception e) {
+            // no se marca la actividad como revisada, para que se vuelva a intentar en el siguiente
+            // ciclo dentro de 1 hora
             log.error(
                 "Could not obtain activitie's climate {}: {}", activity.getId(), e.getMessage());
           }

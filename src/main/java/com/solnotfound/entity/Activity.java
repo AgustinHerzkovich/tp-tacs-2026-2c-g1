@@ -24,11 +24,11 @@ public class Activity {
   private Integer
       anticipationWindow; // hecho en horas, cantidad de tiempo antes de la actividad para chequear
 
-  @Setter @Getter private Boolean wasNotificated = false;
   @Setter @Getter private ReprogramationRange reprogramationRange;
   @Setter @Getter private Boolean availability = false;
   @Getter private ActivityStatus status = ActivityStatus.CONFIRMED;
   private List<ActivityStatus> statusHistory = new ArrayList<>(List.of(ActivityStatus.CONFIRMED));
+  @Setter @Getter private Boolean weatherChecked = false;
 
   // las condiciones del clima y avisar a los usuarios
 
@@ -99,10 +99,15 @@ public class Activity {
 
   public boolean isTimeToCheckWeatherConditions() {
     LocalDateTime now = LocalDateTime.now();
-    return (dateTime.minusHours(anticipationWindow).isBefore(now)
-            || dateTime.minusHours(anticipationWindow).isEqual(now))
-        && dateTime.isAfter(now)
-        && !wasNotificated;
+    LocalDateTime windowStart = dateTime.minusHours(anticipationWindow);
+
+    boolean withinAnticipationWindow = !windowStart.isAfter(now) && !dateTime.isBefore(now);
+
+    return (withinAnticipationWindow && !weatherChecked);
+  }
+
+  public void markWeatherChecked() {
+    this.weatherChecked = true;
   }
 
   private boolean cannotChangeParticipants() {
