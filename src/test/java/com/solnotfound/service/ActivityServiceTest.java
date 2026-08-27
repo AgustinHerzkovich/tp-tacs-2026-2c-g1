@@ -2,15 +2,25 @@ package com.solnotfound.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import com.solnotfound.adapters.IWeatherAdapter;
 import com.solnotfound.dto.ActivityFilterDTO;
 import com.solnotfound.dto.ActivityResponse;
+import com.solnotfound.dto.ActivityWeatherResponse;
 import com.solnotfound.dto.CreateActivityRequest;
 import com.solnotfound.dto.LocationDTO;
 import com.solnotfound.dto.ParticipantDTO;
 import com.solnotfound.dto.ReprogramationRangeDTO;
 import com.solnotfound.dto.WeatherConditionsDTO;
+import com.solnotfound.dto.WeatherForecastDTO;
 import com.solnotfound.entity.ActivityType;
+import com.solnotfound.entity.Location;
+import com.solnotfound.entity.WeatherForecast;
+import com.solnotfound.exception.ActivityAccessDeniedException;
 import com.solnotfound.exception.ActivityNotFoundException;
 import com.solnotfound.exception.IllegalStateActivityException;
 import com.solnotfound.exception.InvalidActivityException;
@@ -26,11 +36,14 @@ class ActivityServiceTest {
 
   private ActivityService activityService;
   private ActivityRepository activityRepository;
+  private IWeatherAdapter weatherAdapter;
 
   @BeforeEach
   void setUp() {
     activityRepository = new ActivityRepository();
-    activityService = new ActivityService(activityRepository, new CityRepository());
+    weatherAdapter = org.mockito.Mockito.mock(IWeatherAdapter.class);
+
+    activityService = new ActivityService(activityRepository, weatherAdapter, new CityRepository());
   }
 
   @Test
@@ -372,6 +385,61 @@ class ActivityServiceTest {
     ActivityResponse result = activityService.leave(activity.id(), "user-1");
 
     assertThat(result.availability()).isFalse();
+  }
+
+  @Test
+  void getsCurrentWeatherAndActivityForecastForParticipant() {
+    ActivityResponse activity = activityService.create(validRequest());
+
+    activityService.join(activity.id(), "user-1");
+
+    LocalDateTime currentDateTime = LocalDateTime.now();
+
+    WeatherForecast currentWeather = new WeatherForecast(1, currentDateTime, 25.0f, 20.0f, 10.0f);
+
+    WeatherForecast activityForecast =
+        new WeatherForecast(2, activity.dateTime(), 22.0f, 40.0f, 15.0f);
+
+    when(weatherAdapter.getWeather(any(Location.class))).thenReturn(currentWeather);
+
+    when(weatherAdapter.getFutureClimate(
+            any(Location.class), org.mockito.ArgumentMatchers.eq(activity.dateTime())))
+        .thenReturn(activityForecast);
+
+    ActivityWeatherResponse result = activityService.getWeather(activity.id(), "user-1");
+
+    assertThat(result.activityId()).isEqualTo(activity.id());
+    assertThat(result.location()).isEqualTo(activity.location());
+    assertThat(result.activityDateTime()).isEqualTo(activity.dateTime());
+
+    assertThat(result.currentWeather())
+        .isEqualTo(new WeatherForecastDTO(currentDateTime, 25.0f, 20.0f, 10.0f));
+
+    assertThat(result.activityForecast())
+        .isEqualTo(new WeatherForecastDTO(activity.dateTime(), 22.0f, 40.0f, 15.0f));
+  }
+
+  @Test
+  void rejectsGettingWeatherForNonExistentActivity() {
+    assertThatThrownBy(() -> activityService.getWeather("non-existent-id", "user-1"))
+        .isInstanceOf(ActivityNotFoundException.class)
+        .hasMessage("Activity not found: non-existent-id");
+
+    verify(weatherAdapter, never()).getWeather(any(Location.class));
+    verify(weatherAdapter, never()).getFutureClimate(any(Location.class), any(LocalDateTime.class));
+  }
+
+  @Test
+  void rejectsGettingWeatherForUserWhoIsNotParticipant() {
+    ActivityResponse activity = activityService.create(validRequest());
+
+    assertThatThrownBy(() -> activityService.getWeather(activity.id(), "user-1"))
+        .isInstanceOf(ActivityAccessDeniedException.class)
+        .hasMessage("User is not participating in this activity");
+
+    verify(weatherAdapter, never()).getWeather(any(Location.class));
+
+    verify(weatherAdapter, never()).getFutureClimate(any(Location.class), any(LocalDateTime.class));
   }
 
   private CreateActivityRequest requestWith(

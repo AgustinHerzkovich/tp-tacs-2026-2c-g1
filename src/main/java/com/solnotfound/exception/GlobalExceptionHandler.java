@@ -34,6 +34,15 @@ public class GlobalExceptionHandler {
     return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problem);
   }
 
+  @ExceptionHandler(ActivityAccessDeniedException.class)
+  public ResponseEntity<ProblemDetail> handleActivityAccessDenied(
+      ActivityAccessDeniedException exception) {
+    ProblemDetail problem =
+        ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, exception.getMessage());
+    problem.setTitle("Activity access denied");
+    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(problem);
+  }
+
   @ExceptionHandler(IllegalStateActivityException.class)
   public ResponseEntity<ProblemDetail> handleIllegalStateActivityException(
       IllegalStateActivityException exception) {

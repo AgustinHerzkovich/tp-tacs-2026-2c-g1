@@ -1,5 +1,8 @@
 package com.solnotfound.controller;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -7,12 +10,15 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.solnotfound.adapters.IWeatherAdapter;
 import com.solnotfound.dto.CreateActivityRequest;
 import com.solnotfound.dto.LocationDTO;
 import com.solnotfound.dto.ReprogramationRangeDTO;
 import com.solnotfound.dto.WeatherConditionsDTO;
 import com.solnotfound.entity.ActivityStatus;
 import com.solnotfound.entity.ActivityType;
+import com.solnotfound.entity.Location;
+import com.solnotfound.entity.WeatherForecast;
 import com.solnotfound.repository.ActivityRepository;
 import com.solnotfound.service.ActivityService;
 import java.time.LocalDateTime;
@@ -22,6 +28,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest
@@ -31,6 +38,7 @@ class ActivityParticipationControllerTest {
   @Autowired private ActivityRepository repository;
   @Autowired private ActivityService service;
   @Autowired private MockMvc mockMvc;
+  @MockitoBean private IWeatherAdapter weatherAdapter;
 
   @BeforeEach
   void setUp() {
@@ -89,6 +97,45 @@ class ActivityParticipationControllerTest {
         .perform(put("/activities/{id}/participants/me", activityId))
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.title").value("Activity state conflict"));
+  }
+
+  @Test
+  void weatherUsesJwtSubjectAndSerializesLocation() throws Exception {
+    var activity = service.create(request(1, 2));
+    service.join(activity.id(), "user-1");
+    WeatherForecast current = new WeatherForecast(1, LocalDateTime.now(), 22.0f, 10.0f, 15.0f);
+    WeatherForecast forecast = new WeatherForecast(2, activity.dateTime(), 18.0f, 60.0f, 30.0f);
+    when(weatherAdapter.getWeather(any(Location.class))).thenReturn(current);
+    when(weatherAdapter.getFutureClimate(any(Location.class), eq(activity.dateTime())))
+        .thenReturn(forecast);
+
+    mockMvc
+        .perform(
+            get("/activities/{id}/weather", activity.id())
+                .with(jwt().jwt(jwt -> jwt.subject("user-1"))))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.location.city").value("Buenos Aires"))
+        .andExpect(jsonPath("$.locationDTO").doesNotExist())
+        .andExpect(jsonPath("$.currentWeather.temperature").value(22.0));
+  }
+
+  @Test
+  void weatherReturnsForbiddenOrNotFoundAsProblemDetail() throws Exception {
+    String activityId = service.create(request(1, 2)).id();
+
+    mockMvc
+        .perform(
+            get("/activities/{id}/weather", activityId)
+                .with(jwt().jwt(jwt -> jwt.subject("outsider"))))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.title").value("Activity access denied"));
+
+    mockMvc
+        .perform(
+            get("/activities/{id}/weather", "missing")
+                .with(jwt().jwt(jwt -> jwt.subject("user-1"))))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.title").value("Activity not found"));
   }
 
   private CreateActivityRequest request(int minParticipants, int maxParticipants) {

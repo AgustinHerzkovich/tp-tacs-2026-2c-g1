@@ -4,6 +4,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.solnotfound.adapters.IWeatherAdapter;
 import com.solnotfound.exception.GlobalExceptionHandler;
 import com.solnotfound.repository.ActivityRepository;
 import com.solnotfound.repository.CityRepository;
@@ -16,11 +17,15 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 class ActivitySearchControllerTest {
 
   private MockMvc mockMvc;
+  private IWeatherAdapter weatherAdapter;
 
   @BeforeEach
   void setUp() {
+    weatherAdapter = org.mockito.Mockito.mock(IWeatherAdapter.class);
+
     ActivityController controller =
-        new ActivityController(new ActivityService(new ActivityRepository(), new CityRepository()));
+        new ActivityController(
+            new ActivityService(new ActivityRepository(), weatherAdapter, new CityRepository()));
     mockMvc =
         MockMvcBuilders.standaloneSetup(controller)
             .setControllerAdvice(new GlobalExceptionHandler())
