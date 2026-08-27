@@ -7,13 +7,17 @@ import lombok.Setter;
 
 @Getter
 public class Notification {
-  @Setter private String id;
-  @Setter private LocalDateTime createdAt;
+  @Setter
+  private String id;
+  @Setter
+  private LocalDateTime createdAt;
 
   private final String receiverUser;     // TODO: asociar a quien se le manda la notificacion (user)
   private final Activity activity;
 
   private final NotificationType type;
+  private final String title;
+  private final String message;
 
   @Setter
   private NotificationStatus status;
@@ -26,21 +30,15 @@ public class Notification {
     this.activity = activity;
     this.type = type;
     this.createdAt = createdAt;
+
+    this.message = type.generateMessage(activity);  // TODO: Los guardo en variable una vez generado para no recalcularlo cada vez que se llama a getTitle o getMessage?  o directamente lo genero cada vez?
+    this.title = type.generateTitle(activity);
+
     this.status = NotificationStatus.PENDING;
     this.read = false;
   }
 
   public void setAsRead() {
     this.read = true;
-  }
-
-  // TODO: Implementar la logica para generar el titulo de la notificacion
-  public String getTitle() {
-    return type.toString();
-  }
-
-  // TODO: Implementar la logica para generar el mensaje de la notificacion
-  public String getMessage() {
-    return "message";
   }
 }
