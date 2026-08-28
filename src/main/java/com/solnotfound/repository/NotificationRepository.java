@@ -35,7 +35,7 @@ public class NotificationRepository implements INotificationRepository {
     for (Notification notification : notifications) {
       this.save(notification);
     }
-    return new ArrayList<>(storage.values());
+    return (List<Notification>) notifications;
   }
 
   @Override
