@@ -33,7 +33,7 @@ public class NotificationRepository implements INotificationRepository {
   @Override
   public List<Notification> saveAll(Iterable<Notification> notifications) {
     for (Notification notification : notifications) {
-      storage.put(notification.getId(), notification);
+      this.save(notification);
     }
     return new ArrayList<>(storage.values());
   }
@@ -41,11 +41,6 @@ public class NotificationRepository implements INotificationRepository {
   @Override
   public Optional<Notification> findById(String id) {
     return Optional.ofNullable(storage.get(id));
-  }
-
-  @Override
-  public List<Notification> findAll() {
-    return new ArrayList<>(storage.values());
   }
 
   @Override

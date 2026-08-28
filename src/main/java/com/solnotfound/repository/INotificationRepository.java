@@ -13,7 +13,5 @@ public interface INotificationRepository {
 
   Optional<Notification> findById(String id);
 
-  List<Notification> findAll();
-
   List<Notification> findByReadAndReceiverUserId(Boolean read, String receiverUser);
 }
