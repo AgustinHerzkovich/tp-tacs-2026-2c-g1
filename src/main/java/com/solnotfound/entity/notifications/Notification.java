@@ -24,12 +24,12 @@ public class Notification {
 
   private boolean read;
 
-  public Notification(String id, String receiverUser, Activity activity, NotificationType type, LocalDateTime createdAt) {
+  public Notification(String id, String receiverUser, Activity activity, NotificationType type) {
     this.id = id;
     this.receiverUser = receiverUser;
     this.activity = activity;
     this.type = type;
-    this.createdAt = createdAt;
+    this.createdAt = LocalDateTime.now();
 
     this.message = type.generateMessage(activity);
     this.title = type.generateTitle(activity);
