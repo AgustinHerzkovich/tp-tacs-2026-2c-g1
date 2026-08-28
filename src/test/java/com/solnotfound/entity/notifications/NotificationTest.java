@@ -22,7 +22,8 @@ class NotificationTest {
 
   @Test
   void shouldInitializeWithCorrectStateAndAssociations() {
-    Notification notification = new Notification("notif-1", "user-1", activity, NotificationType.BAD_WEATHER_ALERT);
+    Notification notification = new Notification("user-1", activity, NotificationType.BAD_WEATHER_ALERT);
+    notification.setId("notif-1");
 
     // Verify that the title and message are generated (we test the exact strings in the Type test)
     assertNotNull(notification.getTitle());
@@ -35,7 +36,8 @@ class NotificationTest {
 
   @Test
   void shouldMarkNotificationAsRead() {
-    Notification notification = new Notification("notif-2", "user-2", activity, NotificationType.STARTED);
+    Notification notification = new Notification("user-2", activity, NotificationType.STARTED);
+    notification.setId("notif-2");
 
     assertFalse(notification.isRead());
 

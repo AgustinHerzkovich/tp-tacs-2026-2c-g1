@@ -24,8 +24,7 @@ public class Notification {
 
   private boolean read;
 
-  public Notification(String id, String receiverUser, Activity activity, NotificationType type) {
-    this.id = id;
+  public Notification(String receiverUser, Activity activity, NotificationType type) {
     this.receiverUser = receiverUser;
     this.activity = activity;
     this.type = type;

@@ -33,7 +33,8 @@ class NotificationServiceTest {
     Activity activity = new Activity();
     activity.setId("act-1");
 
-    notification = new Notification("notif-1", "user-auth-123", activity, NotificationType.BAD_WEATHER_ALERT);
+    notification = new Notification("user-auth-123", activity, NotificationType.BAD_WEATHER_ALERT);
+    notification.setId("notif-1");
   }
 
   @Test
