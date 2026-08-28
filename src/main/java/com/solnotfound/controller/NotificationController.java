@@ -31,7 +31,11 @@ public class NotificationController {
 
   @PatchMapping("/{id}")
   public ResponseEntity<Void> markAsRead(@PathVariable String id) {
-    notificationService.markAsRead(id);
+
+    // TODO: Implement the logic to get the authenticated user's ID
+    String currentUserId = "hardcodeado123";
+
+    notificationService.markAsRead(id, currentUserId);
     return ResponseEntity.ok().build();
   }
 

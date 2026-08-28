@@ -2,6 +2,8 @@ package com.solnotfound.service;
 
 import com.solnotfound.dto.NotificationResponse;
 import com.solnotfound.entity.notifications.Notification;
+import com.solnotfound.exception.AccessDeniedException;
+import com.solnotfound.exception.ResourceNotFoundException;
 import com.solnotfound.repository.INotificationRepository;
 import java.util.List;
 import org.springframework.stereotype.Service;
@@ -14,21 +16,26 @@ public class NotificationService {
     this.notificationRepository = notificationRepository;
   }
 
-  public List<NotificationResponse> getNotificationsByUser(String userId) {
-    return notificationRepository.findByReadAndReceiverUserId(false, userId).stream()
+  public List<NotificationResponse> getNotificationsByUser(String currentUserId) {
+    return notificationRepository.findByReadAndReceiverUserId(false, currentUserId).stream()
       .map(this::toDto)
       .toList();
   }
 
-  public void markAsRead(String notificationId) {
+  public void markAsRead(String notificationId, String currentUserId) {
+    Notification notification = notificationRepository.findById(notificationId)
+      .orElseThrow(() -> new ResourceNotFoundException("No se encontró la notificación con el ID: " + notificationId));
 
-    // TODO: Handle the case where the notification is not found (throw an exception)
 
-    notificationRepository.findById(notificationId).ifPresent(notification -> {
-      notification.setAsRead();
-      notificationRepository.save(notification);
-    });
+    //TODO: Cuando tengamos el User real, tomar de este su id para la comparacion
+    if (!notification.getReceiverUser().equals(currentUserId)) {
+      throw new AccessDeniedException("La notificación no pertenece al usuario autenticado");
+    }
+
+    notification.setAsRead();
+    notificationRepository.save(notification);
   }
+
 
   private NotificationResponse toDto(Notification notification) {
     return new NotificationResponse(

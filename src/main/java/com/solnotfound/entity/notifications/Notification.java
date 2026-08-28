@@ -31,7 +31,7 @@ public class Notification {
     this.type = type;
     this.createdAt = createdAt;
 
-    this.message = type.generateMessage(activity);  // TODO: Los guardo en variable una vez generado para no recalcularlo cada vez que se llama a getTitle o getMessage?  o directamente lo genero cada vez?
+    this.message = type.generateMessage(activity);
     this.title = type.generateTitle(activity);
 
     this.status = NotificationStatus.PENDING;
