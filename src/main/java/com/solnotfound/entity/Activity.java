@@ -21,9 +21,7 @@ public class Activity {
   private List<WeatherCondition> weatherConditions = List.of();
 
   @Setter @Getter
-  private Integer
-      anticipationWindow; // hecho en horas, cantidad de tiempo antes de la actividad para chequear
-
+  private Integer anticipationWindow; // hecho en horas, cantidad de tiempo antes de la actividad para chequear
   @Setter @Getter private ReprogramationRange reprogramationRange;
   private Boolean availability = false;
   @Getter private ActivityStatus status = ActivityStatus.CONFIRMED;
@@ -112,6 +110,10 @@ public class Activity {
 
   public void markWeatherChecked() {
     this.weatherChecked = true;
+  }
+
+  public String getCreator() {
+    return "CAMBIAR_POR_EL_USUARIO_CREADOR"; // TODO: Tras el merge enviar directamente la entidad del usuario creador
   }
 
   public boolean finishIfPast(LocalDateTime now) {
