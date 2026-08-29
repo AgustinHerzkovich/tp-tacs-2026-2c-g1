@@ -22,6 +22,8 @@ public class Activity {
   private ReprogramationRange reprogramationRange;
   private Boolean availability = false;
   private Boolean weatherChecked = false;
+  private User organizer;
+  private List<User> participants;
 
   // las condiciones del clima y avisar a los usuarios
 

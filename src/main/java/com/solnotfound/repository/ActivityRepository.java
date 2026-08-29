@@ -21,4 +21,19 @@ public class ActivityRepository { // TODO: Por ahora se guardan en memoria
   public Activity findById(String id) {
     return activities.get(id);
   }
+
+  public List<Activity> findActivitiesByOrganizerId(String organizerId) {
+    return activities.values().stream()
+      .filter(activity -> activity.getOrganizer().getId().equals(organizerId))
+      .toList();
+  }
+
+  public List<Activity> findActivitiesByParticipantId(String participantId) {
+    return activities.values().stream()
+      .filter(activity ->
+        activity.getParticipants().stream()
+          .anyMatch(participant -> participant.getId().equals(participantId)))
+      .toList();
+  }
+
 }

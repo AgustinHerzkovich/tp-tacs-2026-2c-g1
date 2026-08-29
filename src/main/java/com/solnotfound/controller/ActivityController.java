@@ -58,4 +58,22 @@ public class ActivityController {
     }
     return ResponseEntity.ok(activity);
   }
+
+  @GetMapping("/organizer/{id}")
+  public ResponseEntity<List<ActivityResponse>> getByOrganizerId(@PathVariable String id) {
+    List<ActivityResponse> activities = activityService.getByOrganizerId(id);
+    if (activities == null) {
+      return ResponseEntity.notFound().build();
+    }
+    return ResponseEntity.ok(activities);
+  }
+
+  @GetMapping("/participant/{id}")
+  public ResponseEntity<List<ActivityResponse>> getByParticipantId(@PathVariable String id) {
+    List<ActivityResponse> activities = activityService.getByParticipantId(id);
+    if (activities == null) {
+      return ResponseEntity.notFound().build();
+    }
+    return ResponseEntity.ok(activities);
+  }
 }
