@@ -5,7 +5,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.solnotfound.exception.GlobalExceptionHandler;
-import com.solnotfound.repository.ActivityRepository;
+import com.solnotfound.repository.ActivityMockRepository;
 import com.solnotfound.service.ActivityService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,7 +19,7 @@ class ActivitySearchControllerTest {
   @BeforeEach
   void setUp() {
     ActivityController controller =
-        new ActivityController(new ActivityService(new ActivityRepository()));
+        new ActivityController(new ActivityService(new ActivityMockRepository()));
     mockMvc =
         MockMvcBuilders.standaloneSetup(controller)
             .setControllerAdvice(new GlobalExceptionHandler())

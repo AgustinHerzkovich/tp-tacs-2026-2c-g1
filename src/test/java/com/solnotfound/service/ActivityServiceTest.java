@@ -2,15 +2,14 @@ package com.solnotfound.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
-import com.solnotfound.dto.ActivityFilterDTO;
-import com.solnotfound.dto.ActivityResponse;
-import com.solnotfound.dto.CreateActivityRequest;
-import com.solnotfound.dto.LocationDTO;
-import com.solnotfound.dto.ReprogramationRangeDTO;
-import com.solnotfound.dto.WeatherConditionsDTO;
+import com.solnotfound.dto.*;
 import com.solnotfound.entity.ActivityType;
+import com.solnotfound.entity.User;
 import com.solnotfound.exception.InvalidActivityException;
+import com.solnotfound.repository.ActivityMockRepository;
 import com.solnotfound.repository.ActivityRepository;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -25,7 +24,7 @@ class ActivityServiceTest {
 
   @BeforeEach
   void setUp() {
-    activityRepository = new ActivityRepository();
+    activityRepository = new ActivityMockRepository();
     activityService = new ActivityService(activityRepository);
   }
 
@@ -240,6 +239,124 @@ class ActivityServiceTest {
     assertThat(results).extracting(ActivityResponse::id).containsExactly(available.id());
   }
 
+  @Test
+  void returnsEmptyListWhenNoActivitiesExist() {
+    assertThat(activityService.getByOrganizerId("1")).isEmpty();
+    assertThat(activityService.getByParticipantId("1")).isEmpty();
+  }
+
+  @Test
+  void returnsActivitiesOrganizedByTheUser() {
+    ActivityResponse first = activityService.create(validRequest());
+    ActivityResponse second = activityService.create(validRequest());
+    ActivityResponse other = activityService.create(validRequest());
+    activityRepository.findById(first.id()).setOrganizer(user("1"));
+    activityRepository.findById(second.id()).setOrganizer(user("1"));
+    activityRepository.findById(other.id()).setOrganizer(user("2"));
+
+    List<ActivityResponse> results = activityService.getByOrganizerId("1");
+
+    assertThat(results)
+        .extracting(ActivityResponse::id)
+        .containsExactlyInAnyOrder(first.id(), second.id());
+  }
+
+  @Test
+  void organizerQueryExcludesActivitiesWhereTheUserOnlyParticipates() {
+    ActivityResponse organized = activityService.create(validRequest());
+    ActivityResponse participated = activityService.create(validRequest());
+    activityRepository.findById(organized.id()).setOrganizer(user("1"));
+    activityRepository.findById(participated.id()).setParticipants(List.of(user("1")));
+
+    List<ActivityResponse> results = activityService.getByOrganizerId("1");
+
+    assertThat(results).extracting(ActivityResponse::id).containsExactly(organized.id());
+  }
+
+  @Test
+  void organizerQueryReturnsEmptyListWhenUserOrganizesNoActivity() {
+    ActivityResponse other = activityService.create(validRequest());
+    activityRepository.findById(other.id()).setOrganizer(user("2"));
+
+    assertThat(activityService.getByOrganizerId("1")).isEmpty();
+  }
+
+  @Test
+  void organizerQueryIgnoresActivitiesWithoutOrganizer() {
+    activityService.create(validRequest());
+    ActivityResponse organized = activityService.create(validRequest());
+    activityRepository.findById(organized.id()).setOrganizer(user("1"));
+
+    List<ActivityResponse> results = activityService.getByOrganizerId("1");
+
+    assertThat(results).extracting(ActivityResponse::id).containsExactly(organized.id());
+  }
+
+  @Test
+  void organizerQueryReturnsNullWhenRepositoryReturnsNull() {
+    ActivityRepository repository = mock(ActivityRepository.class);
+    when(repository.findActivitiesByOrganizerId("1")).thenReturn(null);
+    ActivityService service = new ActivityService(repository);
+
+    assertThat(service.getByOrganizerId("1")).isNull();
+  }
+
+  @Test
+  void returnsActivitiesWhereTheUserIsParticipant() {
+    ActivityResponse first = activityService.create(validRequest());
+    ActivityResponse second = activityService.create(validRequest());
+    ActivityResponse other = activityService.create(validRequest());
+    activityRepository.findById(first.id()).setParticipants(List.of(user("1")));
+    activityRepository.findById(second.id()).setParticipants(List.of(user("1"), user("3")));
+    activityRepository.findById(other.id()).setParticipants(List.of(user("2")));
+
+    List<ActivityResponse> results = activityService.getByParticipantId("1");
+
+    assertThat(results)
+        .extracting(ActivityResponse::id)
+        .containsExactlyInAnyOrder(first.id(), second.id());
+  }
+
+  @Test
+  void participantQueryExcludesActivitiesTheUserOnlyOrganizes() {
+    ActivityResponse organized = activityService.create(validRequest());
+    ActivityResponse participated = activityService.create(validRequest());
+    activityRepository.findById(organized.id()).setOrganizer(user("1"));
+    activityRepository.findById(participated.id()).setParticipants(List.of(user("1")));
+
+    List<ActivityResponse> results = activityService.getByParticipantId("1");
+
+    assertThat(results).extracting(ActivityResponse::id).containsExactly(participated.id());
+  }
+
+  @Test
+  void participantQueryReturnsEmptyListWhenUserParticipatesInNoActivity() {
+    ActivityResponse other = activityService.create(validRequest());
+    activityRepository.findById(other.id()).setParticipants(List.of(user("2")));
+
+    assertThat(activityService.getByParticipantId("1")).isEmpty();
+  }
+
+  @Test
+  void participantQueryIgnoresActivitiesWithoutParticipants() {
+    activityService.create(validRequest());
+    ActivityResponse participated = activityService.create(validRequest());
+    activityRepository.findById(participated.id()).setParticipants(List.of(user("1")));
+
+    List<ActivityResponse> results = activityService.getByParticipantId("1");
+
+    assertThat(results).extracting(ActivityResponse::id).containsExactly(participated.id());
+  }
+
+  @Test
+  void participantQueryReturnsNullWhenRepositoryReturnsNull() {
+    ActivityRepository repository = mock(ActivityRepository.class);
+    when(repository.findActivitiesByParticipantId("1")).thenReturn(null);
+    ActivityService service = new ActivityService(repository);
+
+    assertThat(service.getByParticipantId("1")).isNull();
+  }
+
   private CreateActivityRequest requestWith(
       ActivityType type, String city, LocalDateTime dateTime) {
     return new CreateActivityRequest(
@@ -279,5 +396,11 @@ class ActivityServiceTest {
 
   private ReprogramationRangeDTO validReprogramationRange() {
     return new ReprogramationRangeDTO(3, LocalTime.of(10, 0), LocalTime.of(20, 0));
+  }
+
+  private User user(String id) {
+    User user = new User();
+    user.setId(id);
+    return user;
   }
 }

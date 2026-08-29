@@ -2,13 +2,9 @@ package com.solnotfound.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.solnotfound.dto.ActivityResponse;
-import com.solnotfound.dto.CreateActivityRequest;
-import com.solnotfound.dto.LocationDTO;
-import com.solnotfound.dto.ReprogramationRangeDTO;
-import com.solnotfound.dto.WeatherConditionsDTO;
+import com.solnotfound.dto.*;
 import com.solnotfound.entity.ActivityType;
-import com.solnotfound.repository.ActivityRepository;
+import com.solnotfound.repository.ActivityMockRepository;
 import com.solnotfound.service.ActivityService;
 import java.net.URI;
 import java.time.LocalDateTime;
@@ -22,7 +18,7 @@ class ActivityControllerTest {
   @Test
   void respondsCreatedWithResourceLocation() {
     ActivityController controller =
-        new ActivityController(new ActivityService(new ActivityRepository()));
+        new ActivityController(new ActivityService(new ActivityMockRepository()));
     LocationDTO location = new LocationDTO("Buenos Aires", null, null);
     CreateActivityRequest request =
         new CreateActivityRequest(
