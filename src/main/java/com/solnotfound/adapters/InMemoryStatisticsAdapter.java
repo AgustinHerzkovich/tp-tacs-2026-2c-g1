@@ -1,11 +1,12 @@
 package com.solnotfound.adapters;
 
+import com.solnotfound.entity.ActivityStatistics;
+import com.solnotfound.entity.ActivityStatus;
 import com.solnotfound.entity.WeatherForecastStatistics;
-import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+
 @Component
 public class InMemoryStatisticsAdapter implements IStatisticsAdapter {
   @Override
@@ -19,5 +20,10 @@ public class InMemoryStatisticsAdapter implements IStatisticsAdapter {
       System.out.println("fuck off");
     }
     return new WeatherForecastStatistics(100, 80, 20, 200.0);
+  }
+
+  @Override
+  public ActivityStatistics getActivityStatistics(ActivityStatus activityStatus) {
+    return new ActivityStatistics(50L, activityStatus);
   }
 }
