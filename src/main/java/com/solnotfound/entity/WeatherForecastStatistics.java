@@ -1,6 +1,5 @@
 package com.solnotfound.entity;
 
-import jdk.jfr.StackTrace;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;

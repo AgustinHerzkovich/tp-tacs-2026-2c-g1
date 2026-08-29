@@ -1,11 +1,8 @@
 package com.solnotfound.controller;
 
-import com.solnotfound.dto.ActivityResponse;
 import com.solnotfound.dto.ActivityStatisticsResponse;
 import com.solnotfound.dto.WeatherForecastStatisticsResponse;
 import com.solnotfound.entity.ActivityStatus;
-import com.solnotfound.entity.ActivityStatus;
-import com.solnotfound.exception.InvaildActivityStatusException;
 import com.solnotfound.service.StatisticsService;
 import java.time.LocalDate;
 import java.util.Optional;

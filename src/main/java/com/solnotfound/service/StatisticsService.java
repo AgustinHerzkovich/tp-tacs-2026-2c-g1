@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import com.solnotfound.exception.CouldNotRetrieveStatisticsException;
 import java.time.LocalDate;
+import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import org.springframework.stereotype.Service;
 
@@ -59,7 +60,4 @@ public class StatisticsService {
       throw new CouldNotRetrieveStatisticsException("Could not retrieve activity statistics", e);
     }
   }
-
-
-
 }
