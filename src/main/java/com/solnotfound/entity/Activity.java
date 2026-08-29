@@ -30,6 +30,7 @@ public class Activity {
   @Getter private ActivityStatus status = ActivityStatus.CONFIRMED;
   private List<ActivityStatus> statusHistory = new ArrayList<>(List.of(ActivityStatus.CONFIRMED));
   @Setter @Getter private Boolean weatherChecked = false;
+  private User organizer;
 
   // las condiciones del clima y avisar a los usuarios
 

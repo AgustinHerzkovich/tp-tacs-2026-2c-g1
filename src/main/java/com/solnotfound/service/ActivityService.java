@@ -194,6 +194,22 @@ public class ActivityService {
     return toWeatherResponse(activity, currentWeather, activityForecast);
   }
 
+  public List<ActivityResponse> getByOrganizerId(String id) {
+    List<Activity> activities = activityRepository.findActivitiesByOrganizerId(id);
+    if (activities == null) {
+      return null;
+    }
+    return activities.stream().map(this::toResponse).toList();
+  }
+
+  public List<ActivityResponse> getByParticipantId(String id) {
+    List<Activity> activities = activityRepository.findActivitiesByOrganizerId(id);
+    if (activities == null) {
+      return null;
+    }
+    return activities.stream().map(this::toResponse).toList();
+  }
+
   private void validate(CreateActivityRequest request) {
     if (request.minParticipants() > request.maxParticipants()) {
       throw new InvalidActivityException("Minimum participants cannot exceed maximum participants");
@@ -365,4 +381,5 @@ public class ActivityService {
 
     return activity;
   }
+
 }
