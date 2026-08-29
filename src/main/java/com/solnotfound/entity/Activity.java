@@ -1,5 +1,6 @@
 package com.solnotfound.entity;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.Getter;
@@ -26,6 +27,26 @@ public class Activity {
   private List<User> participants;
 
   // las condiciones del clima y avisar a los usuarios
+
+  @SuppressFBWarnings("EI_EXPOSE_REP")
+  public User getOrganizer() {
+    return organizer;
+  }
+
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
+  public void setOrganizer(User organizer) {
+    this.organizer = organizer;
+  }
+
+  @SuppressFBWarnings("EI_EXPOSE_REP")
+  public List<User> getParticipants() {
+    return participants;
+  }
+
+  @SuppressFBWarnings("EI_EXPOSE_REP2")
+  public void setParticipants(List<User> participants) {
+    this.participants = participants;
+  }
 
   public List<WeatherCondition> getWeatherConditions() {
     return List.copyOf(weatherConditions);
