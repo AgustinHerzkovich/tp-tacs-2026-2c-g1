@@ -7,13 +7,7 @@ import com.solnotfound.entity.ActivityStatistics;
 import com.solnotfound.entity.ActivityStatus;
 import com.solnotfound.entity.WeatherForecastStatistics;
 import com.solnotfound.exception.CouldNotRetrieveStatisticsException;
-import org.springframework.cglib.core.Local;
-import org.springframework.stereotype.Service;
-
-import com.solnotfound.exception.CouldNotRetrieveStatisticsException;
 import java.time.LocalDate;
-import org.springframework.stereotype.Service;
-import java.time.LocalDateTime;
 import org.springframework.stereotype.Service;
 
 @Service

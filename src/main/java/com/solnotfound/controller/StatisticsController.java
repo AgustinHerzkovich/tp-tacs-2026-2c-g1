@@ -3,23 +3,22 @@ package com.solnotfound.controller;
 import com.solnotfound.dto.ActivityStatisticsResponse;
 import com.solnotfound.dto.WeatherForecastStatisticsResponse;
 import com.solnotfound.entity.ActivityStatus;
+import com.solnotfound.exception.InvaildActivityStatusException;
 import com.solnotfound.service.StatisticsService;
 import java.time.LocalDate;
 import java.util.Optional;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import com.solnotfound.exception.InvaildActivityStatusException;
-
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/statistics")
 public class StatisticsController {
   private final StatisticsService statisticsService;
-  public StatisticsController(StatisticsService statisticsService) {this.statisticsService = statisticsService;}
+
+  public StatisticsController(StatisticsService statisticsService) {
+    this.statisticsService = statisticsService;
+  }
 
   @GetMapping("/weatherForecast")
   public ResponseEntity<WeatherForecastStatisticsResponse> getWeatherForecastServiceStatistics(
