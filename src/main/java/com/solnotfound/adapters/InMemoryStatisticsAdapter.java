@@ -3,7 +3,6 @@ package com.solnotfound.adapters;
 import com.solnotfound.entity.ActivityStatistics;
 import com.solnotfound.entity.ActivityStatus;
 import com.solnotfound.entity.WeatherForecastStatistics;
-import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;

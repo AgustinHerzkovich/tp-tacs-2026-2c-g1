@@ -1,5 +1,7 @@
 package com.solnotfound.entity;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
+
 public enum ActivityStatus {
   /*
   Además del estado tener en cuenta que puede o no estar habilitado
@@ -14,7 +16,6 @@ public enum ActivityStatus {
   RESCHEDULED, // Hay que ver si es realmente necesaria o solo es un Confirmed
   CANCELLED,
   FINISHED;
-
   @JsonCreator
   public static ActivityStatus fromString(String value) {
     if (value == null || value.isBlank()) {

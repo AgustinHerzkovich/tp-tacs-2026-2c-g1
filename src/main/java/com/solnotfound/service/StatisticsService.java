@@ -6,6 +6,7 @@ import com.solnotfound.dto.WeatherForecastStatisticsResponse;
 import com.solnotfound.entity.ActivityStatistics;
 import com.solnotfound.entity.ActivityStatus;
 import com.solnotfound.entity.WeatherForecastStatistics;
+import com.solnotfound.exception.CouldNotRetrieveStatisticsException;
 import org.springframework.cglib.core.Local;
 import org.springframework.stereotype.Service;
 
@@ -58,4 +59,7 @@ public class StatisticsService {
       throw new CouldNotRetrieveStatisticsException("Could not retrieve activity statistics", e);
     }
   }
+
+
+
 }

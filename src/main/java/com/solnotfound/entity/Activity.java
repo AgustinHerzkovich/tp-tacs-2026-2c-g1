@@ -31,7 +31,7 @@ public class Activity {
   @Setter @Getter private Boolean weatherChecked = false;
   @Getter private LocalDateTime startingSoonNotificationDateTime;
   private User organizer;
-
+  private Boolean availability = false;
   // las condiciones del clima y avisar a los usuarios
 
   @edu.umd.cs.findbugs.annotations.SuppressFBWarnings(
