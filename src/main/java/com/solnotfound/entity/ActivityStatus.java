@@ -14,6 +14,7 @@ public enum ActivityStatus {
   RESCHEDULED, // Hay que ver si es realmente necesaria o solo es un Confirmed
   CANCELLED,
   FINISHED;
+
   @JsonCreator
   public static ActivityStatus fromString(String value) {
     if (value == null || value.isBlank()) {

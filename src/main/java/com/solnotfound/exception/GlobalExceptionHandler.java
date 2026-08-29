@@ -96,12 +96,11 @@ public class GlobalExceptionHandler {
     problem.setProperty("parameter", exception.getName());
     return ResponseEntity.badRequest().body(problem);
   }
+
   @ExceptionHandler(CouldNotRetrieveStatisticsException.class)
   public ProblemDetail handleStatisticsServiceUnavailable(CouldNotRetrieveStatisticsException ex) {
-    ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
-      HttpStatus.SERVICE_UNAVAILABLE,
-      ex.getMessage()
-    );
+    ProblemDetail problemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage());
     problemDetail.setTitle("Servicio No Disponible");
 
     // Es buena práctica indicarle al cliente si vale la pena reintentar
@@ -110,17 +109,17 @@ public class GlobalExceptionHandler {
 
     return problemDetail;
   }
-  @ExceptionHandler(InvaildActivityStatusException.class)
-    public ProblemDetail handleInvalidActivityStatus(InvaildActivityStatusException ex) {
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
-        HttpStatus.BAD_REQUEST,
-        ex.getMessage()
-        );
-        problemDetail.setTitle("Invalid Activity Status");
-        problemDetail.setProperty("timestamp", Instant.now());
 
-        return problemDetail;
-    }
+  @ExceptionHandler(InvaildActivityStatusException.class)
+  public ProblemDetail handleInvalidActivityStatus(InvaildActivityStatusException ex) {
+    ProblemDetail problemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+    problemDetail.setTitle("Invalid Activity Status");
+    problemDetail.setProperty("timestamp", Instant.now());
+
+    return problemDetail;
+  }
+
 
   @ExceptionHandler(ResourceNotFoundException.class)
   public ResponseEntity<ProblemDetail> handleResourceNotFound(ResourceNotFoundException exception) {
