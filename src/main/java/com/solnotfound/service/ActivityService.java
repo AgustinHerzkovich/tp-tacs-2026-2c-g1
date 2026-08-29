@@ -203,7 +203,7 @@ public class ActivityService {
   }
 
   public List<ActivityResponse> getByParticipantId(String id) {
-    List<Activity> activities = activityRepository.findActivitiesByOrganizerId(id);
+    List<Activity> activities = activityRepository.findActivitiesByParticipantId(id);
     if (activities == null) {
       return null;
     }
