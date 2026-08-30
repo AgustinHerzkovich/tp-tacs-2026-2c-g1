@@ -3,6 +3,7 @@ package com.solnotfound.entity;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -42,11 +43,12 @@ public class Votation {
     options.get(options.indexOf(option)).removeUser(user);
   }
 
-  public LocalDateTime getVoteByUser(User user) {
+  public Optional<LocalDateTime> getVoteByUser(User user) {
     for (VotationOption option : options) {
       if (option.thisUserVoted(user)) {
-        return option.getDateTime();
+        return Optional.of(option.getDateTime());
       }
     }
+    return Optional.empty();
   }
 }
