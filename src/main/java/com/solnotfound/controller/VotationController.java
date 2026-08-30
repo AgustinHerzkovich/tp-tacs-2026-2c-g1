@@ -4,6 +4,7 @@ import com.solnotfound.dto.UpdateVotationOptionsRequest;
 import com.solnotfound.dto.VotationDTO;
 import com.solnotfound.service.VotationService;
 import jakarta.validation.Valid;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -48,5 +49,13 @@ public class VotationController {
       return authentication.getName();
     }
     return "development-user";
+  }
+
+  @PutMapping("/{votationId}/vote")
+  public ResponseEntity<VotationDTO> vote(
+      @PathVariable String votationId,
+      @Valid @RequestBody LocalDateTime vote,
+      Authentication authentication) {
+    return ResponseEntity.ok(votationService.vote(votationId, currentUserId(authentication), vote));
   }
 }
