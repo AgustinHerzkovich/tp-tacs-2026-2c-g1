@@ -92,3 +92,23 @@ pero se intentó ejecutar con Java 17. El hook evita esa mezcla configurando Jav
 ## Git flow
 
 ![Diagrama de Git flow](src/main/resources/static/gitflow.png)
+
+## Uso de inteligencia artificial
+
+Durante el desarrollo utilizamos asistentes de IA generativa, principalmente ChatGPT y Claude,
+como herramientas de apoyo. Su uso se concentró en las siguientes tareas:
+
+- Generación y adaptación de código repetitivo o *boilerplate*.
+- Propuesta de casos de prueba y revisión de la cobertura de tests.
+- Revisión de las user stories para detectar requisitos, casos límite o validaciones que pudieran
+  haberse omitido.
+- Consulta de alternativas y opiniones para decisiones de diseño e implementación.
+- Apoyo en la redacción y revisión de documentación técnica, incluyendo la creación y
+  homogeneización de la documentación Javadoc del código.
+- Apoyo en la aplicación y verificación del formato y de las herramientas de calidad del proyecto,
+  como Spotless, Checkstyle y SpotBugs.
+- Análisis de errores de compilación, tests y conflictos de integración.
+
+Las respuestas de estas herramientas se tomaron como sugerencias y no como resultados definitivos.
+El equipo revisó las propuestas, las adaptó al diseño y las convenciones del proyecto, y validó los
+cambios mediante revisión del código, ejecución de tests y el proceso de verificación de Maven.
