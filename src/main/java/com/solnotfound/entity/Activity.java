@@ -10,6 +10,7 @@ import lombok.Setter;
 public class Activity {
 
   @Getter @Setter private String id;
+  @Getter @Setter private String creatorUserId;
   @Getter @Setter private String title;
   @Getter @Setter private String description;
   @Getter @Setter private ActivityType type;
@@ -52,12 +53,24 @@ public class Activity {
     return List.copyOf(statusHistory);
   }
 
+  /**
+   * Changes the activity status and appends it to the status history.
+   *
+   * @param newStatus status to apply
+   */
   public void setStatus(ActivityStatus newStatus) {
     // TODO: Validar transiciones permitidas entre estados.
     status = newStatus;
     statusHistory.add(newStatus);
   }
 
+  /**
+   * Adds a participant if they are not already registered and updates availability when the minimum
+   * participant count is reached.
+   *
+   * @param userId identifier of the participant
+   * @throws IllegalStateActivityException if the activity no longer accepts changes or is full
+   */
   public synchronized void addParticipant(String userId) {
     if (cannotChangeParticipants()) {
       throw new IllegalStateActivityException(
@@ -84,6 +97,13 @@ public class Activity {
     }
   }
 
+  /**
+   * Removes a participant when present and updates availability if the activity drops below its
+   * minimum participant count.
+   *
+   * @param userId identifier of the participant
+   * @throws IllegalStateActivityException if the activity no longer accepts participant changes
+   */
   public synchronized void removeParticipant(String userId) {
     if (cannotChangeParticipants()) {
       throw new IllegalStateActivityException(
@@ -101,6 +121,12 @@ public class Activity {
     }
   }
 
+  /**
+   * Indicates whether the activity is inside its anticipation window and has not yet had its
+   * forecast checked.
+   *
+   * @return {@code true} when the weather check should run
+   */
   public boolean isTimeToCheckWeatherConditions() {
     LocalDateTime now = LocalDateTime.now();
     LocalDateTime windowStart = dateTime.minusHours(anticipationWindow);
@@ -114,6 +140,13 @@ public class Activity {
     this.weatherChecked = true;
   }
 
+  /**
+   * Finishes the activity when its scheduled time has passed, unless it is already cancelled or
+   * finished.
+   *
+   * @param now instant used to evaluate the activity
+   * @return {@code true} when the status changed to {@link ActivityStatus#FINISHED}
+   */
   public boolean finishIfPast(LocalDateTime now) {
     if (status != ActivityStatus.CANCELLED
         && status != ActivityStatus.FINISHED

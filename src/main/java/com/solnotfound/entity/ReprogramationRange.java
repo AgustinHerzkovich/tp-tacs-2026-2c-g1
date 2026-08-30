@@ -16,6 +16,14 @@ public class ReprogramationRange {
   private final LocalTime initialHour;
   private final LocalTime finalHour;
 
+  /**
+   * Checks whether a candidate date is after the original date, no later than the configured day
+   * limit, and inside the allowed daily time window.
+   *
+   * @param originalDateTime original activity date and time
+   * @param candidateDateTime proposed replacement date and time
+   * @return {@code true} when the candidate satisfies every range constraint
+   */
   public boolean isWithinRange(LocalDateTime originalDateTime, LocalDateTime candidateDateTime) {
     LocalDateTime limit = originalDateTime.plusDays(maxDays);
     LocalTime candidateTime = candidateDateTime.toLocalTime();

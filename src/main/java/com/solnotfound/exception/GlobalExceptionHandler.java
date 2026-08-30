@@ -76,4 +76,20 @@ public class GlobalExceptionHandler {
     problem.setProperty("parameter", exception.getName());
     return ResponseEntity.badRequest().body(problem);
   }
+
+  @ExceptionHandler(ResourceNotFoundException.class)
+  public ResponseEntity<ProblemDetail> handleResourceNotFound(ResourceNotFoundException exception) {
+    ProblemDetail problem =
+        ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, exception.getMessage());
+    problem.setTitle("Resource not found");
+    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problem);
+  }
+
+  @ExceptionHandler(AccessDeniedException.class)
+  public ResponseEntity<ProblemDetail> handleAccessDenied(AccessDeniedException exception) {
+    ProblemDetail problem =
+        ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, exception.getMessage());
+    problem.setTitle("Access denied");
+    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(problem);
+  }
 }

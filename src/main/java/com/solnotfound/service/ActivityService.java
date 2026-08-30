@@ -22,8 +22,8 @@ import com.solnotfound.entity.WeatherForecast;
 import com.solnotfound.exception.ActivityAccessDeniedException;
 import com.solnotfound.exception.ActivityNotFoundException;
 import com.solnotfound.exception.InvalidActivityException;
-import com.solnotfound.repository.ActivityRepository;
-import com.solnotfound.repository.CityRepository;
+import com.solnotfound.repository.IActivityRepository;
+import com.solnotfound.repository.ICityRepository;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -31,27 +31,40 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class ActivityService {
-  private final ActivityRepository activityRepository;
+  private final IActivityRepository activityRepository;
   private final IWeatherAdapter weatherAdapter;
-  private final CityRepository cityRepository;
+  private final ICityRepository cityRepository;
 
   @edu.umd.cs.findbugs.annotations.SuppressFBWarnings(
       value = "EI_EXPOSE_REP2",
       justification = "Spring injects the shared in-memory repository")
   public ActivityService(
-      ActivityRepository activityRepository,
+      IActivityRepository activityRepository,
       IWeatherAdapter weatherAdapter,
-      CityRepository cityRepository) {
+      ICityRepository cityRepository) {
     this.activityRepository = activityRepository;
     this.weatherAdapter = weatherAdapter;
     this.cityRepository = cityRepository;
   }
 
   public ActivityResponse create(CreateActivityRequest request) {
+    return create(request, "development-user");
+  }
+
+  /**
+   * Validates and creates an activity associated with its authenticated creator.
+   *
+   * @param request activity data to validate and persist
+   * @param creatorUserId authenticated creator identifier
+   * @return the persisted activity representation
+   * @throws InvalidActivityException when cross-field business constraints are not satisfied
+   */
+  public ActivityResponse create(CreateActivityRequest request, String creatorUserId) {
     validate(request);
 
     Activity activity = new Activity();
     activity.setId(UUID.randomUUID().toString());
+    activity.setCreatorUserId(creatorUserId);
     activity.setTitle(request.title());
     activity.setDescription(request.description());
     activity.setType(request.type());
@@ -72,6 +85,13 @@ public class ActivityService {
     return activityRepository.findAll().stream().map(this::toResponse).toList();
   }
 
+  /**
+   * Searches activities using all non-null filters. Date bounds are inclusive.
+   *
+   * @param filter optional activity criteria
+   * @return matching activities
+   * @throws InvalidActivityException when the start date is after the end date
+   */
   public List<ActivityResponse> search(ActivityFilterDTO filter) {
     if (filter.dateFrom() != null
         && filter.dateTo() != null
@@ -117,6 +137,14 @@ public class ActivityService {
     return toResponse(activity);
   }
 
+  /**
+   * Adds a user to an activity and persists the resulting participant and availability state.
+   *
+   * @param activityId activity identifier
+   * @param userId authenticated user identifier
+   * @return the updated activity
+   * @throws ActivityNotFoundException when the activity does not exist
+   */
   public ActivityResponse join(String activityId, String userId) {
     Activity activity = findActivityOrThrow(activityId);
 
@@ -127,6 +155,14 @@ public class ActivityService {
     return toResponse(activity);
   }
 
+  /**
+   * Removes a user from an activity and persists the resulting participant and availability state.
+   *
+   * @param activityId activity identifier
+   * @param userId authenticated user identifier
+   * @return the updated activity
+   * @throws ActivityNotFoundException when the activity does not exist
+   */
   public ActivityResponse leave(String activityId, String userId) {
     Activity activity = findActivityOrThrow(activityId);
 
@@ -137,11 +173,19 @@ public class ActivityService {
     return toResponse(activity);
   }
 
+  /**
+   * Retrieves current weather and the activity-time forecast for a participant.
+   *
+   * @param activityId activity identifier
+   * @param userId authenticated user identifier
+   * @return weather information associated with the activity
+   * @throws ActivityNotFoundException when the activity does not exist
+   * @throws ActivityAccessDeniedException when the user is not participating
+   */
   public ActivityWeatherResponse getWeather(String activityId, String userId) {
     Activity activity = findActivityOrThrow(activityId);
 
     verifyParticipant(activity, userId);
-    // TODO: Revisar si es getWeather o getClimate
     WeatherForecast currentWeather = weatherAdapter.getWeather(activity.getLocation());
 
     WeatherForecast activityForecast =
