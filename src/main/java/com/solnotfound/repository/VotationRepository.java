@@ -15,4 +15,6 @@ public interface VotationRepository {
   public List<Votation> findByVoterId(String id);
 
   public List<Votation> findByOrganizerOrParticipantId(String userId);
+
+  public Votation findActiveVotationByActivityId(String activityId);
 }

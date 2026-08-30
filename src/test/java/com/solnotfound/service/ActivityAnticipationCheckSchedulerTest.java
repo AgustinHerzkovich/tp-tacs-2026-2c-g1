@@ -8,8 +8,10 @@ import static org.mockito.Mockito.*;
 import com.solnotfound.adapters.IWeatherAdapter;
 import com.solnotfound.entity.*;
 import com.solnotfound.repository.ActivityRepository;
+import com.solnotfound.repository.VotationRepository;
 import com.solnotfound.service.schedulers.ActivityAnticipationCheckScheduler;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,6 +32,8 @@ class ActivityAnticipationCheckSchedulerTest {
 
   @Mock private INotificationFacade notificationFacade;
 
+  @Mock private VotationRepository votationRepository;
+
   @InjectMocks private ActivityAnticipationCheckScheduler scheduler;
 
   private Activity activityToCheck;
@@ -37,6 +41,7 @@ class ActivityAnticipationCheckSchedulerTest {
   private Location location;
   private LocalDateTime dateTime;
   private WeatherForecast weather;
+  private ReprogramationRange range;
 
   @BeforeEach
   void setUp() {
@@ -48,6 +53,12 @@ class ActivityAnticipationCheckSchedulerTest {
     lenient().when(activityToCheck.isTimeToCheckWeatherConditions()).thenReturn(true);
     lenient().when(activityToCheck.getLocation()).thenReturn(location);
     lenient().when(activityToCheck.getDateTime()).thenReturn(dateTime);
+    lenient().when(activityToCheck.getId()).thenReturn("activity-1");
+
+    range = mock(ReprogramationRange.class);
+    lenient().when(range.getMaxDays()).thenReturn(1);
+    lenient().when(range.getInitialHour()).thenReturn(LocalTime.of(10, 0));
+    lenient().when(activityToCheck.getReprogramationRange()).thenReturn(range);
 
     activityNotToCheck = mock(Activity.class);
     lenient().when(activityNotToCheck.isTimeToCheckWeatherConditions()).thenReturn(false);
@@ -176,5 +187,102 @@ class ActivityAnticipationCheckSchedulerTest {
 
     assertThat(activityCaptor.getValue()).isEqualTo(activityToCheck);
     assertThat(weatherCaptor.getValue()).isEqualTo(weather);
+  }
+
+  @Test
+  void opensActiveVotationWithGoodWeatherOptionsWhenNoneIsActive() throws Exception {
+    when(activityRepository.findAll()).thenReturn(List.of(activityToCheck));
+    when(weatherAdapter.getFutureClimate(any(), any())).thenReturn(weather);
+    when(badWeatherChecker.isBadWeatherForActivity(any(), eq(activityToCheck)))
+        .thenReturn(true, false, false);
+    when(range.isWithinRange(any(), any())).thenReturn(true, true, false);
+
+    scheduler.checkActivitiesClimate();
+
+    ArgumentCaptor<Votation> votationCaptor = ArgumentCaptor.forClass(Votation.class);
+    verify(votationRepository).save(votationCaptor.capture());
+    Votation saved = votationCaptor.getValue();
+
+    assertThat(saved.getStatus()).isEqualTo(VotationStatus.ACTIVE);
+    assertThat(saved.getActivity()).isEqualTo(activityToCheck);
+    assertThat(saved.getOptions().get(0).getUsers()).isEmpty();
+    assertThat(saved.getOptions())
+        .extracting(VotationOption::getDateTime)
+        .containsExactly(
+            dateTime.plusDays(1).withHour(10).withMinute(0).withSecond(0),
+            dateTime.plusDays(1).withHour(11).withMinute(0).withSecond(0));
+  }
+
+  @Test
+  void doesNotOpenVotationWhenAnActiveVotationAlreadyExists() throws Exception {
+    Votation activeVotation = mock(Votation.class);
+    when(activityRepository.findAll()).thenReturn(List.of(activityToCheck));
+    when(weatherAdapter.getFutureClimate(any(), any())).thenReturn(weather);
+    when(badWeatherChecker.isBadWeatherForActivity(any(), eq(activityToCheck))).thenReturn(true);
+    when(votationRepository.findActiveVotationByActivityId("activity-1"))
+        .thenReturn(activeVotation);
+
+    scheduler.checkActivitiesClimate();
+
+    verify(notificationFacade).notifyBadWeather(activityToCheck, weather);
+    verify(votationRepository, never()).save(any());
+  }
+
+  @Test
+  void onlyOffersOptionsForSlotsWithGoodWeather() throws Exception {
+    when(activityRepository.findAll()).thenReturn(List.of(activityToCheck));
+    when(weatherAdapter.getFutureClimate(any(), any())).thenReturn(weather);
+    when(badWeatherChecker.isBadWeatherForActivity(any(), eq(activityToCheck)))
+        .thenReturn(true, true, false);
+    when(range.isWithinRange(any(), any())).thenReturn(true, true, false);
+
+    scheduler.checkActivitiesClimate();
+
+    ArgumentCaptor<Votation> votationCaptor = ArgumentCaptor.forClass(Votation.class);
+    verify(votationRepository).save(votationCaptor.capture());
+    Votation saved = votationCaptor.getValue();
+
+    assertThat(saved.getOptions())
+        .extracting(VotationOption::getDateTime)
+        .containsExactly(dateTime.plusDays(1).withHour(11).withMinute(0).withSecond(0));
+  }
+
+  @Test
+  void considersEveryDayWithinTheReprogramationRange() throws Exception {
+    when(range.getMaxDays()).thenReturn(2);
+    when(range.isWithinRange(any(), any())).thenReturn(true, true, false, true, true, false);
+    when(activityRepository.findAll()).thenReturn(List.of(activityToCheck));
+    when(weatherAdapter.getFutureClimate(any(), any())).thenReturn(weather);
+    when(badWeatherChecker.isBadWeatherForActivity(any(), eq(activityToCheck)))
+        .thenReturn(true, false, false, false, false);
+
+    scheduler.checkActivitiesClimate();
+
+    ArgumentCaptor<Votation> votationCaptor = ArgumentCaptor.forClass(Votation.class);
+    verify(votationRepository).save(votationCaptor.capture());
+    Votation saved = votationCaptor.getValue();
+
+    assertThat(saved.getOptions())
+        .extracting(VotationOption::getDateTime)
+        .containsExactly(
+            dateTime.plusDays(1).withHour(10).withMinute(0).withSecond(0),
+            dateTime.plusDays(1).withHour(11).withMinute(0).withSecond(0),
+            dateTime.plusDays(2).withHour(10).withMinute(0).withSecond(0),
+            dateTime.plusDays(2).withHour(11).withMinute(0).withSecond(0));
+  }
+
+  @Test
+  void savesVotationWithNoOptionsWhenNoCandidateIsWithinRange() throws Exception {
+    when(range.isWithinRange(any(), any())).thenReturn(false);
+    when(activityRepository.findAll()).thenReturn(List.of(activityToCheck));
+    when(weatherAdapter.getFutureClimate(any(), any())).thenReturn(weather);
+    when(badWeatherChecker.isBadWeatherForActivity(any(), eq(activityToCheck))).thenReturn(true);
+
+    scheduler.checkActivitiesClimate();
+
+    ArgumentCaptor<Votation> votationCaptor = ArgumentCaptor.forClass(Votation.class);
+    verify(votationRepository).save(votationCaptor.capture());
+
+    assertThat(votationCaptor.getValue().getOptions()).isEmpty();
   }
 }

@@ -3,6 +3,7 @@ package com.solnotfound.repository;
 import com.solnotfound.entity.Activity;
 import com.solnotfound.entity.User;
 import com.solnotfound.entity.Votation;
+import com.solnotfound.entity.VotationStatus;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -70,6 +71,17 @@ public class VotationMockRepository implements VotationRepository {
                 isOrganizer(votation.getActivity(), userId)
                     || isParticipant(votation.getActivity(), userId))
         .toList();
+  }
+
+  @Override
+  public Votation findActiveVotationByActivityId(String activityId) {
+    return votations.stream()
+        .filter(votation -> votation.getStatus() == VotationStatus.ACTIVE)
+        .filter(
+            votation ->
+                votation.getActivity() != null && activityId.equals(votation.getActivity().getId()))
+        .findFirst()
+        .orElse(null);
   }
 
   private boolean isOrganizer(Activity activity, String userId) {

@@ -23,6 +23,16 @@ public class GlobalExceptionHandler {
     return ResponseEntity.badRequest().body(problem);
   }
 
+  @ExceptionHandler(InvalidVotationOptionsException.class)
+  public ResponseEntity<ProblemDetail> handleInvalidVotationOptions(
+      InvalidVotationOptionsException exception) {
+    ProblemDetail problem =
+        ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, exception.getMessage());
+    problem.setTitle("Invalid votation options");
+    problem.setProperty("invalidOptionDates", exception.getInvalidOptionDates());
+    return ResponseEntity.badRequest().body(problem);
+  }
+
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ResponseEntity<ProblemDetail> handleValidation(MethodArgumentNotValidException exception) {
     Map<String, String> errors = new LinkedHashMap<>();

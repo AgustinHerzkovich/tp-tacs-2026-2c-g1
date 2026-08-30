@@ -1,13 +1,12 @@
 package com.solnotfound.controller;
 
 import com.solnotfound.dto.VotationDTO;
+import com.solnotfound.dto.VotationOptionDTO;
 import com.solnotfound.service.VotationService;
+import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/votations")
@@ -17,6 +16,16 @@ public class VotationController {
 
   public VotationController(VotationService votationService) {
     this.votationService = votationService;
+  }
+
+  @PutMapping("/{votationId}/options")
+  public ResponseEntity<List<VotationDTO>> updateVotationOptions(
+      @PathVariable String votationId, @Valid @RequestBody List<VotationOptionDTO> request) {
+    List<VotationDTO> votations = votationService.updateVotationOptions(votationId, request);
+    if (votations == null) {
+      return ResponseEntity.notFound().build();
+    }
+    return ResponseEntity.ok(votations);
   }
 
   @GetMapping("/users/{userId}")
