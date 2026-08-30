@@ -2,6 +2,7 @@ package com.solnotfound.controller;
 
 import com.solnotfound.dto.ActivityFilterDTO;
 import com.solnotfound.dto.ActivityResponse;
+import com.solnotfound.dto.ActivityWeatherResponse;
 import com.solnotfound.dto.CreateActivityRequest;
 import com.solnotfound.entity.ActivityType;
 import com.solnotfound.service.ActivityService;
@@ -73,6 +74,12 @@ public class ActivityController {
   public ResponseEntity<ActivityResponse> leave(
       @PathVariable String id, Authentication authentication) {
     return ResponseEntity.ok(activityService.leave(id, currentUserId(authentication)));
+  }
+
+  @GetMapping("/{id}/weather")
+  public ResponseEntity<ActivityWeatherResponse> getWeather(
+      @PathVariable String id, Authentication authentication) {
+    return ResponseEntity.ok(activityService.getWeather(id, currentUserId(authentication)));
   }
 
   private String currentUserId(Authentication authentication) {

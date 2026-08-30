@@ -1,14 +1,21 @@
 package com.solnotfound.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import com.solnotfound.adapters.IWeatherAdapter;
 import com.solnotfound.dto.ActivityResponse;
+import com.solnotfound.dto.ActivityWeatherResponse;
 import com.solnotfound.dto.CreateActivityRequest;
 import com.solnotfound.dto.LocationDTO;
 import com.solnotfound.dto.ParticipantDTO;
 import com.solnotfound.dto.ReprogramationRangeDTO;
 import com.solnotfound.dto.WeatherConditionsDTO;
 import com.solnotfound.entity.ActivityType;
+import com.solnotfound.entity.WeatherForecast;
 import com.solnotfound.repository.ActivityRepository;
 import com.solnotfound.repository.CityRepository;
 import com.solnotfound.service.ActivityService;
@@ -24,8 +31,10 @@ class ActivityControllerTest {
 
   @Test
   void respondsCreatedWithResourceLocation() {
+    IWeatherAdapter weatherAdapter = mock(IWeatherAdapter.class);
     ActivityController controller =
-        new ActivityController(new ActivityService(new ActivityRepository(), new CityRepository()));
+        new ActivityController(
+            new ActivityService(new ActivityRepository(), weatherAdapter, new CityRepository()));
     LocationDTO location = new LocationDTO("Buenos Aires", null, null);
     CreateActivityRequest request =
         new CreateActivityRequest(
@@ -50,8 +59,10 @@ class ActivityControllerTest {
 
   @Test
   void joinsParticipantAndReturnsOk() {
+    IWeatherAdapter weatherAdapter = mock(IWeatherAdapter.class);
     ActivityController controller =
-        new ActivityController(new ActivityService(new ActivityRepository(), new CityRepository()));
+        new ActivityController(
+            new ActivityService(new ActivityRepository(), weatherAdapter, new CityRepository()));
 
     CreateActivityRequest request =
         new CreateActivityRequest(
@@ -84,8 +95,10 @@ class ActivityControllerTest {
 
   @Test
   void removesParticipantAndReturnsOk() {
+    IWeatherAdapter weatherAdapter = mock(IWeatherAdapter.class);
     ActivityController controller =
-        new ActivityController(new ActivityService(new ActivityRepository(), new CityRepository()));
+        new ActivityController(
+            new ActivityService(new ActivityRepository(), weatherAdapter, new CityRepository()));
 
     CreateActivityRequest request =
         new CreateActivityRequest(
@@ -114,6 +127,60 @@ class ActivityControllerTest {
     assertThat(response.getBody().participantCount()).isZero();
 
     assertThat(response.getBody().participants()).isEmpty();
+  }
+
+  @Test
+  void returnsWeatherAndForecastForParticipant() {
+    IWeatherAdapter weatherAdapter = mock(IWeatherAdapter.class);
+
+    ActivityController controller =
+        new ActivityController(
+            new ActivityService(new ActivityRepository(), weatherAdapter, new CityRepository()));
+
+    CreateActivityRequest request =
+        new CreateActivityRequest(
+            "Football match",
+            "Friendly match",
+            ActivityType.OUTDOOR,
+            new LocationDTO("Buenos Aires", null, null),
+            LocalDateTime.now().plusDays(1),
+            1,
+            10,
+            new WeatherConditionsDTO(30, 10, 28, 25.0),
+            15,
+            new ReprogramationRangeDTO(3, LocalTime.of(10, 0), LocalTime.of(20, 0)));
+
+    ActivityResponse activity = controller.create(request).getBody();
+
+    controller.join(activity.id(), authentication("user-1"));
+
+    WeatherForecast currentWeather =
+        new WeatherForecast(1, LocalDateTime.of(2026, 8, 27, 10, 0), 22.0f, 10.0f, 15.0f);
+
+    WeatherForecast activityForecast =
+        new WeatherForecast(2, activity.dateTime(), 18.0f, 60.0f, 30.0f);
+
+    when(weatherAdapter.getWeather(any())).thenReturn(currentWeather);
+
+    when(weatherAdapter.getFutureClimate(any(), eq(activity.dateTime())))
+        .thenReturn(activityForecast);
+
+    ResponseEntity<ActivityWeatherResponse> response =
+        controller.getWeather(activity.id(), authentication("user-1"));
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+    assertThat(response.getBody()).isNotNull();
+
+    assertThat(response.getBody().activityId()).isEqualTo(activity.id());
+
+    assertThat(response.getBody().location()).isEqualTo(activity.location());
+
+    assertThat(response.getBody().activityDateTime()).isEqualTo(activity.dateTime());
+
+    assertThat(response.getBody().currentWeather().temperature()).isEqualTo(22.0f);
+
+    assertThat(response.getBody().activityForecast().temperature()).isEqualTo(18.0f);
   }
 
   private TestingAuthenticationToken authentication(String userId) {

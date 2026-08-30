@@ -1,12 +1,15 @@
 package com.solnotfound.service;
 
+import com.solnotfound.adapters.IWeatherAdapter;
 import com.solnotfound.dto.ActivityFilterDTO;
 import com.solnotfound.dto.ActivityResponse;
+import com.solnotfound.dto.ActivityWeatherResponse;
 import com.solnotfound.dto.CreateActivityRequest;
 import com.solnotfound.dto.LocationDTO;
 import com.solnotfound.dto.ParticipantDTO;
 import com.solnotfound.dto.ReprogramationRangeDTO;
 import com.solnotfound.dto.WeatherConditionsDTO;
+import com.solnotfound.dto.WeatherForecastDTO;
 import com.solnotfound.entity.Activity;
 import com.solnotfound.entity.Location;
 import com.solnotfound.entity.MaxRainProbabilityCondition;
@@ -15,6 +18,8 @@ import com.solnotfound.entity.Participant;
 import com.solnotfound.entity.ReprogramationRange;
 import com.solnotfound.entity.TemperatureRangeCondition;
 import com.solnotfound.entity.WeatherCondition;
+import com.solnotfound.entity.WeatherForecast;
+import com.solnotfound.exception.ActivityAccessDeniedException;
 import com.solnotfound.exception.ActivityNotFoundException;
 import com.solnotfound.exception.InvalidActivityException;
 import com.solnotfound.repository.ActivityRepository;
@@ -27,13 +32,18 @@ import org.springframework.stereotype.Service;
 @Service
 public class ActivityService {
   private final ActivityRepository activityRepository;
+  private final IWeatherAdapter weatherAdapter;
   private final CityRepository cityRepository;
 
   @edu.umd.cs.findbugs.annotations.SuppressFBWarnings(
       value = "EI_EXPOSE_REP2",
       justification = "Spring injects the shared in-memory repository")
-  public ActivityService(ActivityRepository activityRepository, CityRepository cityRepository) {
+  public ActivityService(
+      ActivityRepository activityRepository,
+      IWeatherAdapter weatherAdapter,
+      CityRepository cityRepository) {
     this.activityRepository = activityRepository;
+    this.weatherAdapter = weatherAdapter;
     this.cityRepository = cityRepository;
   }
 
@@ -127,6 +137,19 @@ public class ActivityService {
     return toResponse(activity);
   }
 
+  public ActivityWeatherResponse getWeather(String activityId, String userId) {
+    Activity activity = findActivityOrThrow(activityId);
+
+    verifyParticipant(activity, userId);
+    // TODO: Revisar si es getWeather o getClimate
+    WeatherForecast currentWeather = weatherAdapter.getWeather(activity.getLocation());
+
+    WeatherForecast activityForecast =
+        weatherAdapter.getFutureClimate(activity.getLocation(), activity.getDateTime());
+
+    return toWeatherResponse(activity, currentWeather, activityForecast);
+  }
+
   private void validate(CreateActivityRequest request) {
     if (request.minParticipants() > request.maxParticipants()) {
       throw new InvalidActivityException("Minimum participants cannot exceed maximum participants");
@@ -170,6 +193,15 @@ public class ActivityService {
     if (range.initialHour().isAfter(range.finalHour())) {
       throw new InvalidActivityException(
           "Reprogramation range initial hour must not be after final hour");
+    }
+  }
+
+  private void verifyParticipant(Activity activity, String userId) {
+    boolean isParticipant =
+        activity.getParticipants().stream().anyMatch(p -> p.getUserId().equals(userId));
+
+    if (!isParticipant) {
+      throw new ActivityAccessDeniedException("User is not participating in this activity");
     }
   }
 
@@ -260,6 +292,24 @@ public class ActivityService {
     return participants.stream()
         .map(participant -> new ParticipantDTO(participant.getUserId()))
         .toList();
+  }
+
+  private ActivityWeatherResponse toWeatherResponse(
+      Activity activity, WeatherForecast currentWeather, WeatherForecast activityForecast) {
+    return new ActivityWeatherResponse(
+        activity.getId(),
+        toLocationDTO(activity.getLocation()),
+        activity.getDateTime(),
+        toWeatherForecastDTO(currentWeather),
+        toWeatherForecastDTO(activityForecast));
+  }
+
+  private WeatherForecastDTO toWeatherForecastDTO(WeatherForecast weatherForecast) {
+    return new WeatherForecastDTO(
+        weatherForecast.getDateTime(),
+        weatherForecast.getTemperature(),
+        weatherForecast.getChanceOfRain(),
+        weatherForecast.getWindSpeed());
   }
 
   private Activity findActivityOrThrow(String activityId) {
