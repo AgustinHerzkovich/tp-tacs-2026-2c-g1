@@ -14,7 +14,6 @@ public class Votation {
   private String id;
   private String activityId;
   private LocalDateTime creationDate;
-  private LocalDateTime closeDate;
   private Double minQuorum = 0.50; // 50%
   private VotationStatus status;
   private List<VotationOption> options = new ArrayList<>();
