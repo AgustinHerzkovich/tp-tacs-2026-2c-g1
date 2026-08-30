@@ -168,4 +168,12 @@ public class Activity {
   private boolean cannotChangeParticipants() {
     return status == ActivityStatus.CANCELLED || status == ActivityStatus.FINISHED;
   }
+
+  public boolean isAParticipant(User user) {
+    return participants.contains(user);
+  }
+
+  public boolean isAnOrganizerOrAParticipant(User user) {
+    return organizer.equals(user) || isAParticipant(user);
+  }
 }
