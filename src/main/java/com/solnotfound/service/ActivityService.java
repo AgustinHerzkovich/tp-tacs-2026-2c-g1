@@ -5,7 +5,6 @@ import com.solnotfound.dto.ActivityResponse;
 import com.solnotfound.dto.CreateActivityRequest;
 import com.solnotfound.dto.LocationDTO;
 import com.solnotfound.dto.ParticipantDTO;
-import com.solnotfound.dto.ParticipantRequest;
 import com.solnotfound.dto.ReprogramationRangeDTO;
 import com.solnotfound.dto.WeatherConditionsDTO;
 import com.solnotfound.entity.Activity;
@@ -19,6 +18,7 @@ import com.solnotfound.entity.WeatherCondition;
 import com.solnotfound.exception.ActivityNotFoundException;
 import com.solnotfound.exception.InvalidActivityException;
 import com.solnotfound.repository.ActivityRepository;
+import com.solnotfound.repository.CityRepository;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -27,9 +27,14 @@ import org.springframework.stereotype.Service;
 @Service
 public class ActivityService {
   private final ActivityRepository activityRepository;
+  private final CityRepository cityRepository;
 
-  public ActivityService(ActivityRepository activityRepository) {
+  @edu.umd.cs.findbugs.annotations.SuppressFBWarnings(
+      value = "EI_EXPOSE_REP2",
+      justification = "Spring injects the shared in-memory repository")
+  public ActivityService(ActivityRepository activityRepository, CityRepository cityRepository) {
     this.activityRepository = activityRepository;
+    this.cityRepository = cityRepository;
   }
 
   public ActivityResponse create(CreateActivityRequest request) {
@@ -77,7 +82,8 @@ public class ActivityService {
 
     if (filter.city() != null
         && !filter.city().isBlank()
-        && !filter.city().equalsIgnoreCase(activity.getLocation().city())) {
+        && (activity.getLocation().city() == null
+            || !filter.city().equalsIgnoreCase(activity.getLocation().city().name()))) {
       return false;
     }
 
@@ -101,10 +107,10 @@ public class ActivityService {
     return toResponse(activity);
   }
 
-  public ActivityResponse join(String activityId, ParticipantRequest request) {
+  public ActivityResponse join(String activityId, String userId) {
     Activity activity = findActivityOrThrow(activityId);
 
-    activity.addParticipant(request.userId());
+    activity.addParticipant(userId);
 
     activityRepository.save(activity);
 
@@ -168,7 +174,7 @@ public class ActivityService {
   }
 
   private Location toLocation(LocationDTO dto) {
-    return new Location(dto.city(), dto.latitude(), dto.longitude());
+    return new Location(cityRepository.findOrCreate(dto.city()), dto.latitude(), dto.longitude());
   }
 
   private ReprogramationRange toReprogramationRange(ReprogramationRangeDTO dto) {
@@ -223,7 +229,10 @@ public class ActivityService {
   }
 
   private LocationDTO toLocationDTO(Location location) {
-    return new LocationDTO(location.city(), location.latitude(), location.longitude());
+    return new LocationDTO(
+        location.city() == null ? null : location.city().name(),
+        location.latitude(),
+        location.longitude());
   }
 
   private WeatherConditionsDTO toWeatherConditionsDTO(List<WeatherCondition> conditions) {

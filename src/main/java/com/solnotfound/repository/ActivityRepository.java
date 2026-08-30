@@ -1,6 +1,7 @@
 package com.solnotfound.repository;
 
 import com.solnotfound.entity.Activity;
+import com.solnotfound.entity.ActivityStatus;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -18,7 +19,20 @@ public class ActivityRepository { // TODO: Por ahora se guardan en memoria
     return List.copyOf(activities.values());
   }
 
+  public List<Activity> findActive() {
+    return activities.values().stream()
+        .filter(
+            activity ->
+                activity.getStatus() != ActivityStatus.CANCELLED
+                    && activity.getStatus() != ActivityStatus.FINISHED)
+        .toList();
+  }
+
   public Activity findById(String id) {
     return activities.get(id);
+  }
+
+  public void deleteAll() {
+    activities.clear();
   }
 }

@@ -38,9 +38,9 @@ public class GlobalExceptionHandler {
   public ResponseEntity<ProblemDetail> handleIllegalStateActivityException(
       IllegalStateActivityException exception) {
     ProblemDetail problem =
-        ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, exception.getMessage());
-    problem.setTitle("Illegal State activity");
-    return ResponseEntity.badRequest().body(problem);
+        ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
+    problem.setTitle("Activity state conflict");
+    return ResponseEntity.status(HttpStatus.CONFLICT).body(problem);
   }
 
   @ExceptionHandler(MethodArgumentNotValidException.class)

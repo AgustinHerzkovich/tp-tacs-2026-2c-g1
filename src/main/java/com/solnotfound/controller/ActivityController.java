@@ -3,7 +3,6 @@ package com.solnotfound.controller;
 import com.solnotfound.dto.ActivityFilterDTO;
 import com.solnotfound.dto.ActivityResponse;
 import com.solnotfound.dto.CreateActivityRequest;
-import com.solnotfound.dto.ParticipantRequest;
 import com.solnotfound.entity.ActivityType;
 import com.solnotfound.service.ActivityService;
 import jakarta.validation.Valid;
@@ -12,10 +11,13 @@ import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -61,17 +63,25 @@ public class ActivityController {
     return ResponseEntity.ok(activity);
   }
 
-  @PatchMapping("/{id}/participants")
+  @PutMapping("/{id}/participants/me")
   public ResponseEntity<ActivityResponse> join(
-      @PathVariable String id, @Valid @RequestBody ParticipantRequest request) {
-
-    return ResponseEntity.ok(activityService.join(id, request));
+      @PathVariable String id, Authentication authentication) {
+    return ResponseEntity.ok(activityService.join(id, currentUserId(authentication)));
   }
 
-  @PatchMapping("/{id}/participants/{userId}")
+  @DeleteMapping("/{id}/participants/me")
   public ResponseEntity<ActivityResponse> leave(
-      @PathVariable String id, @PathVariable String userId) {
+      @PathVariable String id, Authentication authentication) {
+    return ResponseEntity.ok(activityService.leave(id, currentUserId(authentication)));
+  }
 
-    return ResponseEntity.ok(activityService.leave(id, userId));
+  private String currentUserId(Authentication authentication) {
+    if (authentication != null && authentication.getPrincipal() instanceof Jwt jwt) {
+      return jwt.getSubject();
+    }
+    if (authentication != null && authentication.isAuthenticated()) {
+      return authentication.getName();
+    }
+    return "development-user";
   }
 }

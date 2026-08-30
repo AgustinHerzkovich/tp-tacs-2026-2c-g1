@@ -12,6 +12,9 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@edu.umd.cs.findbugs.annotations.SuppressFBWarnings(
+    value = "EI_EXPOSE_REP2",
+    justification = "Spring injects shared application collaborators")
 public class ActivityAnticipationCheckScheduler {
 
   private final ActivityRepository activityRepository;
@@ -22,13 +25,14 @@ public class ActivityAnticipationCheckScheduler {
   @Scheduled(cron = "0 0 * * * *")
   public void checkActivitiesClimate() {
 
-    List<Activity> activities = activityRepository.findAll();
+    List<Activity> activeActivities = activityRepository.findActive();
 
-    List<Activity> activitiesToCheck =
-        activities.stream().filter(Activity::isTimeToCheckWeatherConditions).toList();
-
-    activitiesToCheck.forEach(
+    activeActivities.forEach(
         activity -> {
+          if (!activity.isTimeToCheckWeatherConditions()) {
+            return;
+          }
+
           Location location = activity.getLocation();
           try {
             WeatherForecast weather =

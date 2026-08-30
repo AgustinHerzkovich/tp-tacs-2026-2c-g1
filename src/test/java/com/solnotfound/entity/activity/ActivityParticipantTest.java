@@ -7,6 +7,9 @@ import com.solnotfound.entity.Activity;
 import com.solnotfound.entity.ActivityStatus;
 import com.solnotfound.entity.Participant;
 import com.solnotfound.exception.IllegalStateActivityException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -54,10 +57,11 @@ public class ActivityParticipantTest {
   @Test
   void doesNotAllowSameUserToJoinTwice() {
     activity.addParticipant("user-1");
+    activity.addParticipant("user-1");
 
-    assertThatThrownBy(() -> activity.addParticipant("user-1"))
-        .isInstanceOf(IllegalStateActivityException.class)
-        .hasMessage("User is already participating in this activity.");
+    assertThat(activity.getParticipants())
+        .extracting(Participant::getUserId)
+        .containsExactly("user-1");
   }
 
   @Test
@@ -85,9 +89,9 @@ public class ActivityParticipantTest {
 
   @Test
   void doesNotAllowRemovingUserWhoIsNotParticipating() {
-    assertThatThrownBy(() -> activity.removeParticipant("user-1"))
-        .isInstanceOf(IllegalStateActivityException.class)
-        .hasMessage("User is not participating in this activity");
+    activity.removeParticipant("user-1");
+
+    assertThat(activity.getParticipants()).isEmpty();
   }
 
   @Test
@@ -170,5 +174,45 @@ public class ActivityParticipantTest {
 
     assertThat(activity.getStatusHistory())
         .containsExactly(ActivityStatus.CONFIRMED, ActivityStatus.PROPOSED);
+  }
+
+  @Test
+  void concurrentJoinsDoNotExceedMaximumParticipants() throws Exception {
+    activity.setMaxParticipants(1);
+    CountDownLatch start = new CountDownLatch(1);
+
+    try (ExecutorService executor = Executors.newFixedThreadPool(2)) {
+      executor.submit(() -> joinAfter(start, "user-1"));
+      executor.submit(() -> joinAfter(start, "user-2"));
+      start.countDown();
+    }
+
+    assertThat(activity.getParticipants()).hasSize(1);
+  }
+
+  @Test
+  void concurrentDuplicateJoinsAddUserOnce() throws Exception {
+    CountDownLatch start = new CountDownLatch(1);
+
+    try (ExecutorService executor = Executors.newFixedThreadPool(2)) {
+      executor.submit(() -> joinAfter(start, "user-1"));
+      executor.submit(() -> joinAfter(start, "user-1"));
+      start.countDown();
+    }
+
+    assertThat(activity.getParticipants())
+        .extracting(Participant::getUserId)
+        .containsExactly("user-1");
+  }
+
+  private void joinAfter(CountDownLatch start, String userId) {
+    try {
+      start.await();
+      activity.addParticipant(userId);
+    } catch (InterruptedException exception) {
+      Thread.currentThread().interrupt();
+    } catch (IllegalStateActivityException ignored) {
+      // One contender is expected to lose when the activity reaches capacity.
+    }
   }
 }

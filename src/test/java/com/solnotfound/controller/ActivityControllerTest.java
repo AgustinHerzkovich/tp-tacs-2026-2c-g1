@@ -6,11 +6,11 @@ import com.solnotfound.dto.ActivityResponse;
 import com.solnotfound.dto.CreateActivityRequest;
 import com.solnotfound.dto.LocationDTO;
 import com.solnotfound.dto.ParticipantDTO;
-import com.solnotfound.dto.ParticipantRequest;
 import com.solnotfound.dto.ReprogramationRangeDTO;
 import com.solnotfound.dto.WeatherConditionsDTO;
 import com.solnotfound.entity.ActivityType;
 import com.solnotfound.repository.ActivityRepository;
+import com.solnotfound.repository.CityRepository;
 import com.solnotfound.service.ActivityService;
 import java.net.URI;
 import java.time.LocalDateTime;
@@ -18,13 +18,14 @@ import java.time.LocalTime;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.TestingAuthenticationToken;
 
 class ActivityControllerTest {
 
   @Test
   void respondsCreatedWithResourceLocation() {
     ActivityController controller =
-        new ActivityController(new ActivityService(new ActivityRepository()));
+        new ActivityController(new ActivityService(new ActivityRepository(), new CityRepository()));
     LocationDTO location = new LocationDTO("Buenos Aires", null, null);
     CreateActivityRequest request =
         new CreateActivityRequest(
@@ -50,7 +51,7 @@ class ActivityControllerTest {
   @Test
   void joinsParticipantAndReturnsOk() {
     ActivityController controller =
-        new ActivityController(new ActivityService(new ActivityRepository()));
+        new ActivityController(new ActivityService(new ActivityRepository(), new CityRepository()));
 
     CreateActivityRequest request =
         new CreateActivityRequest(
@@ -68,7 +69,7 @@ class ActivityControllerTest {
     ActivityResponse activity = controller.create(request).getBody();
 
     ResponseEntity<ActivityResponse> response =
-        controller.join(activity.id(), new ParticipantRequest("user-1"));
+        controller.join(activity.id(), authentication("user-1"));
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
 
@@ -84,7 +85,7 @@ class ActivityControllerTest {
   @Test
   void removesParticipantAndReturnsOk() {
     ActivityController controller =
-        new ActivityController(new ActivityService(new ActivityRepository()));
+        new ActivityController(new ActivityService(new ActivityRepository(), new CityRepository()));
 
     CreateActivityRequest request =
         new CreateActivityRequest(
@@ -101,9 +102,10 @@ class ActivityControllerTest {
 
     ActivityResponse activity = controller.create(request).getBody();
 
-    controller.join(activity.id(), new ParticipantRequest("user-1"));
+    controller.join(activity.id(), authentication("user-1"));
 
-    ResponseEntity<ActivityResponse> response = controller.leave(activity.id(), "user-1");
+    ResponseEntity<ActivityResponse> response =
+        controller.leave(activity.id(), authentication("user-1"));
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
 
@@ -112,5 +114,11 @@ class ActivityControllerTest {
     assertThat(response.getBody().participantCount()).isZero();
 
     assertThat(response.getBody().participants()).isEmpty();
+  }
+
+  private TestingAuthenticationToken authentication(String userId) {
+    TestingAuthenticationToken authentication = new TestingAuthenticationToken(userId, null);
+    authentication.setAuthenticated(true);
+    return authentication;
   }
 }

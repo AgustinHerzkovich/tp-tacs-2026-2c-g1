@@ -25,7 +25,7 @@ public class Activity {
       anticipationWindow; // hecho en horas, cantidad de tiempo antes de la actividad para chequear
 
   @Setter @Getter private ReprogramationRange reprogramationRange;
-  @Setter @Getter private Boolean availability = false;
+  private Boolean availability = false;
   @Getter private ActivityStatus status = ActivityStatus.CONFIRMED;
   private List<ActivityStatus> statusHistory = new ArrayList<>(List.of(ActivityStatus.CONFIRMED));
   @Setter @Getter private Boolean weatherChecked = false;
@@ -40,8 +40,12 @@ public class Activity {
     this.weatherConditions = List.copyOf(weatherConditions);
   }
 
-  public List<Participant> getParticipants() {
+  public synchronized List<Participant> getParticipants() {
     return List.copyOf(participants);
+  }
+
+  public synchronized Boolean getAvailability() {
+    return availability;
   }
 
   public List<ActivityStatus> getStatusHistory() {
@@ -54,23 +58,23 @@ public class Activity {
     statusHistory.add(newStatus);
   }
 
-  public void addParticipant(String userId) {
+  public synchronized void addParticipant(String userId) {
     if (cannotChangeParticipants()) {
       throw new IllegalStateActivityException(
           "Participants cannot be added to an activity in that status.");
-    }
-
-    boolean isFull = participants.size() >= maxParticipants;
-
-    if (isFull) {
-      throw new IllegalStateActivityException("Activity has no available spots.");
     }
 
     boolean alreadyParticipating =
         participants.stream().anyMatch(participant -> participant.getUserId().equals(userId));
 
     if (alreadyParticipating) {
-      throw new IllegalStateActivityException("User is already participating in this activity.");
+      return;
+    }
+
+    boolean isFull = participants.size() >= maxParticipants;
+
+    if (isFull) {
+      throw new IllegalStateActivityException("Activity has no available spots.");
     }
 
     participants.add(new Participant(userId));
@@ -80,7 +84,7 @@ public class Activity {
     }
   }
 
-  public void removeParticipant(String userId) {
+  public synchronized void removeParticipant(String userId) {
     if (cannotChangeParticipants()) {
       throw new IllegalStateActivityException(
           "Participants cannot be removed to an activity in that status.");
@@ -89,7 +93,7 @@ public class Activity {
     boolean removed = participants.removeIf(participant -> participant.getUserId().equals(userId));
 
     if (!removed) {
-      throw new IllegalStateActivityException("User is not participating in this activity");
+      return;
     }
 
     if (participants.size() < minParticipants) {
@@ -108,6 +112,16 @@ public class Activity {
 
   public void markWeatherChecked() {
     this.weatherChecked = true;
+  }
+
+  public boolean finishIfPast(LocalDateTime now) {
+    if (status != ActivityStatus.CANCELLED
+        && status != ActivityStatus.FINISHED
+        && dateTime.isBefore(now)) {
+      setStatus(ActivityStatus.FINISHED);
+      return true;
+    }
+    return false;
   }
 
   private boolean cannotChangeParticipants() {
