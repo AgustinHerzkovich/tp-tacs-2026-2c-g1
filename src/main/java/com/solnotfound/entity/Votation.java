@@ -11,8 +11,10 @@ import lombok.Setter;
 public class Votation {
 
   private String id;
-  private String activityId;
+  private Activity activity;
   private LocalDateTime creationDate;
+  private LocalDateTime closeDate;
+  private Double minQuorum = 0.50; // 50%
   private VotationStatus status;
   private List<VotationOption> options = new ArrayList<>();
 
@@ -22,5 +24,29 @@ public class Votation {
 
   public void setOptions(List<VotationOption> options) {
     this.options = new ArrayList<>(options);
+  }
+
+  public boolean isAnOption(LocalDateTime option) {
+    return options.stream().anyMatch((votOpt) -> votOpt.getDateTime().equals(option));
+  }
+
+  public boolean thisUserVoted(User user) {
+    return options.stream().anyMatch((option) -> option.thisUserVoted(user));
+  }
+
+  public void vote(LocalDateTime option, User user) {
+    options.get(options.indexOf(option)).addUser(user);
+  }
+
+  public void unvote(LocalDateTime option, User user) {
+    options.get(options.indexOf(option)).removeUser(user);
+  }
+
+  public LocalDateTime getVoteByUser(User user) {
+    for (VotationOption option : options) {
+      if (option.thisUserVoted(user)) {
+        return option.getDateTime();
+      }
+    }
   }
 }
