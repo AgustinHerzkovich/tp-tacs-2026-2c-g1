@@ -400,10 +400,10 @@ class ActivityServiceTest {
 
     LocalDateTime currentDateTime = LocalDateTime.now();
 
-    WeatherForecast currentWeather = new WeatherForecast(1, currentDateTime, 25.0f, 20.0f, 10.0f);
+    WeatherForecast currentWeather = new WeatherForecast(currentDateTime, 25.0f, 20.0f, 10.0f);
 
     WeatherForecast activityForecast =
-        new WeatherForecast(2, activity.dateTime(), 22.0f, 40.0f, 15.0f);
+        new WeatherForecast(activity.dateTime(), 22.0f, 40.0f, 15.0f);
 
     when(weatherAdapter.getWeather(any(Location.class))).thenReturn(currentWeather);
 

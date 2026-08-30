@@ -103,8 +103,8 @@ class ActivityParticipationControllerTest {
   void weatherUsesJwtSubjectAndSerializesLocation() throws Exception {
     var activity = service.create(request(1, 2));
     service.join(activity.id(), "user-1");
-    WeatherForecast current = new WeatherForecast(1, LocalDateTime.now(), 22.0f, 10.0f, 15.0f);
-    WeatherForecast forecast = new WeatherForecast(2, activity.dateTime(), 18.0f, 60.0f, 30.0f);
+    WeatherForecast current = new WeatherForecast(LocalDateTime.now(), 22.0f, 10.0f, 15.0f);
+    WeatherForecast forecast = new WeatherForecast(activity.dateTime(), 18.0f, 60.0f, 30.0f);
     when(weatherAdapter.getWeather(any(Location.class))).thenReturn(current);
     when(weatherAdapter.getFutureClimate(any(Location.class), eq(activity.dateTime())))
         .thenReturn(forecast);

@@ -10,6 +10,7 @@ import com.solnotfound.entity.VotationOption;
 import com.solnotfound.entity.VotationStatus;
 import com.solnotfound.entity.WeatherForecast;
 import com.solnotfound.entity.notifications.BadWeatherAlertNotificationType;
+import com.solnotfound.exception.WeatherUnavailableException;
 import com.solnotfound.listener.ActivityNotificationEvent;
 import com.solnotfound.repository.IActivityRepository;
 import com.solnotfound.repository.IVotationRepository;
@@ -81,7 +82,7 @@ public class ActivityAnticipationCheckScheduler {
 
     log.info("Opening new active votation for activity {}", activity.getId());
 
-    List<VotationOption> options = new ArrayList<>();
+    List<LocalDateTime> candidateTimes = new ArrayList<>();
 
     log.info(
         "Searching for new time options with better weather conditions for activity {}",
@@ -96,14 +97,25 @@ public class ActivityAnticipationCheckScheduler {
               .withSecond(0);
 
       while (activity.getReprogramationRange().isWithinRange(activity.getDateTime(), newTime)) {
-        WeatherForecast weather = weatherAdapter.getFutureClimate(activity.getLocation(), newTime);
-        if (!badWeatherChecker.isBadWeatherForActivity(weather, activity)) {
-          VotationOption option = new VotationOption();
-          option.setDateTime(newTime);
-          option.setUsers(new ArrayList<>());
-          options.add(option);
-        }
+        candidateTimes.add(newTime);
         newTime = newTime.plusHours(1);
+      }
+    }
+
+    List<WeatherForecast> forecasts =
+        weatherAdapter.getForecastRange(activity.getLocation(), candidateTimes);
+    if (forecasts.size() != candidateTimes.size()) {
+      throw new WeatherUnavailableException("Provider returned an incomplete forecast range");
+    }
+    List<VotationOption> options = new ArrayList<>();
+    for (int index = 0; index < candidateTimes.size(); index++) {
+      WeatherForecast weather = forecasts.get(index);
+      LocalDateTime newTime = candidateTimes.get(index);
+      if (!badWeatherChecker.isBadWeatherForActivity(weather, activity)) {
+        VotationOption option = new VotationOption();
+        option.setDateTime(newTime);
+        option.setUsers(new ArrayList<>());
+        options.add(option);
       }
     }
 

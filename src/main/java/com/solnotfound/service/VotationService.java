@@ -11,6 +11,7 @@ import com.solnotfound.entity.WeatherForecast;
 import com.solnotfound.exception.AccessDeniedException;
 import com.solnotfound.exception.InvalidVotationOptionsException;
 import com.solnotfound.exception.ResourceNotFoundException;
+import com.solnotfound.exception.WeatherUnavailableException;
 import com.solnotfound.mapper.VotationMapper;
 import com.solnotfound.repository.IActivityRepository;
 import com.solnotfound.repository.IVotationRepository;
@@ -18,6 +19,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -44,7 +46,7 @@ public class VotationService {
 
   public List<VotationDTO> getByOrganizerOrParticipantId(String userId) {
     List<String> activityIds =
-        java.util.stream.Stream.concat(
+        Stream.concat(
                 activityRepository.findActivitiesByOrganizerId(userId).stream(),
                 activityRepository.findActivitiesByParticipantId(userId).stream())
             .map(Activity::getId)
@@ -75,18 +77,25 @@ public class VotationService {
       throw new InvalidVotationOptionsException(request.dates());
     }
 
-    List<LocalDateTime> invalidOptions =
+    List<LocalDateTime> outOfRangeOptions =
         request.dates().stream()
             .filter(
                 date ->
                     !activity.getReprogramationRange().isWithinRange(activity.getDateTime(), date))
             .toList();
-    invalidOptions =
-        java.util.stream.Stream.concat(
-                invalidOptions.stream(),
-                request.dates().stream().filter(date -> isBadWeatherAt(activity, date)))
-            .distinct()
-            .toList();
+    List<LocalDateTime> datesWithinRange =
+        request.dates().stream().filter(date -> !outOfRangeOptions.contains(date)).toList();
+    List<WeatherForecast> forecasts =
+        weatherAdapter.getForecastRange(activity.getLocation(), datesWithinRange);
+    if (forecasts.size() != datesWithinRange.size()) {
+      throw new WeatherUnavailableException("Provider returned an incomplete forecast range");
+    }
+    List<LocalDateTime> invalidOptions = new ArrayList<>(outOfRangeOptions);
+    for (int index = 0; index < forecasts.size(); index++) {
+      if (badWeatherChecker.isBadWeatherForActivity(forecasts.get(index), activity)) {
+        invalidOptions.add(datesWithinRange.get(index));
+      }
+    }
     if (!invalidOptions.isEmpty()) {
       throw new InvalidVotationOptionsException(invalidOptions);
     }
@@ -102,10 +111,5 @@ public class VotationService {
     votationRepository.save(votation);
 
     return VotationMapper.toDTO(votation);
-  }
-
-  private boolean isBadWeatherAt(Activity activity, LocalDateTime dateTime) {
-    WeatherForecast weather = weatherAdapter.getFutureClimate(activity.getLocation(), dateTime);
-    return badWeatherChecker.isBadWeatherForActivity(weather, activity);
   }
 }

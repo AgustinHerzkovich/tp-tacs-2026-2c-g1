@@ -12,6 +12,7 @@ import com.solnotfound.exception.ResourceNotFoundException;
 import com.solnotfound.repository.INotificationRepository;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.StreamSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -88,7 +89,7 @@ class NotificationServiceTest {
         org.mockito.ArgumentCaptor.forClass(Iterable.class);
     verify(notificationRepository).saveAll(captor.capture());
     List<String> receivers =
-        java.util.stream.StreamSupport.stream(captor.getValue().spliterator(), false)
+        StreamSupport.stream(captor.getValue().spliterator(), false)
             .map(Notification::getReceiverUser)
             .toList();
     assertEquals(List.of("creator-1", "participant-1"), receivers);

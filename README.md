@@ -58,6 +58,41 @@ Maven. Desde la raíz del proyecto, ejecutar:
 
 Actualmente los datos se almacenan en memoria y se pierden al reiniciar la aplicación.
 
+## Servicio meteorológico
+
+La aplicación usa [Open-Meteo](https://open-meteo.com/) para clima actual y pronóstico horario.
+Consulta temperatura en °C, probabilidad de precipitación en porcentaje y viento en km/h. Cuando
+una ubicación no tiene coordenadas, usa la primera coincidencia de Open-Meteo Geocoding.
+
+Open-Meteo se selecciona por defecto y no requiere API key para el uso no comercial de este TP. Las
+coordenadas, condiciones actuales y pronósticos se almacenan en cachés acotadas. Las llamadas tienen
+timeouts, retry corto y circuit breaker. Si el proveedor no responde y no existe una entrada vigente
+en caché, los endpoints meteorológicos responden `503` y los procesos automáticos se reintentan en la
+próxima ejecución; nunca se interpreta la falta de datos como buen clima.
+
+Los TTL y límites de entradas pueden ajustarse con las propiedades
+`weather.cache.<geocoding|current|forecast>.ttl` y
+`weather.cache.<geocoding|current|forecast>.maximum-size`. Los valores predeterminados son 24 horas
+y 1000 entradas para geocodificación, 15 minutos y 5000 entradas para condiciones actuales, y una
+hora y 10000 entradas para pronósticos.
+
+Para desarrollo sin red puede habilitarse el adapter determinístico en memoria:
+
+```bash
+WEATHER_PROVIDER=in-memory ./mvnw spring-boot:run
+```
+
+En Windows PowerShell:
+
+```powershell
+$env:WEATHER_PROVIDER="in-memory"
+.\mvnw.cmd spring-boot:run
+```
+
+Los datos meteorológicos provienen de Open-Meteo y están sujetos a su licencia
+[CC BY 4.0](https://open-meteo.com/en/licence). Los pronósticos son estimaciones y no deben usarse
+como única fuente para decisiones de seguridad.
+
 ## Calidad de código
 
 El proyecto incluye Maven Wrapper. Para aplicar el formato, comprobarlo y ejecutar la verificación

@@ -11,6 +11,7 @@ public class TemperatureRangeCondition implements WeatherCondition {
 
   @Override
   public Boolean isSatisfiedBy(WeatherForecast weatherForecast) {
-    return true; // TODO
+    Float temperature = weatherForecast.getTemperature();
+    return temperature != null && temperature >= minTemperature && temperature <= maxTemperature;
   }
 }

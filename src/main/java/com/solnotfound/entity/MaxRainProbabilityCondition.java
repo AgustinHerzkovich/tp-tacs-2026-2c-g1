@@ -10,6 +10,7 @@ public class MaxRainProbabilityCondition implements WeatherCondition {
 
   @Override
   public Boolean isSatisfiedBy(WeatherForecast weatherForecast) {
-    return true; // TODO
+    return weatherForecast.getChanceOfRain() != null
+        && weatherForecast.getChanceOfRain() <= maxProbability;
   }
 }

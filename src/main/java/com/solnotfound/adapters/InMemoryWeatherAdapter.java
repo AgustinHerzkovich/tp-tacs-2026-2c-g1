@@ -3,19 +3,15 @@ package com.solnotfound.adapters;
 import com.solnotfound.entity.Location;
 import com.solnotfound.entity.WeatherForecast;
 import java.time.LocalDateTime;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
-// se hace esre in memory weather adapter ya que sino spring no buildea el docker
 @Component
+@ConditionalOnProperty(name = "weather.provider", havingValue = "in-memory")
 public class InMemoryWeatherAdapter implements IWeatherAdapter {
 
   @Override
   public WeatherForecast getWeather(Location location) {
-    return placeholderForecast(LocalDateTime.now());
-  }
-
-  @Override
-  public WeatherForecast getClimate(Location location) {
     return placeholderForecast(LocalDateTime.now());
   }
 
@@ -25,6 +21,6 @@ public class InMemoryWeatherAdapter implements IWeatherAdapter {
   }
 
   private WeatherForecast placeholderForecast(LocalDateTime dateTime) {
-    return new WeatherForecast(null, dateTime, 22.0f, 0.0f, 5.0f);
+    return new WeatherForecast(dateTime, 22.0f, 0.0f, 5.0f);
   }
 }
