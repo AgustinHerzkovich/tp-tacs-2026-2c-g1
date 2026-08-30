@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Stream;
+import java.util.Optional;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -140,12 +141,12 @@ public class VotationService {
     if (!votation.getStatus().equals(VotationStatus.ACTIVE)) {
       throw new AccessDeniedException("Votation already closed: " + votationId);
     }
-    if (!votation.thisUserVoted(user)) {
+    final Optional<LocalDateTime> currentVote = votation.getVoteByUser(user);
+    if (currentVote.isEmpty()) {
       votation.vote(vote, user);
     } else {
-      final LocalDateTime currentVote = votation.getVoteByUser(user);
-      votation.unvote(currentVote, user);
-      if (!currentVote.equals(vote)) {
+      votation.unvote(currentVote.get(), user);
+      if (!currentVote.get().equals(vote)) {
         votation.vote(vote, user);
       }
     }
