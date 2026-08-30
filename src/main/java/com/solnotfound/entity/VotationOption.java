@@ -20,4 +20,16 @@ public class VotationOption {
   public void setUsers(List<User> users) {
     this.users = new ArrayList<>(users);
   }
+
+  public void addUser(User user) {
+    this.users.add(user);
+  }
+
+  public boolean thisUserVoted(User user) {
+    return this.users.contains(user);
+  }
+
+  public void removeUser(User user) {
+    this.users.remove(user);
+  }
 }
