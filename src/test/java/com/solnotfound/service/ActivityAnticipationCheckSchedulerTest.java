@@ -40,7 +40,7 @@ class ActivityAnticipationCheckSchedulerTest {
 
   @BeforeEach
   void setUp() {
-    location = mock(Location.class);
+    location = new Location(new City("ba", "Buenos Aires"), -34.6037, -58.3816);
     dateTime = LocalDateTime.now().plusHours(2);
     weather = mock(WeatherForecast.class);
 
@@ -55,7 +55,7 @@ class ActivityAnticipationCheckSchedulerTest {
 
   @Test
   void onlyChecksWeatherForActivitiesThatAreDueForCheck() throws Exception {
-    when(activityRepository.findAll()).thenReturn(List.of(activityToCheck, activityNotToCheck));
+    when(activityRepository.findActive()).thenReturn(List.of(activityToCheck, activityNotToCheck));
     when(weatherAdapter.getFutureClimate(location, dateTime)).thenReturn(weather);
     when(badWeatherChecker.isBadWeatherForActivity(weather, activityToCheck)).thenReturn(false);
 
@@ -70,7 +70,7 @@ class ActivityAnticipationCheckSchedulerTest {
 
   @Test
   void notifiesWhenWeatherIsBad() throws Exception {
-    when(activityRepository.findAll()).thenReturn(List.of(activityToCheck));
+    when(activityRepository.findActive()).thenReturn(List.of(activityToCheck));
     when(weatherAdapter.getFutureClimate(location, dateTime)).thenReturn(weather);
     when(badWeatherChecker.isBadWeatherForActivity(weather, activityToCheck)).thenReturn(true);
 
@@ -87,7 +87,7 @@ class ActivityAnticipationCheckSchedulerTest {
 
   @Test
   void doesNotNotifyWhenWeatherIsGood() throws Exception {
-    when(activityRepository.findAll()).thenReturn(List.of(activityToCheck));
+    when(activityRepository.findActive()).thenReturn(List.of(activityToCheck));
     when(weatherAdapter.getFutureClimate(location, dateTime)).thenReturn(weather);
     when(badWeatherChecker.isBadWeatherForActivity(weather, activityToCheck)).thenReturn(false);
 
@@ -98,7 +98,7 @@ class ActivityAnticipationCheckSchedulerTest {
 
   @Test
   void skipsActivitiesThatAreNotDueForCheck() {
-    when(activityRepository.findAll()).thenReturn(List.of(activityNotToCheck));
+    when(activityRepository.findActive()).thenReturn(List.of(activityNotToCheck));
 
     scheduler.checkActivitiesClimate();
 
@@ -110,7 +110,7 @@ class ActivityAnticipationCheckSchedulerTest {
   @Test
   void continuesProcessingRemainingActivitiesWhenWeatherAdapterThrows() throws Exception {
     Activity anotherActivity = mock(Activity.class);
-    Location anotherLocation = mock(Location.class);
+    Location anotherLocation = new Location(new City("cordoba", "Cordoba"), -31.4201, -64.1888);
     LocalDateTime anotherDateTime = LocalDateTime.now().plusHours(3);
     WeatherForecast anotherWeather = mock(WeatherForecast.class);
 
@@ -118,7 +118,7 @@ class ActivityAnticipationCheckSchedulerTest {
     when(anotherActivity.getLocation()).thenReturn(anotherLocation);
     when(anotherActivity.getDateTime()).thenReturn(anotherDateTime);
 
-    when(activityRepository.findAll()).thenReturn(List.of(activityToCheck, anotherActivity));
+    when(activityRepository.findActive()).thenReturn(List.of(activityToCheck, anotherActivity));
 
     // First activity throws while fetching the weather
     when(weatherAdapter.getFutureClimate(location, dateTime))
@@ -141,7 +141,7 @@ class ActivityAnticipationCheckSchedulerTest {
 
   @Test
   void doesNothingWhenThereAreNoActivities() {
-    when(activityRepository.findAll()).thenReturn(List.of());
+    when(activityRepository.findActive()).thenReturn(List.of());
 
     scheduler.checkActivitiesClimate();
 
@@ -150,7 +150,7 @@ class ActivityAnticipationCheckSchedulerTest {
 
   @Test
   void retriesWeatherCheckOnNextSchedulerRunAfterPreviousFailure() throws Exception {
-    when(activityRepository.findAll()).thenReturn(List.of(activityToCheck));
+    when(activityRepository.findActive()).thenReturn(List.of(activityToCheck));
 
     when(weatherAdapter.getFutureClimate(location, dateTime))
         .thenThrow(

@@ -1,27 +1,34 @@
 package com.solnotfound.entity;
 
+import com.solnotfound.exception.IllegalStateActivityException;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
 
-@Getter
-@Setter
 public class Activity {
-  private String id;
-  private String title;
-  private String description;
-  private ActivityType type;
-  private Location location;
-  private LocalDateTime dateTime;
-  private Integer minParticipants;
-  private Integer maxParticipants;
+
+  @Getter @Setter private String id;
+  @Getter @Setter private String title;
+  @Getter @Setter private String description;
+  @Getter @Setter private ActivityType type;
+  @Getter @Setter private Location location;
+  @Getter @Setter private LocalDateTime dateTime;
+  @Getter @Setter private Integer minParticipants;
+  @Getter @Setter private Integer maxParticipants;
+  private List<Participant> participants = new ArrayList<>();
   private List<WeatherCondition> weatherConditions = List.of();
+
+  @Setter @Getter
   private Integer
       anticipationWindow; // hecho en horas, cantidad de tiempo antes de la actividad para chequear
-  private ReprogramationRange reprogramationRange;
+
+  @Setter @Getter private ReprogramationRange reprogramationRange;
   private Boolean availability = false;
-  private Boolean weatherChecked = false;
+  @Getter private ActivityStatus status = ActivityStatus.CONFIRMED;
+  private List<ActivityStatus> statusHistory = new ArrayList<>(List.of(ActivityStatus.CONFIRMED));
+  @Setter @Getter private Boolean weatherChecked = false;
 
   // las condiciones del clima y avisar a los usuarios
 
@@ -31,6 +38,67 @@ public class Activity {
 
   public void setWeatherConditions(List<WeatherCondition> weatherConditions) {
     this.weatherConditions = List.copyOf(weatherConditions);
+  }
+
+  public synchronized List<Participant> getParticipants() {
+    return List.copyOf(participants);
+  }
+
+  public synchronized Boolean getAvailability() {
+    return availability;
+  }
+
+  public List<ActivityStatus> getStatusHistory() {
+    return List.copyOf(statusHistory);
+  }
+
+  public void setStatus(ActivityStatus newStatus) {
+    // TODO: Validar transiciones permitidas entre estados.
+    status = newStatus;
+    statusHistory.add(newStatus);
+  }
+
+  public synchronized void addParticipant(String userId) {
+    if (cannotChangeParticipants()) {
+      throw new IllegalStateActivityException(
+          "Participants cannot be added to an activity in that status.");
+    }
+
+    boolean alreadyParticipating =
+        participants.stream().anyMatch(participant -> participant.getUserId().equals(userId));
+
+    if (alreadyParticipating) {
+      return;
+    }
+
+    boolean isFull = participants.size() >= maxParticipants;
+
+    if (isFull) {
+      throw new IllegalStateActivityException("Activity has no available spots.");
+    }
+
+    participants.add(new Participant(userId));
+
+    if (participants.size() >= minParticipants) {
+      availability = true;
+    }
+  }
+
+  public synchronized void removeParticipant(String userId) {
+    if (cannotChangeParticipants()) {
+      throw new IllegalStateActivityException(
+          "Participants cannot be removed to an activity in that status.");
+    }
+
+    boolean removed = participants.removeIf(participant -> participant.getUserId().equals(userId));
+
+    if (!removed) {
+      return;
+    }
+
+    if (participants.size() < minParticipants) {
+      availability = false;
+    }
   }
 
   public boolean isTimeToCheckWeatherConditions() {
@@ -44,5 +112,19 @@ public class Activity {
 
   public void markWeatherChecked() {
     this.weatherChecked = true;
+  }
+
+  public boolean finishIfPast(LocalDateTime now) {
+    if (status != ActivityStatus.CANCELLED
+        && status != ActivityStatus.FINISHED
+        && dateTime.isBefore(now)) {
+      setStatus(ActivityStatus.FINISHED);
+      return true;
+    }
+    return false;
+  }
+
+  private boolean cannotChangeParticipants() {
+    return status == ActivityStatus.CANCELLED || status == ActivityStatus.FINISHED;
   }
 }

@@ -23,6 +23,26 @@ public class GlobalExceptionHandler {
     return ResponseEntity.badRequest().body(problem);
   }
 
+  @ExceptionHandler(ActivityNotFoundException.class)
+  public ResponseEntity<ProblemDetail> handleActivityNotFound(ActivityNotFoundException exception) {
+
+    ProblemDetail problem =
+        ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, exception.getMessage());
+
+    problem.setTitle("Activity not found");
+
+    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problem);
+  }
+
+  @ExceptionHandler(IllegalStateActivityException.class)
+  public ResponseEntity<ProblemDetail> handleIllegalStateActivityException(
+      IllegalStateActivityException exception) {
+    ProblemDetail problem =
+        ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
+    problem.setTitle("Activity state conflict");
+    return ResponseEntity.status(HttpStatus.CONFLICT).body(problem);
+  }
+
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ResponseEntity<ProblemDetail> handleValidation(MethodArgumentNotValidException exception) {
     Map<String, String> errors = new LinkedHashMap<>();

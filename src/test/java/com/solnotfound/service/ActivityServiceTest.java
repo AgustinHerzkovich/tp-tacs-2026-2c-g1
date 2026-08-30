@@ -7,11 +7,15 @@ import com.solnotfound.dto.ActivityFilterDTO;
 import com.solnotfound.dto.ActivityResponse;
 import com.solnotfound.dto.CreateActivityRequest;
 import com.solnotfound.dto.LocationDTO;
+import com.solnotfound.dto.ParticipantDTO;
 import com.solnotfound.dto.ReprogramationRangeDTO;
 import com.solnotfound.dto.WeatherConditionsDTO;
 import com.solnotfound.entity.ActivityType;
+import com.solnotfound.exception.ActivityNotFoundException;
+import com.solnotfound.exception.IllegalStateActivityException;
 import com.solnotfound.exception.InvalidActivityException;
 import com.solnotfound.repository.ActivityRepository;
+import com.solnotfound.repository.CityRepository;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
@@ -26,7 +30,7 @@ class ActivityServiceTest {
   @BeforeEach
   void setUp() {
     activityRepository = new ActivityRepository();
-    activityService = new ActivityService(activityRepository);
+    activityService = new ActivityService(activityRepository, new CityRepository());
   }
 
   @Test
@@ -229,7 +233,10 @@ class ActivityServiceTest {
     ActivityResponse available =
         activityService.create(
             requestWith(ActivityType.OUTDOOR, "Buenos Aires", LocalDateTime.now().plusDays(1)));
-    activityRepository.findById(available.id()).setAvailability(true);
+
+    for (int i = 0; i < 10; i++) {
+      activityService.join(available.id(), "user-" + i);
+    }
 
     activityService.create(
         requestWith(ActivityType.OUTDOOR, "Buenos Aires", LocalDateTime.now().plusDays(1)));
@@ -238,6 +245,133 @@ class ActivityServiceTest {
         activityService.search(new ActivityFilterDTO(null, null, null, null, true));
 
     assertThat(results).extracting(ActivityResponse::id).containsExactly(available.id());
+  }
+
+  @Test
+  void joinsParticipantToActivity() {
+    ActivityResponse activity = activityService.create(validRequest());
+
+    ActivityResponse result = activityService.join(activity.id(), "user-1");
+
+    assertThat(result.participantCount()).isEqualTo(1);
+
+    assertThat(result.participants()).extracting(ParticipantDTO::userId).containsExactly("user-1");
+  }
+
+  @Test
+  void removesParticipantFromActivity() {
+    ActivityResponse activity = activityService.create(validRequest());
+
+    activityService.join(activity.id(), "user-1");
+
+    ActivityResponse result = activityService.leave(activity.id(), "user-1");
+
+    assertThat(result.participantCount()).isZero();
+
+    assertThat(result.participants()).isEmpty();
+  }
+
+  @Test
+  void rejectsJoiningNonExistentActivity() {
+    assertThatThrownBy(() -> activityService.join("non-existent-id", "user-1"))
+        .isInstanceOf(ActivityNotFoundException.class)
+        .hasMessage("Activity not found: non-existent-id");
+  }
+
+  @Test
+  void rejectsLeavingNonExistentActivity() {
+    assertThatThrownBy(() -> activityService.leave("non-existent-id", "user-1"))
+        .isInstanceOf(ActivityNotFoundException.class)
+        .hasMessage("Activity not found: non-existent-id");
+  }
+
+  @Test
+  void rejectsJoiningActivityTwice() {
+    ActivityResponse activity = activityService.create(validRequest());
+
+    activityService.join(activity.id(), "user-1");
+
+    ActivityResponse result = activityService.join(activity.id(), "user-1");
+
+    assertThat(result.participants()).extracting(ParticipantDTO::userId).containsExactly("user-1");
+  }
+
+  @Test
+  void rejectsJoiningWhenActivityIsFull() {
+    CreateActivityRequest request =
+        new CreateActivityRequest(
+            "Football match",
+            "Friendly match",
+            ActivityType.OUTDOOR,
+            cityLocation(),
+            LocalDateTime.now().plusDays(1),
+            1,
+            1,
+            validWeatherConditions(),
+            4,
+            validReprogramationRange());
+
+    ActivityResponse activity = activityService.create(request);
+
+    activityService.join(activity.id(), "user-1");
+
+    assertThatThrownBy(() -> activityService.join(activity.id(), "user-2"))
+        .isInstanceOf(IllegalStateActivityException.class)
+        .hasMessage("Activity has no available spots.");
+  }
+
+  @Test
+  void makesActivityAvailableWhenMinimumParticipantsIsReached() {
+    CreateActivityRequest request =
+        new CreateActivityRequest(
+            "Football match",
+            "Friendly match",
+            ActivityType.OUTDOOR,
+            cityLocation(),
+            LocalDateTime.now().plusDays(1),
+            2,
+            3,
+            validWeatherConditions(),
+            4,
+            validReprogramationRange());
+
+    ActivityResponse activity = activityService.create(request);
+
+    ActivityResponse afterFirstJoin = activityService.join(activity.id(), "user-1");
+
+    assertThat(afterFirstJoin.availability()).isFalse();
+
+    ActivityResponse afterSecondJoin = activityService.join(activity.id(), "user-2");
+
+    assertThat(afterSecondJoin.availability()).isTrue();
+  }
+
+  @Test
+  void makesActivityUnavailableWhenParticipantsDropBelowMinimum() {
+    CreateActivityRequest request =
+        new CreateActivityRequest(
+            "Football match",
+            "Friendly match",
+            ActivityType.OUTDOOR,
+            cityLocation(),
+            LocalDateTime.now().plusDays(1),
+            2,
+            3,
+            validWeatherConditions(),
+            4,
+            validReprogramationRange());
+
+    ActivityResponse activity = activityService.create(request);
+
+    activityService.join(activity.id(), "user-1");
+
+    activityService.join(activity.id(), "user-2");
+
+    assertThat(activityService.getById(activity.id()).availability()).isTrue();
+
+    ActivityResponse result = activityService.leave(activity.id(), "user-1");
+
+    assertThat(result.availability()).isFalse();
   }
 
   private CreateActivityRequest requestWith(

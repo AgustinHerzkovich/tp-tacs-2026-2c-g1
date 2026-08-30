@@ -4,17 +4,21 @@ import com.solnotfound.dto.ActivityFilterDTO;
 import com.solnotfound.dto.ActivityResponse;
 import com.solnotfound.dto.CreateActivityRequest;
 import com.solnotfound.dto.LocationDTO;
+import com.solnotfound.dto.ParticipantDTO;
 import com.solnotfound.dto.ReprogramationRangeDTO;
 import com.solnotfound.dto.WeatherConditionsDTO;
 import com.solnotfound.entity.Activity;
 import com.solnotfound.entity.Location;
 import com.solnotfound.entity.MaxRainProbabilityCondition;
 import com.solnotfound.entity.MaxWindCondition;
+import com.solnotfound.entity.Participant;
 import com.solnotfound.entity.ReprogramationRange;
 import com.solnotfound.entity.TemperatureRangeCondition;
 import com.solnotfound.entity.WeatherCondition;
+import com.solnotfound.exception.ActivityNotFoundException;
 import com.solnotfound.exception.InvalidActivityException;
 import com.solnotfound.repository.ActivityRepository;
+import com.solnotfound.repository.CityRepository;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -23,9 +27,14 @@ import org.springframework.stereotype.Service;
 @Service
 public class ActivityService {
   private final ActivityRepository activityRepository;
+  private final CityRepository cityRepository;
 
-  public ActivityService(ActivityRepository activityRepository) {
+  @edu.umd.cs.findbugs.annotations.SuppressFBWarnings(
+      value = "EI_EXPOSE_REP2",
+      justification = "Spring injects the shared in-memory repository")
+  public ActivityService(ActivityRepository activityRepository, CityRepository cityRepository) {
     this.activityRepository = activityRepository;
+    this.cityRepository = cityRepository;
   }
 
   public ActivityResponse create(CreateActivityRequest request) {
@@ -73,7 +82,8 @@ public class ActivityService {
 
     if (filter.city() != null
         && !filter.city().isBlank()
-        && !filter.city().equalsIgnoreCase(activity.getLocation().city())) {
+        && (activity.getLocation().city() == null
+            || !filter.city().equalsIgnoreCase(activity.getLocation().city().name()))) {
       return false;
     }
 
@@ -94,6 +104,26 @@ public class ActivityService {
     if (activity == null) {
       return null;
     }
+    return toResponse(activity);
+  }
+
+  public ActivityResponse join(String activityId, String userId) {
+    Activity activity = findActivityOrThrow(activityId);
+
+    activity.addParticipant(userId);
+
+    activityRepository.save(activity);
+
+    return toResponse(activity);
+  }
+
+  public ActivityResponse leave(String activityId, String userId) {
+    Activity activity = findActivityOrThrow(activityId);
+
+    activity.removeParticipant(userId);
+
+    activityRepository.save(activity);
+
     return toResponse(activity);
   }
 
@@ -144,7 +174,7 @@ public class ActivityService {
   }
 
   private Location toLocation(LocationDTO dto) {
-    return new Location(dto.city(), dto.latitude(), dto.longitude());
+    return new Location(cityRepository.findOrCreate(dto.city()), dto.latitude(), dto.longitude());
   }
 
   private ReprogramationRange toReprogramationRange(ReprogramationRangeDTO dto) {
@@ -190,13 +220,19 @@ public class ActivityService {
         activity.getAvailability(),
         activity.getMinParticipants(),
         activity.getMaxParticipants(),
+        activity.getParticipants().size(),
+        toParticipantsDTO(activity.getParticipants()),
         toWeatherConditionsDTO(activity.getWeatherConditions()),
         activity.getAnticipationWindow(),
-        toReprogramationRangeDTO(activity.getReprogramationRange()));
+        toReprogramationRangeDTO(activity.getReprogramationRange()),
+        activity.getStatus());
   }
 
   private LocationDTO toLocationDTO(Location location) {
-    return new LocationDTO(location.city(), location.latitude(), location.longitude());
+    return new LocationDTO(
+        location.city() == null ? null : location.city().name(),
+        location.latitude(),
+        location.longitude());
   }
 
   private WeatherConditionsDTO toWeatherConditionsDTO(List<WeatherCondition> conditions) {
@@ -218,5 +254,21 @@ public class ActivityService {
 
     return new WeatherConditionsDTO(
         maxRainProbability, minTemperature, maxTemperature, maxWindSpeed);
+  }
+
+  private List<ParticipantDTO> toParticipantsDTO(List<Participant> participants) {
+    return participants.stream()
+        .map(participant -> new ParticipantDTO(participant.getUserId()))
+        .toList();
+  }
+
+  private Activity findActivityOrThrow(String activityId) {
+    Activity activity = activityRepository.findById(activityId);
+
+    if (activity == null) {
+      throw new ActivityNotFoundException("Activity not found: " + activityId);
+    }
+
+    return activity;
   }
 }
