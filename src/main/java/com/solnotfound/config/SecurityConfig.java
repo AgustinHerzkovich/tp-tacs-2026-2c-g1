@@ -1,5 +1,6 @@
 package com.solnotfound.config;
 
+import java.nio.charset.StandardCharsets;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,8 +31,7 @@ public class SecurityConfig {
   @Bean
   JwtDecoder jwtDecoder(
       @Value("${security.jwt.secret:development-secret-must-be-at-least-32-bytes}") String secret) {
-    SecretKey key =
-        new SecretKeySpec(secret.getBytes(java.nio.charset.StandardCharsets.UTF_8), "HmacSHA256");
+    SecretKey key = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
     return NimbusJwtDecoder.withSecretKey(key).macAlgorithm(MacAlgorithm.HS256).build();
   }
 }

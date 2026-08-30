@@ -7,9 +7,8 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public class WeatherForecast {
-  private Integer id;
-  private LocalDateTime dateTime;
-  private Float temperature;
-  private Float chanceOfRain;
-  private Float windSpeed;
+  private final LocalDateTime dateTime;
+  private final Float temperature;
+  private final Float chanceOfRain;
+  private final Float windSpeed;
 }

@@ -102,4 +102,13 @@ public class GlobalExceptionHandler {
     problem.setTitle("Access denied");
     return ResponseEntity.status(HttpStatus.FORBIDDEN).body(problem);
   }
+
+  @ExceptionHandler(WeatherUnavailableException.class)
+  public ResponseEntity<ProblemDetail> handleWeatherUnavailable(
+      WeatherUnavailableException exception) {
+    ProblemDetail problem =
+        ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, exception.getMessage());
+    problem.setTitle("Weather service unavailable");
+    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(problem);
+  }
 }

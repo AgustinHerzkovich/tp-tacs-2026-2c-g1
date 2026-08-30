@@ -70,6 +70,13 @@ class ActivityAnticipationCheckSchedulerTest {
     lenient().when(range.getInitialHour()).thenReturn(LocalTime.of(10, 0));
     lenient().when(activityToCheck.getReprogramationRange()).thenReturn(range);
     lenient().when(votationRepository.findActiveByActivityId("activity-1")).thenReturn(null);
+    lenient()
+        .when(weatherAdapter.getForecastRange(eq(location), anyList()))
+        .thenAnswer(
+            invocation -> {
+              List<LocalDateTime> dates = invocation.getArgument(1);
+              return dates.stream().map(ignored -> weather).toList();
+            });
 
     activityNotToCheck = mock(Activity.class);
     lenient().when(activityNotToCheck.isTimeToCheckWeatherConditions()).thenReturn(false);
@@ -138,6 +145,12 @@ class ActivityAnticipationCheckSchedulerTest {
     when(anotherActivity.getLocation()).thenReturn(anotherLocation);
     when(anotherActivity.getDateTime()).thenReturn(anotherDateTime);
     when(anotherActivity.getReprogramationRange()).thenReturn(range);
+    when(weatherAdapter.getForecastRange(eq(anotherLocation), anyList()))
+        .thenAnswer(
+            invocation -> {
+              List<LocalDateTime> dates = invocation.getArgument(1);
+              return dates.stream().map(ignored -> anotherWeather).toList();
+            });
 
     when(activityRepository.findActive()).thenReturn(List.of(activityToCheck, anotherActivity));
 
@@ -229,9 +242,9 @@ class ActivityAnticipationCheckSchedulerTest {
   @Test
   void opensActiveVotationWithGoodWeatherOptionsWhenNoneIsActive() throws Exception {
     when(activityRepository.findActive()).thenReturn(List.of(activityToCheck));
-    WeatherForecast initialWeather = new WeatherForecast(1, dateTime, 20.0f, 90.0f, 10.0f);
+    WeatherForecast initialWeather = new WeatherForecast(dateTime, 20.0f, 90.0f, 10.0f);
     WeatherForecast candidateWeather =
-        new WeatherForecast(2, dateTime.plusDays(1), 20.0f, 0.0f, 10.0f);
+        new WeatherForecast(dateTime.plusDays(1), 20.0f, 0.0f, 10.0f);
     when(weatherAdapter.getFutureClimate(eq(location), any(LocalDateTime.class)))
         .thenAnswer(
             invocation ->
@@ -240,6 +253,12 @@ class ActivityAnticipationCheckSchedulerTest {
         .thenReturn(true);
     when(badWeatherChecker.isBadWeatherForActivity(candidateWeather, activityToCheck))
         .thenReturn(false);
+    when(weatherAdapter.getForecastRange(eq(location), anyList()))
+        .thenAnswer(
+            invocation -> {
+              List<LocalDateTime> dates = invocation.getArgument(1);
+              return dates.stream().map(ignored -> candidateWeather).toList();
+            });
     when(range.isWithinRange(any(LocalDateTime.class), any(LocalDateTime.class)))
         .thenReturn(true, true, false);
 

@@ -2,6 +2,7 @@ package com.solnotfound.repository;
 
 import com.solnotfound.entity.notifications.Notification;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -43,7 +44,7 @@ public class NotificationRepository implements INotificationRepository {
    */
   @Override
   public List<Notification> saveAll(Iterable<Notification> notifications) {
-    List<Notification> savedNotifications = new java.util.ArrayList<>();
+    List<Notification> savedNotifications = new ArrayList<>();
     for (Notification notification : notifications) {
       savedNotifications.add(save(notification));
     }

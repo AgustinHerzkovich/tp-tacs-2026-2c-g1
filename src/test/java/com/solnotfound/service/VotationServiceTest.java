@@ -3,6 +3,7 @@ package com.solnotfound.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -67,8 +68,8 @@ class VotationServiceTest {
     Votation votation = votation("v-1", "a-1");
     votationRepository.save(votation);
     LocalDateTime candidate = activity.getDateTime().plusDays(1).withHour(12);
-    when(weatherAdapter.getFutureClimate(any(Location.class), any(LocalDateTime.class)))
-        .thenReturn(mock(WeatherForecast.class));
+    when(weatherAdapter.getForecastRange(any(Location.class), anyList()))
+        .thenReturn(List.of(mock(WeatherForecast.class)));
     when(badWeatherChecker.isBadWeatherForActivity(any(), any())).thenReturn(false);
 
     var result =
@@ -93,8 +94,8 @@ class VotationServiceTest {
                     "v-1", new UpdateVotationOptionsRequest(List.of(candidate)), "participant"))
         .isInstanceOf(AccessDeniedException.class);
 
-    when(weatherAdapter.getFutureClimate(any(Location.class), any(LocalDateTime.class)))
-        .thenReturn(mock(WeatherForecast.class));
+    when(weatherAdapter.getForecastRange(any(Location.class), anyList()))
+        .thenReturn(List.of(mock(WeatherForecast.class)));
     when(badWeatherChecker.isBadWeatherForActivity(any(), any())).thenReturn(true);
     assertThatThrownBy(
             () ->

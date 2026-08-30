@@ -10,6 +10,6 @@ public class MaxWindCondition implements WeatherCondition {
 
   @Override
   public Boolean isSatisfiedBy(WeatherForecast weatherForecast) {
-    return true; // TODO
+    return weatherForecast.getWindSpeed() != null && weatherForecast.getWindSpeed() <= maxWindSpeed;
   }
 }

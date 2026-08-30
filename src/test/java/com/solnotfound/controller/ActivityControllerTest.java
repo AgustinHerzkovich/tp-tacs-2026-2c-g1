@@ -26,6 +26,7 @@ import com.solnotfound.service.ActivityService;
 import java.net.URI;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -165,10 +166,10 @@ class ActivityControllerTest {
     controller.join(activity.id(), authentication("user-1"));
 
     WeatherForecast currentWeather =
-        new WeatherForecast(1, LocalDateTime.of(2026, 8, 27, 10, 0), 22.0f, 10.0f, 15.0f);
+        new WeatherForecast(LocalDateTime.of(2026, 8, 27, 10, 0), 22.0f, 10.0f, 15.0f);
 
     WeatherForecast activityForecast =
-        new WeatherForecast(2, activity.dateTime(), 18.0f, 60.0f, 30.0f);
+        new WeatherForecast(activity.dateTime(), 18.0f, 60.0f, 30.0f);
 
     when(weatherAdapter.getWeather(any())).thenReturn(currentWeather);
 
@@ -196,7 +197,7 @@ class ActivityControllerTest {
   @Test
   void listsActivitiesOrganizedByCurrentUser() throws Exception {
     ActivityService service = mock(ActivityService.class);
-    when(service.getByOrganizerId("user-1")).thenReturn(java.util.List.of());
+    when(service.getByOrganizerId("user-1")).thenReturn(List.of());
     ActivityController controller = new ActivityController(service);
 
     MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
@@ -211,7 +212,7 @@ class ActivityControllerTest {
   @Test
   void listsActivitiesJoinedByCurrentUser() throws Exception {
     ActivityService service = mock(ActivityService.class);
-    when(service.getByParticipantId("user-1")).thenReturn(java.util.List.of());
+    when(service.getByParticipantId("user-1")).thenReturn(List.of());
     ActivityController controller = new ActivityController(service);
 
     MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
