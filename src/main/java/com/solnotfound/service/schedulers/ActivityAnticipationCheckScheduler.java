@@ -24,6 +24,7 @@ import org.springframework.stereotype.Component;
 public class ActivityAnticipationCheckScheduler {
 
   private final IActivityRepository activityRepository;
+  private final VotationRepository votationRepository;
   private final IWeatherAdapter weatherAdapter;
   private final IBadWeatherChecker badWeatherChecker;
   private final ApplicationEventPublisher eventPublisher;
@@ -54,6 +55,7 @@ public class ActivityAnticipationCheckScheduler {
             if (badWeather) {
               eventPublisher.publishEvent(
                   ActivityNotificationEvent.from(activity, new BadWeatherAlertNotificationType()));
+              openActivityVotation(activity);
             }
 
           } catch (Exception e) {
@@ -61,5 +63,48 @@ public class ActivityAnticipationCheckScheduler {
                 "Could not obtain activitie's climate {}: {}", activity.getId(), e.getMessage());
           }
         });
+  }
+
+  private void openActivityVotation(Activity activity) {
+    if (votationRepository.findActiveVotationByActivityId(activity.getId()) != null) {
+      log.info("Activity {} has an active votation active already", activity.getId());
+      return;
+    }
+
+    log.info("Opening new active votation for activity {}", activity.getId());
+
+    Votation votation = new Votation();
+    votation.setActivity(activity);
+    votation.setStatus(VotationStatus.ACTIVE);
+    votation.setCreationDate(LocalDateTime.now());
+
+    List<VotationOption> options = new ArrayList<>();
+    votation.setOptions(options);
+
+    log.info(
+        "Searching for new time options with better weather conditions for activity {}",
+        activity.getId());
+    for (int i = 1; i <= activity.getReprogramationRange().getMaxDays(); i++) {
+      LocalDateTime newTime =
+          activity
+              .getDateTime()
+              .plusDays(i)
+              .withHour(activity.getReprogramationRange().getInitialHour().getHour())
+              .withMinute(0)
+              .withSecond(0);
+
+      while (activity.getReprogramationRange().isWithinRange(activity.getDateTime(), newTime)) {
+        WeatherForecast weather = weatherAdapter.getFutureClimate(activity.getLocation(), newTime);
+        if (!badWeatherChecker.isBadWeatherForActivity(weather, activity)) {
+          VotationOption option = new VotationOption();
+          option.setDateTime(newTime);
+          option.setUsers(new ArrayList<>());
+          options.add(option);
+        }
+        newTime = newTime.plusHours(1);
+      }
+    }
+
+    votationRepository.save(votation);
   }
 }

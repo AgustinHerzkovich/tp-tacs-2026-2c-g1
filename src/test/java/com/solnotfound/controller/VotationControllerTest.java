@@ -1,9 +1,12 @@
 package com.solnotfound.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
+import com.solnotfound.adapters.IWeatherAdapter;
 import com.solnotfound.dto.VotationDTO;
 import com.solnotfound.entity.Activity;
+import com.solnotfound.entity.IBadWeatherChecker;
 import com.solnotfound.entity.User;
 import com.solnotfound.entity.Votation;
 import com.solnotfound.entity.VotationStatus;
@@ -23,7 +26,10 @@ class VotationControllerTest {
     repository.save(votation(activity(user("1"), List.of(user("2")))));
     repository.save(votation(activity(user("3"), List.of(user("1")))));
     repository.save(votation(activity(user("4"), List.of(user("5")))));
-    VotationController controller = new VotationController(new VotationService(repository));
+    VotationController controller =
+        new VotationController(
+            new VotationService(
+                repository, mock(IWeatherAdapter.class), mock(IBadWeatherChecker.class)));
 
     ResponseEntity<List<VotationDTO>> response = controller.getByOrganizerOrParticipantId("1");
 
