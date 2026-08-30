@@ -119,7 +119,7 @@ public class VotationService {
     if (!votation.isAnOption(vote)) {
       throw new ResourceNotFoundException("Option not found: " + vote);
     }
-    final Activity activity = votation.getActivity();
+    final Activity activity = activityRepository.findById(votation.getActivityId());
     final User user = com.solnotfound.entity.User.withId(userId);
     if (user == null) {
       throw new ResourceNotFoundException("User not found: " + userId);

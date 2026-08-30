@@ -11,7 +11,7 @@ import lombok.Setter;
 public class Votation {
 
   private String id;
-  private Activity activity;
+  private String activityId;
   private LocalDateTime creationDate;
   private LocalDateTime closeDate;
   private Double minQuorum = 0.50; // 50%
