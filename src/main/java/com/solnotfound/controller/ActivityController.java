@@ -76,6 +76,12 @@ public class ActivityController {
     return ResponseEntity.ok(activityService.leave(id, currentUserId(authentication)));
   }
 
+  @GetMapping("/{id}/weather")
+  public ResponseEntity<ActivityWeatherResponse> getWeather(
+      @PathVariable String id, Authentication authentication) {
+    return ResponseEntity.ok(activityService.getWeather(id, currentUserId(authentication)));
+  }
+
   private String currentUserId(Authentication authentication) {
     if (authentication != null && authentication.getPrincipal() instanceof Jwt jwt) {
       return jwt.getSubject();
@@ -84,11 +90,5 @@ public class ActivityController {
       return authentication.getName();
     }
     return "development-user";
-  }
-
-  @GetMapping("/{id}/weather")
-  public ResponseEntity<ActivityWeatherResponse> getWeather(
-      @PathVariable String id, Authentication authentication) {
-    return ResponseEntity.ok(activityService.getWeather(id, currentUserId(authentication)));
   }
 }
