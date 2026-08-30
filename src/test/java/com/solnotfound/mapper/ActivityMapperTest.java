@@ -36,7 +36,7 @@ class ActivityMapperTest {
     assertThat(dto.type()).isEqualTo(ActivityType.OUTDOOR);
     assertThat(dto.location()).isEqualTo(new LocationDTO("Buenos Aires", -34.6, -58.4));
     assertThat(dto.dateTime()).isEqualTo(dateTime);
-    assertThat(dto.availability()).isFalse();
+    assertThat(dto.availability()).isTrue();
     assertThat(dto.minParticipants()).isEqualTo(10);
     assertThat(dto.maxParticipants()).isEqualTo(20);
     assertThat(dto.weatherConditions()).isEqualTo(new WeatherConditionsDTO(30, 10, 28, 25.0));
@@ -77,7 +77,7 @@ class ActivityMapperTest {
     assertThat(activity.getLocation())
         .isEqualTo(new Location(new City(null, "Buenos Aires"), -34.6, -58.4));
     assertThat(activity.getDateTime()).isEqualTo(dateTime);
-    assertThat(activity.getAvailability()).isFalse();
+    assertThat(activity.getAvailability()).isTrue();
     assertThat(activity.getMinParticipants()).isEqualTo(10);
     assertThat(activity.getMaxParticipants()).isEqualTo(20);
     assertThat(activity.getWeatherConditions())

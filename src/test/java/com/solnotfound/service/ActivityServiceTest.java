@@ -252,12 +252,12 @@ class ActivityServiceTest {
         activityService.create(
             requestWith(ActivityType.OUTDOOR, "Buenos Aires", LocalDateTime.now().plusDays(1)));
 
-    for (int i = 0; i < 10; i++) {
-      activityService.join(available.id(), "user-" + i);
+    ActivityResponse full =
+        activityService.create(
+            requestWith(ActivityType.OUTDOOR, "Buenos Aires", LocalDateTime.now().plusDays(1)));
+    for (int i = 0; i < full.maxParticipants(); i++) {
+      activityService.join(full.id(), "user-" + i);
     }
-
-    activityService.create(
-        requestWith(ActivityType.OUTDOOR, "Buenos Aires", LocalDateTime.now().plusDays(1)));
 
     List<ActivityResponse> results =
         activityService.search(new ActivityFilterDTO(null, null, null, null, true));
@@ -339,7 +339,7 @@ class ActivityServiceTest {
   }
 
   @Test
-  void makesActivityAvailableWhenMinimumParticipantsIsReached() {
+  void activityRemainsAvailableWhileItHasCapacity() {
     CreateActivityRequest request =
         new CreateActivityRequest(
             "Football match",
@@ -357,7 +357,7 @@ class ActivityServiceTest {
 
     ActivityResponse afterFirstJoin = activityService.join(activity.id(), "user-1");
 
-    assertThat(afterFirstJoin.availability()).isFalse();
+    assertThat(afterFirstJoin.availability()).isTrue();
 
     ActivityResponse afterSecondJoin = activityService.join(activity.id(), "user-2");
 
@@ -365,7 +365,7 @@ class ActivityServiceTest {
   }
 
   @Test
-  void makesActivityUnavailableWhenParticipantsDropBelowMinimum() {
+  void activityBecomesAvailableAgainWhenAFullActivityLosesAParticipant() {
     CreateActivityRequest request =
         new CreateActivityRequest(
             "Football match",
@@ -382,14 +382,14 @@ class ActivityServiceTest {
     ActivityResponse activity = activityService.create(request);
 
     activityService.join(activity.id(), "user-1");
-
     activityService.join(activity.id(), "user-2");
+    activityService.join(activity.id(), "user-3");
 
-    assertThat(activityService.getById(activity.id()).availability()).isTrue();
+    assertThat(activityService.getById(activity.id()).availability()).isFalse();
 
     ActivityResponse result = activityService.leave(activity.id(), "user-1");
 
-    assertThat(result.availability()).isFalse();
+    assertThat(result.availability()).isTrue();
   }
 
   @Test

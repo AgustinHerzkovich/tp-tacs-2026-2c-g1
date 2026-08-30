@@ -38,14 +38,14 @@ public class ActivityParticipantTest {
   }
 
   @Test
-  void doesNotMakeActivityAvailableBeforeMinimumParticipants() {
+  void activityIsAvailableWhileItHasCapacity() {
     activity.addParticipant("user-1");
 
-    assertThat(activity.getAvailability()).isFalse();
+    assertThat(activity.getAvailability()).isTrue();
   }
 
   @Test
-  void makesActivityAvailableWhenMinimumParticipantsIsReached() {
+  void activityRemainsAvailableWhenMinimumParticipantsIsReached() {
     activity.addParticipant("user-1");
     activity.addParticipant("user-2");
 
@@ -92,12 +92,13 @@ public class ActivityParticipantTest {
   void makesActivityUnavailableWhenParticipantsDropBelowMinimum() {
     activity.addParticipant("user-1");
     activity.addParticipant("user-2");
+    activity.addParticipant("user-3");
 
-    assertThat(activity.getAvailability()).isTrue();
+    assertThat(activity.getAvailability()).isFalse();
 
     activity.removeParticipant("user-1");
 
-    assertThat(activity.getAvailability()).isFalse();
+    assertThat(activity.getAvailability()).isTrue();
   }
 
   @Test

@@ -2,6 +2,7 @@ package com.solnotfound.service.schedulers;
 
 import com.solnotfound.adapters.IWeatherAdapter;
 import com.solnotfound.entity.Activity;
+import com.solnotfound.entity.ActivityStatus;
 import com.solnotfound.entity.IBadWeatherChecker;
 import com.solnotfound.entity.Location;
 import com.solnotfound.entity.Votation;
@@ -36,9 +37,9 @@ public class ActivityAnticipationCheckScheduler {
   private final ApplicationEventPublisher eventPublisher;
 
   /**
-   * Checks due active activities once per hour. Successful checks are persisted before publishing
-   * bad-weather events, preventing notification failures from causing duplicate weather checks.
-   * Weather-provider failures leave the activity unchecked so a later execution can retry it.
+   * Checks due active activities once per hour. For bad weather, alternatives and the resulting
+   * activity state are persisted before notification delivery. Weather-provider failures leave the
+   * activity unchecked so a later execution can retry it.
    */
   @Scheduled(cron = "0 0 * * * *")
   public void checkActivitiesClimate() {
@@ -56,12 +57,13 @@ public class ActivityAnticipationCheckScheduler {
             WeatherForecast weather =
                 weatherAdapter.getFutureClimate(location, activity.getDateTime());
             boolean badWeather = badWeatherChecker.isBadWeatherForActivity(weather, activity);
-            activity.markWeatherChecked();
-            activityRepository.save(activity);
             if (badWeather) {
+              openActivityVotation(activity);
               eventPublisher.publishEvent(
                   ActivityNotificationEvent.from(activity, new BadWeatherAlertNotificationType()));
-              openActivityVotation(activity);
+            } else {
+              activity.markWeatherChecked();
+              activityRepository.save(activity);
             }
 
           } catch (Exception e) {
@@ -78,11 +80,6 @@ public class ActivityAnticipationCheckScheduler {
     }
 
     log.info("Opening new active votation for activity {}", activity.getId());
-
-    Votation votation = new Votation();
-    votation.setActivityId(activity.getId());
-    votation.setStatus(VotationStatus.ACTIVE);
-    votation.setCreationDate(LocalDateTime.now());
 
     List<VotationOption> options = new ArrayList<>();
 
@@ -110,7 +107,20 @@ public class ActivityAnticipationCheckScheduler {
       }
     }
 
+    activity.markWeatherChecked();
+    if (options.isEmpty()) {
+      activity.setStatus(ActivityStatus.CANCELLED);
+      activityRepository.save(activity);
+      return;
+    }
+
+    Votation votation = new Votation();
+    votation.setActivityId(activity.getId());
+    votation.setStatus(VotationStatus.ACTIVE);
+    votation.setCreationDate(LocalDateTime.now());
     votation.setOptions(options);
     votationRepository.save(votation);
+    activity.setStatus(ActivityStatus.PROPOSED);
+    activityRepository.save(activity);
   }
 }

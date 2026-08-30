@@ -137,6 +137,7 @@ class ActivityAnticipationCheckSchedulerTest {
     when(anotherActivity.isTimeToCheckWeatherConditions()).thenReturn(true);
     when(anotherActivity.getLocation()).thenReturn(anotherLocation);
     when(anotherActivity.getDateTime()).thenReturn(anotherDateTime);
+    when(anotherActivity.getReprogramationRange()).thenReturn(range);
 
     when(activityRepository.findActive()).thenReturn(List.of(activityToCheck, anotherActivity));
 
@@ -148,7 +149,9 @@ class ActivityAnticipationCheckSchedulerTest {
     when(weatherAdapter.getFutureClimate(anotherLocation, anotherDateTime))
         .thenReturn(anotherWeather);
     when(badWeatherChecker.isBadWeatherForActivity(anotherWeather, anotherActivity))
-        .thenReturn(true);
+        .thenReturn(true, false);
+    when(range.isWithinRange(any(LocalDateTime.class), any(LocalDateTime.class)))
+        .thenReturn(true, false);
 
     scheduler.checkActivitiesClimate();
 
@@ -179,7 +182,10 @@ class ActivityAnticipationCheckSchedulerTest {
             new RuntimeException("Error fetching weather")) // first method call throws exception.
         .thenReturn(weather); // second method call returns weather.
 
-    when(badWeatherChecker.isBadWeatherForActivity(weather, activityToCheck)).thenReturn(true);
+    when(range.isWithinRange(any(LocalDateTime.class), any(LocalDateTime.class)))
+        .thenReturn(true, false);
+    when(badWeatherChecker.isBadWeatherForActivity(any(), eq(activityToCheck)))
+        .thenReturn(true, false);
 
     // first scheduler run: the weather check fails, so no notification is sent
     scheduler.checkActivitiesClimate();
@@ -201,10 +207,13 @@ class ActivityAnticipationCheckSchedulerTest {
   }
 
   @Test
-  void doesNotRetryWeatherWhenNotificationDeliveryFails() {
+  void persistsBadWeatherOutcomeBeforeNotificationDeliveryFails() {
     when(activityRepository.findActive()).thenReturn(List.of(activityToCheck));
     when(weatherAdapter.getFutureClimate(location, dateTime)).thenReturn(weather);
-    when(badWeatherChecker.isBadWeatherForActivity(weather, activityToCheck)).thenReturn(true);
+    when(range.isWithinRange(any(LocalDateTime.class), any(LocalDateTime.class)))
+        .thenReturn(true, false);
+    when(badWeatherChecker.isBadWeatherForActivity(any(), eq(activityToCheck)))
+        .thenReturn(true, false);
     doThrow(new RuntimeException("Notification failed"))
         .when(eventPublisher)
         .publishEvent(any(ActivityNotificationEvent.class));
@@ -213,6 +222,8 @@ class ActivityAnticipationCheckSchedulerTest {
 
     verify(activityToCheck).markWeatherChecked();
     verify(activityRepository).save(activityToCheck);
+    verify(votationRepository).save(any(Votation.class));
+    verify(activityToCheck).setStatus(ActivityStatus.PROPOSED);
   }
 
   @Test
@@ -246,6 +257,8 @@ class ActivityAnticipationCheckSchedulerTest {
         .containsExactly(
             dateTime.plusDays(1).withHour(10).withMinute(0).withSecond(0),
             dateTime.plusDays(1).withHour(11).withMinute(0).withSecond(0));
+    verify(activityToCheck).setStatus(ActivityStatus.PROPOSED);
+    verify(activityRepository).save(activityToCheck);
   }
 
   @Test
@@ -308,7 +321,7 @@ class ActivityAnticipationCheckSchedulerTest {
   }
 
   @Test
-  void savesVotationWithNoOptionsWhenNoCandidateIsWithinRange() throws Exception {
+  void cancelsActivityWithoutOpeningVotationWhenNoCandidateIsWithinRange() throws Exception {
     when(range.isWithinRange(any(LocalDateTime.class), any(LocalDateTime.class))).thenReturn(false);
     when(activityRepository.findActive()).thenReturn(List.of(activityToCheck));
     when(weatherAdapter.getFutureClimate(any(), any())).thenReturn(weather);
@@ -316,9 +329,9 @@ class ActivityAnticipationCheckSchedulerTest {
 
     scheduler.checkActivitiesClimate();
 
-    ArgumentCaptor<Votation> votationCaptor = ArgumentCaptor.forClass(Votation.class);
-    verify(votationRepository).save(votationCaptor.capture());
-
-    assertThat(votationCaptor.getValue().getOptions()).isEmpty();
+    verify(votationRepository, never()).save(any());
+    verify(activityToCheck).setStatus(ActivityStatus.CANCELLED);
+    verify(activityToCheck).markWeatherChecked();
+    verify(activityRepository).save(activityToCheck);
   }
 }

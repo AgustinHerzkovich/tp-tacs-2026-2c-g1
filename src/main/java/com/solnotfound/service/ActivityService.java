@@ -137,7 +137,7 @@ public class ActivityService {
   }
 
   /**
-   * Adds a user to an activity and persists the resulting participant and availability state.
+   * Adds a user to an activity and persists the resulting participant state.
    *
    * @param activityId activity identifier
    * @param userId authenticated user identifier
@@ -155,7 +155,7 @@ public class ActivityService {
   }
 
   /**
-   * Removes a user from an activity and persists the resulting participant and availability state.
+   * Removes a user from an activity and persists the resulting participant state.
    *
    * @param activityId activity identifier
    * @param userId authenticated user identifier

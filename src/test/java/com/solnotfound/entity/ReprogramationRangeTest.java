@@ -48,4 +48,11 @@ class ReprogramationRangeTest {
     assertThat(range.isWithinRange(original, atStart)).isTrue();
     assertThat(range.isWithinRange(original, atEnd)).isTrue();
   }
+
+  @Test
+  void acceptsCandidateAfterOriginalTimeOnLastAllowedDay() {
+    LocalDateTime candidate = original.plusDays(3).withHour(20).withMinute(0);
+
+    assertThat(range.isWithinRange(original, candidate)).isTrue();
+  }
 }

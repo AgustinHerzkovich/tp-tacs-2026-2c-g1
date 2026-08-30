@@ -25,7 +25,6 @@ public class Activity {
       anticipationWindow; // hecho en horas, cantidad de tiempo antes de la actividad para chequear
 
   @Setter @Getter private ReprogramationRange reprogramationRange;
-  private Boolean availability = false;
   @Getter private ActivityStatus status = ActivityStatus.CONFIRMED;
   private List<ActivityStatus> statusHistory = new ArrayList<>(List.of(ActivityStatus.CONFIRMED));
   @Setter @Getter private Boolean weatherChecked = false;
@@ -63,8 +62,13 @@ public class Activity {
     return List.copyOf(participants);
   }
 
+  /**
+   * Indicates whether another participant can join according to capacity and activity status.
+   *
+   * @return {@code true} when the activity accepts at least one more participant
+   */
   public synchronized Boolean getAvailability() {
-    return availability;
+    return !cannotChangeParticipants() && participants.size() < maxParticipants;
   }
 
   public List<ActivityStatus> getStatusHistory() {
@@ -83,8 +87,7 @@ public class Activity {
   }
 
   /**
-   * Adds a participant if they are not already registered and updates availability when the minimum
-   * participant count is reached.
+   * Adds a participant if they are not already registered and capacity remains.
    *
    * @param userId identifier of the participant
    * @throws IllegalStateActivityException if the activity no longer accepts changes or is full
@@ -109,15 +112,10 @@ public class Activity {
     }
 
     participants.add(User.withId(userId));
-
-    if (participants.size() >= minParticipants) {
-      availability = true;
-    }
   }
 
   /**
-   * Removes a participant when present and updates availability if the activity drops below its
-   * minimum participant count.
+   * Removes a participant when present.
    *
    * @param userId identifier of the participant
    * @throws IllegalStateActivityException if the activity no longer accepts participant changes
@@ -128,15 +126,7 @@ public class Activity {
           "Participants cannot be removed to an activity in that status.");
     }
 
-    boolean removed = participants.removeIf(participant -> participant.getId().equals(userId));
-
-    if (!removed) {
-      return;
-    }
-
-    if (participants.size() < minParticipants) {
-      availability = false;
-    }
+    participants.removeIf(participant -> participant.getId().equals(userId));
   }
 
   /**
