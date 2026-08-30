@@ -169,7 +169,7 @@ public class Activity {
     return status == ActivityStatus.CANCELLED || status == ActivityStatus.FINISHED;
   }
 
-  public boolean isAParticipant(User user) {
+  public synchronized boolean isAParticipant(User user) {
     return participants.contains(user);
   }
 

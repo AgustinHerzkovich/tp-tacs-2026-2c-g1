@@ -35,12 +35,22 @@ public class Votation {
     return options.stream().anyMatch((option) -> option.thisUserVoted(user));
   }
 
+  private Optional<VotationOption> findOption(LocalDateTime option) {
+    return options.stream().filter(o -> o.getDateTime().equals(option)).findFirst();
+  }
+
   public void vote(LocalDateTime option, User user) {
-    options.get(options.indexOf(option)).addUser(user);
+    final Optional<VotationOption> optionFound = findOption(option);
+    if (optionFound.isPresent()) {
+      optionFound.get().addUser(user);
+    }
   }
 
   public void unvote(LocalDateTime option, User user) {
-    options.get(options.indexOf(option)).removeUser(user);
+    final Optional<VotationOption> optionFound = findOption(option);
+    if (optionFound.isPresent()) {
+      optionFound.get().removeUser(user);
+    }
   }
 
   public Optional<LocalDateTime> getVoteByUser(User user) {
