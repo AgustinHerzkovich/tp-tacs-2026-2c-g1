@@ -19,41 +19,41 @@ public class Votation {
   private VotationStatus status;
   private List<VotationOption> options = new ArrayList<>();
 
-  public List<VotationOption> getOptions() {
+  public synchronized List<VotationOption> getOptions() {
     return List.copyOf(options);
   }
 
-  public void setOptions(List<VotationOption> options) {
+  public synchronized void setOptions(List<VotationOption> options) {
     this.options = new ArrayList<>(options);
   }
 
-  public boolean isAnOption(LocalDateTime option) {
+  public synchronized boolean isAnOption(LocalDateTime option) {
     return options.stream().anyMatch((votOpt) -> votOpt.getDateTime().equals(option));
   }
 
-  public boolean thisUserVoted(User user) {
+  public synchronized boolean thisUserVoted(User user) {
     return options.stream().anyMatch((option) -> option.thisUserVoted(user));
   }
 
-  private Optional<VotationOption> findOption(LocalDateTime option) {
+  private synchronized Optional<VotationOption> findOption(LocalDateTime option) {
     return options.stream().filter(o -> o.getDateTime().equals(option)).findFirst();
   }
 
-  public void vote(LocalDateTime option, User user) {
+  public synchronized void vote(LocalDateTime option, User user) {
     final Optional<VotationOption> optionFound = findOption(option);
     if (optionFound.isPresent()) {
       optionFound.get().addUser(user);
     }
   }
 
-  public void unvote(LocalDateTime option, User user) {
+  public synchronized void unvote(LocalDateTime option, User user) {
     final Optional<VotationOption> optionFound = findOption(option);
     if (optionFound.isPresent()) {
       optionFound.get().removeUser(user);
     }
   }
 
-  public Optional<LocalDateTime> getVoteByUser(User user) {
+  public synchronized Optional<LocalDateTime> getVoteByUser(User user) {
     for (VotationOption option : options) {
       if (option.thisUserVoted(user)) {
         return Optional.of(option.getDateTime());
