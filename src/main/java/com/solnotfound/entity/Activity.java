@@ -4,6 +4,7 @@ import com.solnotfound.exception.IllegalStateActivityException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -35,14 +36,14 @@ public class Activity {
   @edu.umd.cs.findbugs.annotations.SuppressFBWarnings(
       value = "EI_EXPOSE_REP",
       justification = "The activity aggregate intentionally exposes its organizer entity")
-  public User getOrganizer() {
+  public synchronized User getOrganizer() {
     return organizer;
   }
 
   @edu.umd.cs.findbugs.annotations.SuppressFBWarnings(
       value = "EI_EXPOSE_REP2",
       justification = "The activity aggregate intentionally references its organizer entity")
-  public void setOrganizer(User organizer) {
+  public synchronized void setOrganizer(User organizer) {
     this.organizer = organizer;
   }
 
@@ -167,5 +168,26 @@ public class Activity {
 
   private boolean cannotChangeParticipants() {
     return status == ActivityStatus.CANCELLED || status == ActivityStatus.FINISHED;
+  }
+
+  public synchronized boolean isAParticipant(User user) {
+    return participants.contains(user);
+  }
+
+  public synchronized boolean isAnOrganizerOrAParticipant(User user) {
+    return organizer.equals(user) || isAParticipant(user);
+  }
+
+  /**
+   * Finds an organizer or participant by identifier.
+   *
+   * @param userId identifier to find
+   * @return the user belonging to this activity, or empty when the identifier is unrelated
+   */
+  public synchronized Optional<User> findOrganizerOrParticipant(String userId) {
+    if (organizer != null && organizer.getId().equals(userId)) {
+      return Optional.of(organizer);
+    }
+    return participants.stream().filter(user -> user.getId().equals(userId)).findFirst();
   }
 }

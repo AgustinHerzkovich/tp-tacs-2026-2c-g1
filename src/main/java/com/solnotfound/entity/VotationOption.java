@@ -13,11 +13,25 @@ public class VotationOption {
   private LocalDateTime dateTime;
   private List<User> users = new ArrayList<>();
 
-  public List<User> getUsers() {
+  public synchronized List<User> getUsers() {
     return List.copyOf(users);
   }
 
-  public void setUsers(List<User> users) {
+  public synchronized void setUsers(List<User> users) {
     this.users = new ArrayList<>(users);
+  }
+
+  public synchronized void addUser(User user) {
+    if (!this.users.contains(user)) {
+      this.users.add(user);
+    }
+  }
+
+  public synchronized boolean thisUserVoted(User user) {
+    return this.users.contains(user);
+  }
+
+  public synchronized void removeUser(User user) {
+    this.users.remove(user);
   }
 }

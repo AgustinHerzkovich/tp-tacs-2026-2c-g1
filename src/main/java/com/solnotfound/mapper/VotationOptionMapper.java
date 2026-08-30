@@ -1,8 +1,8 @@
 package com.solnotfound.mapper;
 
 import com.solnotfound.dto.VotationOptionDTO;
+import com.solnotfound.entity.User;
 import com.solnotfound.entity.VotationOption;
-import java.util.List;
 
 public final class VotationOptionMapper {
 
@@ -13,14 +13,13 @@ public final class VotationOptionMapper {
       return null;
     }
 
-    return new VotationOptionDTO(option.getDateTime(), toUserDTOs(option));
+    return new VotationOptionDTO(
+        option.getDateTime(),
+        option.getUsers().size(),
+        option.getUsers().stream().map(VotationOptionMapper::displayName).toList());
   }
 
-  private static List<com.solnotfound.dto.UserDTO> toUserDTOs(VotationOption option) {
-    if (option.getUsers() == null) {
-      return null;
-    }
-
-    return option.getUsers().stream().map(UserMapper::toDTO).toList();
+  private static String displayName(User user) {
+    return user.getName() == null || user.getName().isBlank() ? user.getId() : user.getName();
   }
 }

@@ -3,14 +3,14 @@ package com.solnotfound.dto;
 import java.time.LocalDateTime;
 import java.util.List;
 
-public record VotationOptionDTO(LocalDateTime dateTime, List<UserDTO> users) {
+public record VotationOptionDTO(LocalDateTime dateTime, int voteCount, List<String> voterNames) {
 
   public VotationOptionDTO {
-    users = List.copyOf(users);
+    voterNames = List.copyOf(voterNames);
   }
 
   @Override
-  public List<UserDTO> users() {
-    return List.copyOf(users);
+  public List<String> voterNames() {
+    return List.copyOf(voterNames);
   }
 }

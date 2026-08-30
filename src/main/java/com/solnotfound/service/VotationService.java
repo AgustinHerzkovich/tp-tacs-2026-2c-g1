@@ -5,8 +5,10 @@ import com.solnotfound.dto.UpdateVotationOptionsRequest;
 import com.solnotfound.dto.VotationDTO;
 import com.solnotfound.entity.Activity;
 import com.solnotfound.entity.IBadWeatherChecker;
+import com.solnotfound.entity.User;
 import com.solnotfound.entity.Votation;
 import com.solnotfound.entity.VotationOption;
+import com.solnotfound.entity.VotationStatus;
 import com.solnotfound.entity.WeatherForecast;
 import com.solnotfound.exception.AccessDeniedException;
 import com.solnotfound.exception.InvalidVotationOptionsException;
@@ -19,6 +21,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
 
@@ -110,6 +113,50 @@ public class VotationService {
     votation.setOptions(newOptions);
     votationRepository.save(votation);
 
+    return VotationMapper.toDTO(votation);
+  }
+
+  /**
+   * Registers or changes a user's vote in an active votation. Repeating the current choice is
+   * idempotent and each user remains associated with at most one option.
+   *
+   * @param votationId votation identifier
+   * @param userId authenticated user identifier
+   * @param vote selected option date and time
+   * @return the votation with its updated partial result
+   * @throws ResourceNotFoundException when the votation, activity, option, or user does not exist
+   * @throws AccessDeniedException when the votation is closed
+   */
+  public VotationDTO vote(String votationId, String userId, LocalDateTime vote) {
+    final Votation votation = votationRepository.findById(votationId);
+    if (votation == null) {
+      throw new ResourceNotFoundException("Votation not found: " + votationId);
+    }
+    if (!votation.isAnOption(vote)) {
+      throw new ResourceNotFoundException("Option not found: " + vote);
+    }
+    final Activity activity = activityRepository.findById(votation.getActivityId());
+    if (activity == null) {
+      throw new ResourceNotFoundException("Activity not found: " + votation.getActivityId());
+    }
+    final User user =
+        activity
+            .findOrganizerOrParticipant(userId)
+            .orElseThrow(
+                () ->
+                    new ResourceNotFoundException(
+                        "User doesn't belong to this activity: " + userId));
+    if (votation.getStatus() != VotationStatus.ACTIVE) {
+      throw new AccessDeniedException("Votation already closed: " + votationId);
+    }
+    final Optional<LocalDateTime> currentVote = votation.getVoteByUser(user);
+    if (currentVote.isPresent() && !currentVote.get().equals(vote)) {
+      votation.unvote(currentVote.get(), user);
+    }
+    if (currentVote.isEmpty() || !currentVote.get().equals(vote)) {
+      votation.vote(vote, user);
+    }
+    votationRepository.save(votation);
     return VotationMapper.toDTO(votation);
   }
 }
