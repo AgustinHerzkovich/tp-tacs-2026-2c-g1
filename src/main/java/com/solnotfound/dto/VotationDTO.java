@@ -1,23 +1,22 @@
 package com.solnotfound.dto;
 
 import com.solnotfound.entity.VotationStatus;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.time.LocalDateTime;
 import java.util.List;
 
 public record VotationDTO(
     String id,
-    ActivityDTO activity,
+    String activityId,
     LocalDateTime creationDate,
     VotationStatus status,
     List<VotationOptionDTO> options) {
 
-  @SuppressFBWarnings("EI_EXPOSE_REP2")
-  public VotationDTO {}
+  public VotationDTO {
+    options = List.copyOf(options);
+  }
 
   @Override
-  @SuppressFBWarnings("EI_EXPOSE_REP")
   public List<VotationOptionDTO> options() {
-    return options;
+    return List.copyOf(options);
   }
 }

@@ -4,7 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.solnotfound.adapters.IWeatherAdapter;
 import com.solnotfound.dto.ActivityResponse;
@@ -26,6 +30,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 class ActivityControllerTest {
 
@@ -185,6 +191,36 @@ class ActivityControllerTest {
     assertThat(response.getBody().currentWeather().temperature()).isEqualTo(22.0f);
 
     assertThat(response.getBody().activityForecast().temperature()).isEqualTo(18.0f);
+  }
+
+  @Test
+  void listsActivitiesOrganizedByCurrentUser() throws Exception {
+    ActivityService service = mock(ActivityService.class);
+    when(service.getByOrganizerId("user-1")).thenReturn(java.util.List.of());
+    ActivityController controller = new ActivityController(service);
+
+    MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+
+    mockMvc
+        .perform(get("/activities/organized/me").principal(authentication("user-1")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$").isEmpty());
+    verify(service).getByOrganizerId("user-1");
+  }
+
+  @Test
+  void listsActivitiesJoinedByCurrentUser() throws Exception {
+    ActivityService service = mock(ActivityService.class);
+    when(service.getByParticipantId("user-1")).thenReturn(java.util.List.of());
+    ActivityController controller = new ActivityController(service);
+
+    MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+
+    mockMvc
+        .perform(get("/activities/joined/me").principal(authentication("user-1")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$").isEmpty());
+    verify(service).getByParticipantId("user-1");
   }
 
   private TestingAuthenticationToken authentication(String userId) {

@@ -1,7 +1,6 @@
 package com.solnotfound.entity;
 
 import com.solnotfound.exception.IllegalStateActivityException;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -11,7 +10,6 @@ import lombok.Setter;
 public class Activity {
 
   @Getter @Setter private String id;
-  @Getter @Setter private String creatorUserId;
   @Getter @Setter private String title;
   @Getter @Setter private String description;
   @Getter @Setter private ActivityType type;
@@ -19,7 +17,7 @@ public class Activity {
   @Getter @Setter private LocalDateTime dateTime;
   @Getter @Setter private Integer minParticipants;
   @Getter @Setter private Integer maxParticipants;
-  private List<Participant> participants = new ArrayList<>();
+  private List<User> participants = new ArrayList<>();
   private List<WeatherCondition> weatherConditions = List.of();
 
   @Setter @Getter
@@ -35,24 +33,22 @@ public class Activity {
 
   // las condiciones del clima y avisar a los usuarios
 
-  @SuppressFBWarnings("EI_EXPOSE_REP")
+  @edu.umd.cs.findbugs.annotations.SuppressFBWarnings(
+      value = "EI_EXPOSE_REP",
+      justification = "The activity aggregate intentionally exposes its organizer entity")
   public User getOrganizer() {
     return organizer;
   }
 
-  @SuppressFBWarnings("EI_EXPOSE_REP2")
+  @edu.umd.cs.findbugs.annotations.SuppressFBWarnings(
+      value = "EI_EXPOSE_REP2",
+      justification = "The activity aggregate intentionally references its organizer entity")
   public void setOrganizer(User organizer) {
     this.organizer = organizer;
   }
 
-  @SuppressFBWarnings("EI_EXPOSE_REP")
-  public List<User> getParticipants() {
-    return participants;
-  }
-
-  @SuppressFBWarnings("EI_EXPOSE_REP2")
-  public void setParticipants(List<User> participants) {
-    this.participants = participants;
+  public synchronized void setParticipants(List<User> participants) {
+    this.participants = new ArrayList<>(participants);
   }
 
   public List<WeatherCondition> getWeatherConditions() {
@@ -63,7 +59,7 @@ public class Activity {
     this.weatherConditions = List.copyOf(weatherConditions);
   }
 
-  public synchronized List<Participant> getParticipants() {
+  public synchronized List<User> getParticipants() {
     return List.copyOf(participants);
   }
 
@@ -100,7 +96,7 @@ public class Activity {
     }
 
     boolean alreadyParticipating =
-        participants.stream().anyMatch(participant -> participant.getUserId().equals(userId));
+        participants.stream().anyMatch(participant -> participant.getId().equals(userId));
 
     if (alreadyParticipating) {
       return;
@@ -112,7 +108,7 @@ public class Activity {
       throw new IllegalStateActivityException("Activity has no available spots.");
     }
 
-    participants.add(new Participant(userId));
+    participants.add(User.withId(userId));
 
     if (participants.size() >= minParticipants) {
       availability = true;
@@ -132,7 +128,7 @@ public class Activity {
           "Participants cannot be removed to an activity in that status.");
     }
 
-    boolean removed = participants.removeIf(participant -> participant.getUserId().equals(userId));
+    boolean removed = participants.removeIf(participant -> participant.getId().equals(userId));
 
     if (!removed) {
       return;

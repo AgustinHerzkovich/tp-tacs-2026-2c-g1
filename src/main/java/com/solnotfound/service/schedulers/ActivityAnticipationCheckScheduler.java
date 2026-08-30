@@ -4,10 +4,16 @@ import com.solnotfound.adapters.IWeatherAdapter;
 import com.solnotfound.entity.Activity;
 import com.solnotfound.entity.IBadWeatherChecker;
 import com.solnotfound.entity.Location;
+import com.solnotfound.entity.Votation;
+import com.solnotfound.entity.VotationOption;
+import com.solnotfound.entity.VotationStatus;
 import com.solnotfound.entity.WeatherForecast;
 import com.solnotfound.entity.notifications.BadWeatherAlertNotificationType;
 import com.solnotfound.listener.ActivityNotificationEvent;
 import com.solnotfound.repository.IActivityRepository;
+import com.solnotfound.repository.IVotationRepository;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,7 +30,7 @@ import org.springframework.stereotype.Component;
 public class ActivityAnticipationCheckScheduler {
 
   private final IActivityRepository activityRepository;
-  private final VotationRepository votationRepository;
+  private final IVotationRepository votationRepository;
   private final IWeatherAdapter weatherAdapter;
   private final IBadWeatherChecker badWeatherChecker;
   private final ApplicationEventPublisher eventPublisher;
@@ -66,7 +72,7 @@ public class ActivityAnticipationCheckScheduler {
   }
 
   private void openActivityVotation(Activity activity) {
-    if (votationRepository.findActiveVotationByActivityId(activity.getId()) != null) {
+    if (votationRepository.findActiveByActivityId(activity.getId()) != null) {
       log.info("Activity {} has an active votation active already", activity.getId());
       return;
     }
@@ -74,12 +80,11 @@ public class ActivityAnticipationCheckScheduler {
     log.info("Opening new active votation for activity {}", activity.getId());
 
     Votation votation = new Votation();
-    votation.setActivity(activity);
+    votation.setActivityId(activity.getId());
     votation.setStatus(VotationStatus.ACTIVE);
     votation.setCreationDate(LocalDateTime.now());
 
     List<VotationOption> options = new ArrayList<>();
-    votation.setOptions(options);
 
     log.info(
         "Searching for new time options with better weather conditions for activity {}",
@@ -90,7 +95,7 @@ public class ActivityAnticipationCheckScheduler {
               .getDateTime()
               .plusDays(i)
               .withHour(activity.getReprogramationRange().getInitialHour().getHour())
-              .withMinute(0)
+              .withMinute(activity.getReprogramationRange().getInitialHour().getMinute())
               .withSecond(0);
 
       while (activity.getReprogramationRange().isWithinRange(activity.getDateTime(), newTime)) {
@@ -105,6 +110,7 @@ public class ActivityAnticipationCheckScheduler {
       }
     }
 
+    votation.setOptions(options);
     votationRepository.save(votation);
   }
 }

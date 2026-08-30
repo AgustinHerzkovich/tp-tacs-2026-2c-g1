@@ -1,23 +1,23 @@
 package com.solnotfound.entity;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
-@Data
+@Getter
+@Setter
 public class VotationOption {
 
   private LocalDateTime dateTime;
-  private List<User> users;
+  private List<User> users = new ArrayList<>();
 
-  @SuppressFBWarnings("EI_EXPOSE_REP")
   public List<User> getUsers() {
-    return users;
+    return List.copyOf(users);
   }
 
-  @SuppressFBWarnings("EI_EXPOSE_REP2")
   public void setUsers(List<User> users) {
-    this.users = users;
+    this.users = new ArrayList<>(users);
   }
 }

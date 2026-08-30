@@ -6,6 +6,7 @@ import com.solnotfound.dto.ReprogramationRangeDTO;
 import com.solnotfound.dto.UserDTO;
 import com.solnotfound.dto.WeatherConditionsDTO;
 import com.solnotfound.entity.Activity;
+import com.solnotfound.entity.City;
 import com.solnotfound.entity.Location;
 import com.solnotfound.entity.MaxRainProbabilityCondition;
 import com.solnotfound.entity.MaxWindCondition;
@@ -54,7 +55,6 @@ public final class ActivityMapper {
     activity.setType(activityDTO.type());
     activity.setLocation(toLocation(activityDTO.location()));
     activity.setDateTime(activityDTO.dateTime());
-    activity.setAvailability(activityDTO.availability());
     activity.setMinParticipants(activityDTO.minParticipants());
     activity.setMaxParticipants(activityDTO.maxParticipants());
     activity.setWeatherConditions(toWeatherConditions(activityDTO.weatherConditions()));
@@ -71,7 +71,10 @@ public final class ActivityMapper {
       return null;
     }
 
-    return new LocationDTO(location.city(), location.latitude(), location.longitude());
+    return new LocationDTO(
+        location.city() == null ? null : location.city().name(),
+        location.latitude(),
+        location.longitude());
   }
 
   private static Location toLocation(LocationDTO locationDTO) {
@@ -79,7 +82,10 @@ public final class ActivityMapper {
       return null;
     }
 
-    return new Location(locationDTO.city(), locationDTO.latitude(), locationDTO.longitude());
+    return new Location(
+        locationDTO.city() == null ? null : new City(null, locationDTO.city()),
+        locationDTO.latitude(),
+        locationDTO.longitude());
   }
 
   private static ReprogramationRangeDTO toReprogramationRangeDTO(ReprogramationRange range) {
