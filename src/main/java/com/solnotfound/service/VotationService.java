@@ -5,8 +5,10 @@ import com.solnotfound.dto.UpdateVotationOptionsRequest;
 import com.solnotfound.dto.VotationDTO;
 import com.solnotfound.entity.Activity;
 import com.solnotfound.entity.IBadWeatherChecker;
+import com.solnotfound.entity.User;
 import com.solnotfound.entity.Votation;
 import com.solnotfound.entity.VotationOption;
+import com.solnotfound.entity.VotationStatus;
 import com.solnotfound.entity.WeatherForecast;
 import com.solnotfound.exception.AccessDeniedException;
 import com.solnotfound.exception.InvalidVotationOptionsException;
@@ -110,6 +112,43 @@ public class VotationService {
     votation.setOptions(newOptions);
     votationRepository.save(votation);
 
+    return VotationMapper.toDTO(votation);
+  }
+
+  private boolean isBadWeatherAt(Activity activity, LocalDateTime dateTime) {
+    WeatherForecast weather = weatherAdapter.getFutureClimate(activity.getLocation(), dateTime);
+    return badWeatherChecker.isBadWeatherForActivity(weather, activity);
+  }
+
+  public VotationDTO vote(String votationId, String userId, LocalDateTime vote) {
+    final Votation votation = votationRepository.findById(votationId);
+    if (votation == null) {
+      throw new ResourceNotFoundException("Votation not found: " + votationId);
+    }
+    if (!votation.isAnOption(vote)) {
+      throw new ResourceNotFoundException("Option not found: " + vote);
+    }
+    final Activity activity = votation.getActivity();
+    final User user = com.solnotfound.entity.User.withId(userId);
+    if (user == null) {
+      throw new ResourceNotFoundException("User not found: " + userId);
+    }
+    if (!activity.isAnOrganizerOrAParticipant(user)) {
+      throw new AccessDeniedException(
+          "Only the organizer and the participants can participate in this votation");
+    }
+    if (!votation.getStatus().equals(VotationStatus.ACTIVE)) {
+      throw new AccessDeniedException("Votation already closed: " + votationId);
+    }
+    if (!votation.thisUserVoted(user)) {
+      votation.vote(vote, user);
+    } else {
+      final LocalDateTime currentVote = votation.getVoteByUser(user);
+      votation.unvote(currentVote, user);
+      if (!currentVote.equals(vote)) {
+        votation.vote(vote, user);
+      }
+    }
     return VotationMapper.toDTO(votation);
   }
 }
