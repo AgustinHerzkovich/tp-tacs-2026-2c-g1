@@ -140,6 +140,7 @@ public class VotationService {
         votation.vote(vote, user);
       }
     }
+    votationRepository.save(votation);
     return VotationMapper.toDTO(votation);
   }
 }
