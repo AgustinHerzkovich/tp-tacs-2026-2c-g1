@@ -18,7 +18,7 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(InvalidActivityException.class)
   public ResponseEntity<ProblemDetail> handleInvalidActivity(InvalidActivityException exception) {
     ProblemDetail problem =
-      ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, exception.getMessage());
+        ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, exception.getMessage());
     problem.setTitle("Invalid activity");
     return ResponseEntity.badRequest().body(problem);
   }
@@ -57,7 +57,7 @@ public class GlobalExceptionHandler {
     Map<String, String> errors = new LinkedHashMap<>();
     for (FieldError error : exception.getBindingResult().getFieldErrors()) {
       errors.putIfAbsent(
-        error.getField(), Objects.requireNonNullElse(error.getDefaultMessage(), "Invalid value"));
+          error.getField(), Objects.requireNonNullElse(error.getDefaultMessage(), "Invalid value"));
     }
 
     ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
@@ -68,10 +68,10 @@ public class GlobalExceptionHandler {
 
   @ExceptionHandler(MethodArgumentTypeMismatchException.class)
   public ResponseEntity<ProblemDetail> handleTypeMismatch(
-    MethodArgumentTypeMismatchException exception) {
+      MethodArgumentTypeMismatchException exception) {
     ProblemDetail problem =
-      ProblemDetail.forStatusAndDetail(
-        HttpStatus.BAD_REQUEST, "Invalid value for parameter '" + exception.getName() + "'");
+        ProblemDetail.forStatusAndDetail(
+            HttpStatus.BAD_REQUEST, "Invalid value for parameter '" + exception.getName() + "'");
     problem.setTitle("Invalid request parameter");
     problem.setProperty("parameter", exception.getName());
     return ResponseEntity.badRequest().body(problem);
@@ -80,7 +80,7 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(ResourceNotFoundException.class)
   public ResponseEntity<ProblemDetail> handleResourceNotFound(ResourceNotFoundException exception) {
     ProblemDetail problem =
-      ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, exception.getMessage());
+        ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, exception.getMessage());
     problem.setTitle("Resource not found");
     return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problem);
   }
@@ -88,7 +88,7 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(AccessDeniedException.class)
   public ResponseEntity<ProblemDetail> handleAccessDenied(AccessDeniedException exception) {
     ProblemDetail problem =
-      ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, exception.getMessage());
+        ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, exception.getMessage());
     problem.setTitle("Access denied");
     return ResponseEntity.status(HttpStatus.FORBIDDEN).body(problem);
   }

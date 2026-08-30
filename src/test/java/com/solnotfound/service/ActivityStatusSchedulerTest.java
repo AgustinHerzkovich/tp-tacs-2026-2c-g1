@@ -7,7 +7,7 @@ import static org.mockito.Mockito.when;
 
 import com.solnotfound.entity.Activity;
 import com.solnotfound.entity.ActivityStatus;
-import com.solnotfound.repository.ActivityRepository;
+import com.solnotfound.repository.IActivityRepository;
 import com.solnotfound.service.schedulers.ActivityStatusScheduler;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -20,7 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class ActivityStatusSchedulerTest {
 
-  @Mock private ActivityRepository activityRepository;
+  @Mock private IActivityRepository activityRepository;
 
   private ActivityStatusScheduler scheduler;
 

@@ -7,26 +7,23 @@ import lombok.Setter;
 
 @Getter
 public class Notification {
-  @Setter
-  private String id;
-  @Setter
-  private LocalDateTime createdAt;
+  @Setter private String id;
+  @Setter private LocalDateTime createdAt;
 
-  private final String receiverUser;     // TODO: asociar a quien se le manda la notificacion (user)
-  private final Activity activity;
+  private final String receiverUser;
+  private final String activityId;
 
   private final NotificationType type;
   private final String title;
   private final String message;
 
-  @Setter
-  private NotificationStatus status;
+  @Setter private NotificationStatus status;
 
   private boolean read;
 
   public Notification(String receiverUser, Activity activity, NotificationType type) {
     this.receiverUser = receiverUser;
-    this.activity = activity;
+    this.activityId = activity.getId();
     this.type = type;
     this.createdAt = LocalDateTime.now();
 

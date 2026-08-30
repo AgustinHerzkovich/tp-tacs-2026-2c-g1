@@ -1,12 +1,11 @@
 package com.solnotfound.entity.notifications;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import com.solnotfound.entity.Activity;
+import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import java.time.LocalDateTime;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class NotificationTest {
 
@@ -22,7 +21,8 @@ class NotificationTest {
 
   @Test
   void shouldInitializeWithCorrectStateAndAssociations() {
-    Notification notification = new Notification("user-1", activity, NotificationType.BAD_WEATHER_ALERT);
+    Notification notification =
+        new Notification("user-1", activity, new BadWeatherAlertNotificationType());
     notification.setId("notif-1");
 
     // Verify that the title and message are generated (we test the exact strings in the Type test)
@@ -36,7 +36,7 @@ class NotificationTest {
 
   @Test
   void shouldMarkNotificationAsRead() {
-    Notification notification = new Notification("user-2", activity, NotificationType.STARTED);
+    Notification notification = new Notification("user-2", activity, new StartedNotificationType());
     notification.setId("notif-2");
 
     assertFalse(notification.isRead());

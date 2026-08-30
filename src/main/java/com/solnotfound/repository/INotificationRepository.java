@@ -1,6 +1,5 @@
 package com.solnotfound.repository;
 
-
 import com.solnotfound.entity.notifications.Notification;
 import java.util.List;
 import java.util.Optional;

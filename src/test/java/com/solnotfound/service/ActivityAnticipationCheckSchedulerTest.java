@@ -7,9 +7,9 @@ import static org.mockito.Mockito.*;
 
 import com.solnotfound.adapters.IWeatherAdapter;
 import com.solnotfound.entity.*;
-import com.solnotfound.entity.notifications.NotificationType;
+import com.solnotfound.entity.notifications.BadWeatherAlertNotificationType;
 import com.solnotfound.listener.ActivityNotificationEvent;
-import com.solnotfound.repository.ActivityRepository;
+import com.solnotfound.repository.IActivityRepository;
 import com.solnotfound.service.schedulers.ActivityAnticipationCheckScheduler;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -25,20 +25,15 @@ import org.springframework.context.ApplicationEventPublisher;
 @ExtendWith(MockitoExtension.class)
 class ActivityAnticipationCheckSchedulerTest {
 
-  @Mock
-  private ActivityRepository activityRepository;
+  @Mock private IActivityRepository activityRepository;
 
-  @Mock
-  private IWeatherAdapter weatherAdapter;
+  @Mock private IWeatherAdapter weatherAdapter;
 
-  @Mock
-  private IBadWeatherChecker badWeatherChecker;
+  @Mock private IBadWeatherChecker badWeatherChecker;
 
-  @Mock
-  private ApplicationEventPublisher eventPublisher;
+  @Mock private ApplicationEventPublisher eventPublisher;
 
-  @InjectMocks
-  private ActivityAnticipationCheckScheduler scheduler;
+  @InjectMocks private ActivityAnticipationCheckScheduler scheduler;
 
   private Activity activityToCheck;
   private Activity activityNotToCheck;
@@ -84,12 +79,13 @@ class ActivityAnticipationCheckSchedulerTest {
 
     scheduler.checkActivitiesClimate();
 
-    ArgumentCaptor<ActivityNotificationEvent> eventCaptor = ArgumentCaptor.forClass(ActivityNotificationEvent.class);
+    ArgumentCaptor<ActivityNotificationEvent> eventCaptor =
+        ArgumentCaptor.forClass(ActivityNotificationEvent.class);
     verify(eventPublisher, times(1)).publishEvent(eventCaptor.capture());
 
     ActivityNotificationEvent firedEvent = eventCaptor.getValue();
-    assertThat(firedEvent.activity()).isEqualTo(activityToCheck);
-    assertThat(firedEvent.type()).isEqualTo(NotificationType.BAD_WEATHER_ALERT);
+    assertThat(firedEvent.activityId()).isEqualTo(activityToCheck.getId());
+    assertThat(firedEvent.type()).isInstanceOf(BadWeatherAlertNotificationType.class);
   }
 
   @Test
@@ -127,22 +123,23 @@ class ActivityAnticipationCheckSchedulerTest {
 
     // First activity throws while fetching the weather
     when(weatherAdapter.getFutureClimate(location, dateTime))
-      .thenThrow(new RuntimeException("Error fetching weather"));
+        .thenThrow(new RuntimeException("Error fetching weather"));
 
     // Second activity should still be processed normally
     when(weatherAdapter.getFutureClimate(anotherLocation, anotherDateTime))
-      .thenReturn(anotherWeather);
+        .thenReturn(anotherWeather);
     when(badWeatherChecker.isBadWeatherForActivity(anotherWeather, anotherActivity))
-      .thenReturn(true);
+        .thenReturn(true);
 
     scheduler.checkActivitiesClimate();
 
-    ArgumentCaptor<ActivityNotificationEvent> eventCaptor = ArgumentCaptor.forClass(ActivityNotificationEvent.class);
+    ArgumentCaptor<ActivityNotificationEvent> eventCaptor =
+        ArgumentCaptor.forClass(ActivityNotificationEvent.class);
     verify(eventPublisher, times(1)).publishEvent(eventCaptor.capture());
 
     ActivityNotificationEvent firedEvent = eventCaptor.getValue();
-    assertThat(firedEvent.activity()).isEqualTo(anotherActivity);
-    assertThat(firedEvent.type()).isEqualTo(NotificationType.BAD_WEATHER_ALERT);
+    assertThat(firedEvent.activityId()).isEqualTo(anotherActivity.getId());
+    assertThat(firedEvent.type()).isInstanceOf(BadWeatherAlertNotificationType.class);
   }
 
   @Test
@@ -159,9 +156,9 @@ class ActivityAnticipationCheckSchedulerTest {
     when(activityRepository.findActive()).thenReturn(List.of(activityToCheck));
 
     when(weatherAdapter.getFutureClimate(location, dateTime))
-      .thenThrow(
-        new RuntimeException("Error fetching weather")) // first method call throws exception.
-      .thenReturn(weather); // second method call returns weather.
+        .thenThrow(
+            new RuntimeException("Error fetching weather")) // first method call throws exception.
+        .thenReturn(weather); // second method call returns weather.
 
     when(badWeatherChecker.isBadWeatherForActivity(weather, activityToCheck)).thenReturn(true);
 
@@ -175,11 +172,27 @@ class ActivityAnticipationCheckSchedulerTest {
 
     verify(weatherAdapter, times(2)).getFutureClimate(location, dateTime);
 
-    ArgumentCaptor<ActivityNotificationEvent> eventCaptor = ArgumentCaptor.forClass(ActivityNotificationEvent.class);
+    ArgumentCaptor<ActivityNotificationEvent> eventCaptor =
+        ArgumentCaptor.forClass(ActivityNotificationEvent.class);
     verify(eventPublisher, times(1)).publishEvent(eventCaptor.capture());
 
     ActivityNotificationEvent firedEvent = eventCaptor.getValue();
-    assertThat(firedEvent.activity()).isEqualTo(activityToCheck);
-    assertThat(firedEvent.type()).isEqualTo(NotificationType.BAD_WEATHER_ALERT);
+    assertThat(firedEvent.activityId()).isEqualTo(activityToCheck.getId());
+    assertThat(firedEvent.type()).isInstanceOf(BadWeatherAlertNotificationType.class);
+  }
+
+  @Test
+  void doesNotRetryWeatherWhenNotificationDeliveryFails() {
+    when(activityRepository.findActive()).thenReturn(List.of(activityToCheck));
+    when(weatherAdapter.getFutureClimate(location, dateTime)).thenReturn(weather);
+    when(badWeatherChecker.isBadWeatherForActivity(weather, activityToCheck)).thenReturn(true);
+    doThrow(new RuntimeException("Notification failed"))
+        .when(eventPublisher)
+        .publishEvent(any(ActivityNotificationEvent.class));
+
+    scheduler.checkActivitiesClimate();
+
+    verify(activityToCheck).markWeatherChecked();
+    verify(activityRepository).save(activityToCheck);
   }
 }

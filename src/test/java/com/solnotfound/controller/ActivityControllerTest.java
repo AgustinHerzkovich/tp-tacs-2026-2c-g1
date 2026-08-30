@@ -49,7 +49,8 @@ class ActivityControllerTest {
             15,
             new ReprogramationRangeDTO(3, LocalTime.of(10, 0), LocalTime.of(20, 0)));
 
-    ResponseEntity<ActivityResponse> response = controller.create(request);
+    ResponseEntity<ActivityResponse> response =
+        controller.create(request, authentication("creator-1"));
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
     assertThat(response.getBody()).isNotNull();
@@ -77,7 +78,8 @@ class ActivityControllerTest {
             15,
             new ReprogramationRangeDTO(3, LocalTime.of(10, 0), LocalTime.of(20, 0)));
 
-    ActivityResponse activity = controller.create(request).getBody();
+    ActivityResponse activity =
+        controller.create(request, authentication("development-user")).getBody();
 
     ResponseEntity<ActivityResponse> response =
         controller.join(activity.id(), authentication("user-1"));
@@ -113,7 +115,8 @@ class ActivityControllerTest {
             15,
             new ReprogramationRangeDTO(3, LocalTime.of(10, 0), LocalTime.of(20, 0)));
 
-    ActivityResponse activity = controller.create(request).getBody();
+    ActivityResponse activity =
+        controller.create(request, authentication("development-user")).getBody();
 
     controller.join(activity.id(), authentication("user-1"));
 
@@ -150,7 +153,8 @@ class ActivityControllerTest {
             15,
             new ReprogramationRangeDTO(3, LocalTime.of(10, 0), LocalTime.of(20, 0)));
 
-    ActivityResponse activity = controller.create(request).getBody();
+    ActivityResponse activity =
+        controller.create(request, authentication("development-user")).getBody();
 
     controller.join(activity.id(), authentication("user-1"));
 

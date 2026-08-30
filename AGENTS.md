@@ -20,3 +20,9 @@
 
 - The Docker builder runs `./mvnw clean verify`, so formatting, Checkstyle, SpotBugs, or test failures also break `docker compose build`.
 - Java sources must use Unix line endings because Spotless explicitly enforces them.
+
+## Documentation
+
+- Every new non-trivial method must include Javadoc describing its behavior, relevant business
+  rules, side effects, return value, and exceptional cases. Do not add redundant Javadoc to simple
+  getters, setters, constructors, or direct delegations.

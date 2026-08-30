@@ -35,8 +35,9 @@ public class ActivityController {
 
   @PostMapping
   public ResponseEntity<ActivityResponse> create(
-      @Valid @RequestBody CreateActivityRequest request) {
-    ActivityResponse createdActivity = activityService.create(request);
+      @Valid @RequestBody CreateActivityRequest request, Authentication authentication) {
+    ActivityResponse createdActivity =
+        activityService.create(request, currentUserId(authentication));
     return ResponseEntity.created(URI.create("/activities/" + createdActivity.id()))
         .body(createdActivity);
   }

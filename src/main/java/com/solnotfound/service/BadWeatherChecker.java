@@ -12,6 +12,13 @@ import org.springframework.stereotype.Component;
 @Component
 public class BadWeatherChecker implements IBadWeatherChecker {
 
+  /**
+   * Evaluates every configured condition and reports bad weather when at least one is violated.
+   *
+   * @param weather forecast to evaluate
+   * @param activity activity whose accepted conditions are used
+   * @return {@code true} when any condition rejects the forecast
+   */
   @Override
   public boolean isBadWeatherForActivity(WeatherForecast weather, Activity activity) {
     return activity.getWeatherConditions().stream()

@@ -9,9 +9,17 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public class CityRepository {
+public class CityRepository implements ICityRepository {
   private final Map<String, City> citiesByNormalizedName = new ConcurrentHashMap<>();
 
+  /**
+   * Finds a city by an accent-insensitive, case-insensitive normalized name or creates it
+   * atomically. Blank names represent an absent city.
+   *
+   * @param name city display name
+   * @return the canonical city, or {@code null} for a blank name
+   */
+  @Override
   public City findOrCreate(String name) {
     if (name == null || name.isBlank()) {
       return null;
