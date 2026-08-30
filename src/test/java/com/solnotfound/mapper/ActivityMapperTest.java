@@ -9,6 +9,7 @@ import com.solnotfound.dto.UserDTO;
 import com.solnotfound.dto.WeatherConditionsDTO;
 import com.solnotfound.entity.Activity;
 import com.solnotfound.entity.ActivityType;
+import com.solnotfound.entity.City;
 import com.solnotfound.entity.Location;
 import com.solnotfound.entity.MaxRainProbabilityCondition;
 import com.solnotfound.entity.MaxWindCondition;
@@ -35,7 +36,7 @@ class ActivityMapperTest {
     assertThat(dto.type()).isEqualTo(ActivityType.OUTDOOR);
     assertThat(dto.location()).isEqualTo(new LocationDTO("Buenos Aires", -34.6, -58.4));
     assertThat(dto.dateTime()).isEqualTo(dateTime);
-    assertThat(dto.availability()).isTrue();
+    assertThat(dto.availability()).isFalse();
     assertThat(dto.minParticipants()).isEqualTo(10);
     assertThat(dto.maxParticipants()).isEqualTo(20);
     assertThat(dto.weatherConditions()).isEqualTo(new WeatherConditionsDTO(30, 10, 28, 25.0));
@@ -73,9 +74,10 @@ class ActivityMapperTest {
     assertThat(activity.getTitle()).isEqualTo("Football match");
     assertThat(activity.getDescription()).isEqualTo("Friendly match");
     assertThat(activity.getType()).isEqualTo(ActivityType.OUTDOOR);
-    assertThat(activity.getLocation()).isEqualTo(new Location("Buenos Aires", -34.6, -58.4));
+    assertThat(activity.getLocation())
+        .isEqualTo(new Location(new City(null, "Buenos Aires"), -34.6, -58.4));
     assertThat(activity.getDateTime()).isEqualTo(dateTime);
-    assertThat(activity.getAvailability()).isTrue();
+    assertThat(activity.getAvailability()).isFalse();
     assertThat(activity.getMinParticipants()).isEqualTo(10);
     assertThat(activity.getMaxParticipants()).isEqualTo(20);
     assertThat(activity.getWeatherConditions())
@@ -101,9 +103,8 @@ class ActivityMapperTest {
     activity.setTitle("Football match");
     activity.setDescription("Friendly match");
     activity.setType(ActivityType.OUTDOOR);
-    activity.setLocation(new Location("Buenos Aires", -34.6, -58.4));
+    activity.setLocation(new Location(new City(null, "Buenos Aires"), -34.6, -58.4));
     activity.setDateTime(dateTime);
-    activity.setAvailability(true);
     activity.setMinParticipants(10);
     activity.setMaxParticipants(20);
     activity.setWeatherConditions(

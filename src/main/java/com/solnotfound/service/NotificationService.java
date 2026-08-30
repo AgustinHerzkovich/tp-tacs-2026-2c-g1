@@ -2,7 +2,7 @@ package com.solnotfound.service;
 
 import com.solnotfound.dto.NotificationResponse;
 import com.solnotfound.entity.Activity;
-import com.solnotfound.entity.Participant;
+import com.solnotfound.entity.User;
 import com.solnotfound.entity.notifications.Notification;
 import com.solnotfound.entity.notifications.NotificationType;
 import com.solnotfound.exception.AccessDeniedException;
@@ -42,11 +42,10 @@ public class NotificationService {
   public void generateNotificationsForActivityEvent(Activity activity, NotificationType type) {
     List<Notification> notificationsToSave = new ArrayList<>();
 
-    String creatorId = activity.getCreatorUserId();
+    String creatorId = activity.getOrganizer().getId();
     notificationsToSave.add(new Notification(creatorId, activity, type));
 
-    List<String> participantIds =
-        activity.getParticipants().stream().map(Participant::getUserId).toList();
+    List<String> participantIds = activity.getParticipants().stream().map(User::getId).toList();
 
     for (String participantId : participantIds) {
       if (!participantId.equals(creatorId)) {

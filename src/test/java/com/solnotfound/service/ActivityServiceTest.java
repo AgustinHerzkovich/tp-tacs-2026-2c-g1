@@ -3,10 +3,9 @@ package com.solnotfound.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.solnotfound.adapters.IWeatherAdapter;
@@ -21,14 +20,15 @@ import com.solnotfound.dto.WeatherConditionsDTO;
 import com.solnotfound.dto.WeatherForecastDTO;
 import com.solnotfound.entity.ActivityType;
 import com.solnotfound.entity.Location;
+import com.solnotfound.entity.User;
 import com.solnotfound.entity.WeatherForecast;
 import com.solnotfound.exception.ActivityAccessDeniedException;
 import com.solnotfound.exception.ActivityNotFoundException;
 import com.solnotfound.exception.IllegalStateActivityException;
-import com.solnotfound.entity.User;
 import com.solnotfound.exception.InvalidActivityException;
 import com.solnotfound.repository.ActivityRepository;
 import com.solnotfound.repository.CityRepository;
+import com.solnotfound.repository.ICityRepository;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
@@ -40,13 +40,15 @@ class ActivityServiceTest {
   private ActivityService activityService;
   private ActivityRepository activityRepository;
   private IWeatherAdapter weatherAdapter;
+  private ICityRepository cityRepository;
 
   @BeforeEach
   void setUp() {
     activityRepository = new ActivityRepository();
     weatherAdapter = org.mockito.Mockito.mock(IWeatherAdapter.class);
+    cityRepository = new CityRepository();
 
-    activityService = new ActivityService(activityRepository, weatherAdapter, new CityRepository());
+    activityService = new ActivityService(activityRepository, weatherAdapter, cityRepository);
   }
 
   @Test
@@ -499,12 +501,13 @@ class ActivityServiceTest {
   }
 
   @Test
-  void organizerQueryReturnsNullWhenRepositoryReturnsNull() {
+  void organizerQueryRejectsInvalidRepositoryResult() {
     ActivityRepository repository = mock(ActivityRepository.class);
     when(repository.findActivitiesByOrganizerId("1")).thenReturn(null);
-    ActivityService service = new ActivityService(repository);
+    ActivityService service = new ActivityService(repository, weatherAdapter, cityRepository);
 
-    assertThat(service.getByOrganizerId("1")).isNull();
+    assertThatThrownBy(() -> service.getByOrganizerId("1"))
+        .isInstanceOf(NullPointerException.class);
   }
 
   @Test
@@ -555,12 +558,13 @@ class ActivityServiceTest {
   }
 
   @Test
-  void participantQueryReturnsNullWhenRepositoryReturnsNull() {
+  void participantQueryRejectsInvalidRepositoryResult() {
     ActivityRepository repository = mock(ActivityRepository.class);
     when(repository.findActivitiesByParticipantId("1")).thenReturn(null);
-    ActivityService service = new ActivityService(repository);
+    ActivityService service = new ActivityService(repository, weatherAdapter, cityRepository);
 
-    assertThat(service.getByParticipantId("1")).isNull();
+    assertThatThrownBy(() -> service.getByParticipantId("1"))
+        .isInstanceOf(NullPointerException.class);
   }
 
   private CreateActivityRequest requestWith(

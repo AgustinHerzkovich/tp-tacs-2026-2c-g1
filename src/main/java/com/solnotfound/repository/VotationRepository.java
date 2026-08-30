@@ -1,20 +1,50 @@
 package com.solnotfound.repository;
 
 import com.solnotfound.entity.Votation;
+import com.solnotfound.entity.VotationStatus;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.stereotype.Repository;
 
-public interface VotationRepository {
-  public Votation findById(String id);
+@Repository
+public class VotationRepository implements IVotationRepository {
 
-  public List<Votation> findAll();
+  private final Map<String, Votation> votations = new ConcurrentHashMap<>();
 
-  public void save(Votation entity);
+  @Override
+  public Votation findById(String id) {
+    return votations.get(id);
+  }
 
-  public void update(Votation entity);
+  @Override
+  public List<Votation> findAll() {
+    return List.copyOf(votations.values());
+  }
 
-  public List<Votation> findByVoterId(String id);
+  @Override
+  public Votation save(Votation votation) {
+    if (votation.getId() == null || votation.getId().isBlank()) {
+      votation.setId(UUID.randomUUID().toString());
+    }
+    votations.put(votation.getId(), votation);
+    return votation;
+  }
 
-  public List<Votation> findByOrganizerOrParticipantId(String userId);
+  @Override
+  public List<Votation> findByActivityIds(List<String> activityIds) {
+    return votations.values().stream()
+        .filter(votation -> activityIds.contains(votation.getActivityId()))
+        .toList();
+  }
 
-  public Votation findActiveVotationByActivityId(String activityId);
+  @Override
+  public Votation findActiveByActivityId(String activityId) {
+    return votations.values().stream()
+        .filter(votation -> votation.getStatus() == VotationStatus.ACTIVE)
+        .filter(votation -> activityId.equals(votation.getActivityId()))
+        .findFirst()
+        .orElse(null);
+  }
 }

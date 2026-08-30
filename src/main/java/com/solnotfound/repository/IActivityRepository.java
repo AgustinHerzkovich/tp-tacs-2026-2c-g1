@@ -14,4 +14,8 @@ public interface IActivityRepository {
   Activity findById(String id);
 
   void deleteAll();
+
+  List<Activity> findActivitiesByOrganizerId(String organizerId);
+
+  List<Activity> findActivitiesByParticipantId(String participantId);
 }
