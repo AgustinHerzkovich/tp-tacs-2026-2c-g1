@@ -40,4 +40,24 @@ public class ActivityRepository implements IActivityRepository {
   public void deleteAll() {
     activities.clear();
   }
+
+  @Override
+  public List<Activity> findActivitiesByOrganizerId(String organizerId) {
+    return activities.values().stream()
+        .filter(
+            activity ->
+                activity.getOrganizer() != null
+                    && organizerId.equals(activity.getOrganizer().getId()))
+        .toList();
+  }
+
+  @Override
+  public List<Activity> findActivitiesByParticipantId(String participantId) {
+    return activities.values().stream()
+        .filter(
+            activity ->
+                activity.getParticipants().stream()
+                    .anyMatch(participant -> participantId.equals(participant.getId())))
+        .toList();
+  }
 }

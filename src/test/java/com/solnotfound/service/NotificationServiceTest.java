@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import com.solnotfound.entity.Activity;
+import com.solnotfound.entity.User;
 import com.solnotfound.entity.notifications.BadWeatherAlertNotificationType;
 import com.solnotfound.entity.notifications.Notification;
 import com.solnotfound.exception.AccessDeniedException;
@@ -73,7 +74,7 @@ class NotificationServiceTest {
 
   @Test
   void generatesNotificationsForCreatorAndParticipantsWithoutDuplicates() {
-    activity.setCreatorUserId("creator-1");
+    activity.setOrganizer(User.withId("creator-1"));
     activity.setMaxParticipants(3);
     activity.setMinParticipants(1);
     activity.addParticipant("creator-1");

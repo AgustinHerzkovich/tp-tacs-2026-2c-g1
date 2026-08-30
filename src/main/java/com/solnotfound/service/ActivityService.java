@@ -14,7 +14,6 @@ import com.solnotfound.entity.Activity;
 import com.solnotfound.entity.Location;
 import com.solnotfound.entity.MaxRainProbabilityCondition;
 import com.solnotfound.entity.MaxWindCondition;
-import com.solnotfound.entity.Participant;
 import com.solnotfound.entity.ReprogramationRange;
 import com.solnotfound.entity.TemperatureRangeCondition;
 import com.solnotfound.entity.WeatherCondition;
@@ -64,7 +63,7 @@ public class ActivityService {
 
     Activity activity = new Activity();
     activity.setId(UUID.randomUUID().toString());
-    activity.setCreatorUserId(creatorUserId);
+    activity.setOrganizer(com.solnotfound.entity.User.withId(creatorUserId));
     activity.setTitle(request.title());
     activity.setDescription(request.description());
     activity.setType(request.type());
@@ -138,7 +137,7 @@ public class ActivityService {
   }
 
   /**
-   * Adds a user to an activity and persists the resulting participant and availability state.
+   * Adds a user to an activity and persists the resulting participant state.
    *
    * @param activityId activity identifier
    * @param userId authenticated user identifier
@@ -156,7 +155,7 @@ public class ActivityService {
   }
 
   /**
-   * Removes a user from an activity and persists the resulting participant and availability state.
+   * Removes a user from an activity and persists the resulting participant state.
    *
    * @param activityId activity identifier
    * @param userId authenticated user identifier
@@ -192,6 +191,16 @@ public class ActivityService {
         weatherAdapter.getFutureClimate(activity.getLocation(), activity.getDateTime());
 
     return toWeatherResponse(activity, currentWeather, activityForecast);
+  }
+
+  public List<ActivityResponse> getByOrganizerId(String id) {
+    List<Activity> activities = activityRepository.findActivitiesByOrganizerId(id);
+    return activities.stream().map(this::toResponse).toList();
+  }
+
+  public List<ActivityResponse> getByParticipantId(String id) {
+    List<Activity> activities = activityRepository.findActivitiesByParticipantId(id);
+    return activities.stream().map(this::toResponse).toList();
   }
 
   private void validate(CreateActivityRequest request) {
@@ -242,7 +251,7 @@ public class ActivityService {
 
   private void verifyParticipant(Activity activity, String userId) {
     boolean isParticipant =
-        activity.getParticipants().stream().anyMatch(p -> p.getUserId().equals(userId));
+        activity.getParticipants().stream().anyMatch(p -> p.getId().equals(userId));
 
     if (!isParticipant) {
       throw new ActivityAccessDeniedException("User is not participating in this activity");
@@ -332,9 +341,9 @@ public class ActivityService {
         maxRainProbability, minTemperature, maxTemperature, maxWindSpeed);
   }
 
-  private List<ParticipantDTO> toParticipantsDTO(List<Participant> participants) {
+  private List<ParticipantDTO> toParticipantsDTO(List<com.solnotfound.entity.User> participants) {
     return participants.stream()
-        .map(participant -> new ParticipantDTO(participant.getUserId()))
+        .map(participant -> new ParticipantDTO(participant.getId()))
         .toList();
   }
 

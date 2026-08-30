@@ -10,7 +10,6 @@ import lombok.Setter;
 public class Activity {
 
   @Getter @Setter private String id;
-  @Getter @Setter private String creatorUserId;
   @Getter @Setter private String title;
   @Getter @Setter private String description;
   @Getter @Setter private ActivityType type;
@@ -18,7 +17,7 @@ public class Activity {
   @Getter @Setter private LocalDateTime dateTime;
   @Getter @Setter private Integer minParticipants;
   @Getter @Setter private Integer maxParticipants;
-  private List<Participant> participants = new ArrayList<>();
+  private List<User> participants = new ArrayList<>();
   private List<WeatherCondition> weatherConditions = List.of();
 
   @Setter @Getter
@@ -26,12 +25,30 @@ public class Activity {
       anticipationWindow; // hecho en horas, cantidad de tiempo antes de la actividad para chequear
 
   @Setter @Getter private ReprogramationRange reprogramationRange;
-  private Boolean availability = false;
   @Getter private ActivityStatus status = ActivityStatus.CONFIRMED;
   private List<ActivityStatus> statusHistory = new ArrayList<>(List.of(ActivityStatus.CONFIRMED));
   @Setter @Getter private Boolean weatherChecked = false;
+  private User organizer;
 
   // las condiciones del clima y avisar a los usuarios
+
+  @edu.umd.cs.findbugs.annotations.SuppressFBWarnings(
+      value = "EI_EXPOSE_REP",
+      justification = "The activity aggregate intentionally exposes its organizer entity")
+  public User getOrganizer() {
+    return organizer;
+  }
+
+  @edu.umd.cs.findbugs.annotations.SuppressFBWarnings(
+      value = "EI_EXPOSE_REP2",
+      justification = "The activity aggregate intentionally references its organizer entity")
+  public void setOrganizer(User organizer) {
+    this.organizer = organizer;
+  }
+
+  public synchronized void setParticipants(List<User> participants) {
+    this.participants = new ArrayList<>(participants);
+  }
 
   public List<WeatherCondition> getWeatherConditions() {
     return List.copyOf(weatherConditions);
@@ -41,12 +58,17 @@ public class Activity {
     this.weatherConditions = List.copyOf(weatherConditions);
   }
 
-  public synchronized List<Participant> getParticipants() {
+  public synchronized List<User> getParticipants() {
     return List.copyOf(participants);
   }
 
+  /**
+   * Indicates whether another participant can join according to capacity and activity status.
+   *
+   * @return {@code true} when the activity accepts at least one more participant
+   */
   public synchronized Boolean getAvailability() {
-    return availability;
+    return !cannotChangeParticipants() && participants.size() < maxParticipants;
   }
 
   public List<ActivityStatus> getStatusHistory() {
@@ -65,8 +87,7 @@ public class Activity {
   }
 
   /**
-   * Adds a participant if they are not already registered and updates availability when the minimum
-   * participant count is reached.
+   * Adds a participant if they are not already registered and capacity remains.
    *
    * @param userId identifier of the participant
    * @throws IllegalStateActivityException if the activity no longer accepts changes or is full
@@ -78,7 +99,7 @@ public class Activity {
     }
 
     boolean alreadyParticipating =
-        participants.stream().anyMatch(participant -> participant.getUserId().equals(userId));
+        participants.stream().anyMatch(participant -> participant.getId().equals(userId));
 
     if (alreadyParticipating) {
       return;
@@ -90,16 +111,11 @@ public class Activity {
       throw new IllegalStateActivityException("Activity has no available spots.");
     }
 
-    participants.add(new Participant(userId));
-
-    if (participants.size() >= minParticipants) {
-      availability = true;
-    }
+    participants.add(User.withId(userId));
   }
 
   /**
-   * Removes a participant when present and updates availability if the activity drops below its
-   * minimum participant count.
+   * Removes a participant when present.
    *
    * @param userId identifier of the participant
    * @throws IllegalStateActivityException if the activity no longer accepts participant changes
@@ -110,15 +126,7 @@ public class Activity {
           "Participants cannot be removed to an activity in that status.");
     }
 
-    boolean removed = participants.removeIf(participant -> participant.getUserId().equals(userId));
-
-    if (!removed) {
-      return;
-    }
-
-    if (participants.size() < minParticipants) {
-      availability = false;
-    }
+    participants.removeIf(participant -> participant.getId().equals(userId));
   }
 
   /**

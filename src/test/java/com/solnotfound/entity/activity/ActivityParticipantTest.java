@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.solnotfound.entity.Activity;
 import com.solnotfound.entity.ActivityStatus;
-import com.solnotfound.entity.Participant;
+import com.solnotfound.entity.User;
 import com.solnotfound.exception.IllegalStateActivityException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -34,20 +34,18 @@ public class ActivityParticipantTest {
   void addsParticipant() {
     activity.addParticipant("user-1");
 
-    assertThat(activity.getParticipants())
-        .extracting(Participant::getUserId)
-        .containsExactly("user-1");
+    assertThat(activity.getParticipants()).extracting(User::getId).containsExactly("user-1");
   }
 
   @Test
-  void doesNotMakeActivityAvailableBeforeMinimumParticipants() {
+  void activityIsAvailableWhileItHasCapacity() {
     activity.addParticipant("user-1");
 
-    assertThat(activity.getAvailability()).isFalse();
+    assertThat(activity.getAvailability()).isTrue();
   }
 
   @Test
-  void makesActivityAvailableWhenMinimumParticipantsIsReached() {
+  void activityRemainsAvailableWhenMinimumParticipantsIsReached() {
     activity.addParticipant("user-1");
     activity.addParticipant("user-2");
 
@@ -59,9 +57,7 @@ public class ActivityParticipantTest {
     activity.addParticipant("user-1");
     activity.addParticipant("user-1");
 
-    assertThat(activity.getParticipants())
-        .extracting(Participant::getUserId)
-        .containsExactly("user-1");
+    assertThat(activity.getParticipants()).extracting(User::getId).containsExactly("user-1");
   }
 
   @Test
@@ -82,9 +78,7 @@ public class ActivityParticipantTest {
 
     activity.removeParticipant("user-1");
 
-    assertThat(activity.getParticipants())
-        .extracting(Participant::getUserId)
-        .containsExactly("user-2");
+    assertThat(activity.getParticipants()).extracting(User::getId).containsExactly("user-2");
   }
 
   @Test
@@ -98,12 +92,13 @@ public class ActivityParticipantTest {
   void makesActivityUnavailableWhenParticipantsDropBelowMinimum() {
     activity.addParticipant("user-1");
     activity.addParticipant("user-2");
+    activity.addParticipant("user-3");
 
-    assertThat(activity.getAvailability()).isTrue();
+    assertThat(activity.getAvailability()).isFalse();
 
     activity.removeParticipant("user-1");
 
-    assertThat(activity.getAvailability()).isFalse();
+    assertThat(activity.getAvailability()).isTrue();
   }
 
   @Test
@@ -200,9 +195,7 @@ public class ActivityParticipantTest {
       start.countDown();
     }
 
-    assertThat(activity.getParticipants())
-        .extracting(Participant::getUserId)
-        .containsExactly("user-1");
+    assertThat(activity.getParticipants()).extracting(User::getId).containsExactly("user-1");
   }
 
   private void joinAfter(CountDownLatch start, String userId) {

@@ -10,8 +10,10 @@ import com.solnotfound.entity.*;
 import com.solnotfound.entity.notifications.BadWeatherAlertNotificationType;
 import com.solnotfound.listener.ActivityNotificationEvent;
 import com.solnotfound.repository.IActivityRepository;
+import com.solnotfound.repository.IVotationRepository;
 import com.solnotfound.service.schedulers.ActivityAnticipationCheckScheduler;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,6 +35,8 @@ class ActivityAnticipationCheckSchedulerTest {
 
   @Mock private ApplicationEventPublisher eventPublisher;
 
+  @Mock private IVotationRepository votationRepository;
+
   @InjectMocks private ActivityAnticipationCheckScheduler scheduler;
 
   private Activity activityToCheck;
@@ -40,9 +44,17 @@ class ActivityAnticipationCheckSchedulerTest {
   private Location location;
   private LocalDateTime dateTime;
   private WeatherForecast weather;
+  private ReprogramationRange range;
 
   @BeforeEach
   void setUp() {
+    scheduler =
+        new ActivityAnticipationCheckScheduler(
+            activityRepository,
+            votationRepository,
+            weatherAdapter,
+            badWeatherChecker,
+            eventPublisher);
     location = new Location(new City("ba", "Buenos Aires"), -34.6037, -58.3816);
     dateTime = LocalDateTime.now().plusHours(2);
     weather = mock(WeatherForecast.class);
@@ -51,6 +63,13 @@ class ActivityAnticipationCheckSchedulerTest {
     lenient().when(activityToCheck.isTimeToCheckWeatherConditions()).thenReturn(true);
     lenient().when(activityToCheck.getLocation()).thenReturn(location);
     lenient().when(activityToCheck.getDateTime()).thenReturn(dateTime);
+    lenient().when(activityToCheck.getId()).thenReturn("activity-1");
+
+    range = mock(ReprogramationRange.class);
+    lenient().when(range.getMaxDays()).thenReturn(1);
+    lenient().when(range.getInitialHour()).thenReturn(LocalTime.of(10, 0));
+    lenient().when(activityToCheck.getReprogramationRange()).thenReturn(range);
+    lenient().when(votationRepository.findActiveByActivityId("activity-1")).thenReturn(null);
 
     activityNotToCheck = mock(Activity.class);
     lenient().when(activityNotToCheck.isTimeToCheckWeatherConditions()).thenReturn(false);
@@ -118,6 +137,7 @@ class ActivityAnticipationCheckSchedulerTest {
     when(anotherActivity.isTimeToCheckWeatherConditions()).thenReturn(true);
     when(anotherActivity.getLocation()).thenReturn(anotherLocation);
     when(anotherActivity.getDateTime()).thenReturn(anotherDateTime);
+    when(anotherActivity.getReprogramationRange()).thenReturn(range);
 
     when(activityRepository.findActive()).thenReturn(List.of(activityToCheck, anotherActivity));
 
@@ -129,7 +149,9 @@ class ActivityAnticipationCheckSchedulerTest {
     when(weatherAdapter.getFutureClimate(anotherLocation, anotherDateTime))
         .thenReturn(anotherWeather);
     when(badWeatherChecker.isBadWeatherForActivity(anotherWeather, anotherActivity))
-        .thenReturn(true);
+        .thenReturn(true, false);
+    when(range.isWithinRange(any(LocalDateTime.class), any(LocalDateTime.class)))
+        .thenReturn(true, false);
 
     scheduler.checkActivitiesClimate();
 
@@ -160,7 +182,10 @@ class ActivityAnticipationCheckSchedulerTest {
             new RuntimeException("Error fetching weather")) // first method call throws exception.
         .thenReturn(weather); // second method call returns weather.
 
-    when(badWeatherChecker.isBadWeatherForActivity(weather, activityToCheck)).thenReturn(true);
+    when(range.isWithinRange(any(LocalDateTime.class), any(LocalDateTime.class)))
+        .thenReturn(true, false);
+    when(badWeatherChecker.isBadWeatherForActivity(any(), eq(activityToCheck)))
+        .thenReturn(true, false);
 
     // first scheduler run: the weather check fails, so no notification is sent
     scheduler.checkActivitiesClimate();
@@ -182,16 +207,130 @@ class ActivityAnticipationCheckSchedulerTest {
   }
 
   @Test
-  void doesNotRetryWeatherWhenNotificationDeliveryFails() {
+  void persistsBadWeatherOutcomeBeforeNotificationDeliveryFails() {
     when(activityRepository.findActive()).thenReturn(List.of(activityToCheck));
     when(weatherAdapter.getFutureClimate(location, dateTime)).thenReturn(weather);
-    when(badWeatherChecker.isBadWeatherForActivity(weather, activityToCheck)).thenReturn(true);
+    when(range.isWithinRange(any(LocalDateTime.class), any(LocalDateTime.class)))
+        .thenReturn(true, false);
+    when(badWeatherChecker.isBadWeatherForActivity(any(), eq(activityToCheck)))
+        .thenReturn(true, false);
     doThrow(new RuntimeException("Notification failed"))
         .when(eventPublisher)
         .publishEvent(any(ActivityNotificationEvent.class));
 
     scheduler.checkActivitiesClimate();
 
+    verify(activityToCheck).markWeatherChecked();
+    verify(activityRepository).save(activityToCheck);
+    verify(votationRepository).save(any(Votation.class));
+    verify(activityToCheck).setStatus(ActivityStatus.PROPOSED);
+  }
+
+  @Test
+  void opensActiveVotationWithGoodWeatherOptionsWhenNoneIsActive() throws Exception {
+    when(activityRepository.findActive()).thenReturn(List.of(activityToCheck));
+    WeatherForecast initialWeather = new WeatherForecast(1, dateTime, 20.0f, 90.0f, 10.0f);
+    WeatherForecast candidateWeather =
+        new WeatherForecast(2, dateTime.plusDays(1), 20.0f, 0.0f, 10.0f);
+    when(weatherAdapter.getFutureClimate(eq(location), any(LocalDateTime.class)))
+        .thenAnswer(
+            invocation ->
+                dateTime.equals(invocation.getArgument(1)) ? initialWeather : candidateWeather);
+    when(badWeatherChecker.isBadWeatherForActivity(initialWeather, activityToCheck))
+        .thenReturn(true);
+    when(badWeatherChecker.isBadWeatherForActivity(candidateWeather, activityToCheck))
+        .thenReturn(false);
+    when(range.isWithinRange(any(LocalDateTime.class), any(LocalDateTime.class)))
+        .thenReturn(true, true, false);
+
+    scheduler.checkActivitiesClimate();
+
+    ArgumentCaptor<Votation> votationCaptor = ArgumentCaptor.forClass(Votation.class);
+    verify(votationRepository).save(votationCaptor.capture());
+    Votation saved = votationCaptor.getValue();
+
+    assertThat(saved.getStatus()).isEqualTo(VotationStatus.ACTIVE);
+    assertThat(saved.getActivityId()).isEqualTo("activity-1");
+    assertThat(saved.getOptions()).allSatisfy(option -> assertThat(option.getUsers()).isEmpty());
+    assertThat(saved.getOptions())
+        .extracting(VotationOption::getDateTime)
+        .containsExactly(
+            dateTime.plusDays(1).withHour(10).withMinute(0).withSecond(0),
+            dateTime.plusDays(1).withHour(11).withMinute(0).withSecond(0));
+    verify(activityToCheck).setStatus(ActivityStatus.PROPOSED);
+    verify(activityRepository).save(activityToCheck);
+  }
+
+  @Test
+  void doesNotOpenVotationWhenAnActiveVotationAlreadyExists() throws Exception {
+    Votation activeVotation = mock(Votation.class);
+    when(activityRepository.findActive()).thenReturn(List.of(activityToCheck));
+    when(weatherAdapter.getFutureClimate(any(), any())).thenReturn(weather);
+    when(badWeatherChecker.isBadWeatherForActivity(any(), eq(activityToCheck))).thenReturn(true);
+    when(votationRepository.findActiveByActivityId("activity-1")).thenReturn(activeVotation);
+
+    scheduler.checkActivitiesClimate();
+
+    verify(eventPublisher).publishEvent(any(ActivityNotificationEvent.class));
+    verify(votationRepository, never()).save(any());
+  }
+
+  @Test
+  void onlyOffersSlotsWithGoodWeather() throws Exception {
+    when(activityRepository.findActive()).thenReturn(List.of(activityToCheck));
+    when(weatherAdapter.getFutureClimate(any(), any())).thenReturn(weather);
+    when(badWeatherChecker.isBadWeatherForActivity(any(), eq(activityToCheck)))
+        .thenReturn(true, true, false);
+    when(range.isWithinRange(any(LocalDateTime.class), any(LocalDateTime.class)))
+        .thenReturn(true, true, false);
+
+    scheduler.checkActivitiesClimate();
+
+    ArgumentCaptor<Votation> votationCaptor = ArgumentCaptor.forClass(Votation.class);
+    verify(votationRepository).save(votationCaptor.capture());
+    Votation saved = votationCaptor.getValue();
+
+    assertThat(saved.getOptions())
+        .extracting(VotationOption::getDateTime)
+        .containsExactly(dateTime.plusDays(1).withHour(11).withMinute(0).withSecond(0));
+  }
+
+  @Test
+  void considersConfiguredReprogramationRangeWhenOpeningVotation() throws Exception {
+    when(range.getMaxDays()).thenReturn(2);
+    when(range.isWithinRange(any(LocalDateTime.class), any(LocalDateTime.class)))
+        .thenReturn(true, true, false, true, true, false);
+    when(activityRepository.findActive()).thenReturn(List.of(activityToCheck));
+    when(weatherAdapter.getFutureClimate(any(), any())).thenReturn(weather);
+    when(badWeatherChecker.isBadWeatherForActivity(any(), eq(activityToCheck)))
+        .thenReturn(true, false, false, false, false);
+
+    scheduler.checkActivitiesClimate();
+
+    ArgumentCaptor<Votation> votationCaptor = ArgumentCaptor.forClass(Votation.class);
+    verify(votationRepository).save(votationCaptor.capture());
+    Votation saved = votationCaptor.getValue();
+
+    assertThat(saved.getOptions())
+        .extracting(VotationOption::getDateTime)
+        .containsExactly(
+            dateTime.plusDays(1).withHour(10).withMinute(0).withSecond(0),
+            dateTime.plusDays(1).withHour(11).withMinute(0).withSecond(0),
+            dateTime.plusDays(2).withHour(10).withMinute(0).withSecond(0),
+            dateTime.plusDays(2).withHour(11).withMinute(0).withSecond(0));
+  }
+
+  @Test
+  void cancelsActivityWithoutOpeningVotationWhenNoCandidateIsWithinRange() throws Exception {
+    when(range.isWithinRange(any(LocalDateTime.class), any(LocalDateTime.class))).thenReturn(false);
+    when(activityRepository.findActive()).thenReturn(List.of(activityToCheck));
+    when(weatherAdapter.getFutureClimate(any(), any())).thenReturn(weather);
+    when(badWeatherChecker.isBadWeatherForActivity(any(), eq(activityToCheck))).thenReturn(true);
+
+    scheduler.checkActivitiesClimate();
+
+    verify(votationRepository, never()).save(any());
+    verify(activityToCheck).setStatus(ActivityStatus.CANCELLED);
     verify(activityToCheck).markWeatherChecked();
     verify(activityRepository).save(activityToCheck);
   }

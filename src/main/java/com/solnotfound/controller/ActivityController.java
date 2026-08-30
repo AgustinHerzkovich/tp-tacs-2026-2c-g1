@@ -83,6 +83,16 @@ public class ActivityController {
     return ResponseEntity.ok(activityService.getWeather(id, currentUserId(authentication)));
   }
 
+  @GetMapping("/organized/me")
+  public ResponseEntity<List<ActivityResponse>> getOrganized(Authentication authentication) {
+    return ResponseEntity.ok(activityService.getByOrganizerId(currentUserId(authentication)));
+  }
+
+  @GetMapping("/joined/me")
+  public ResponseEntity<List<ActivityResponse>> getJoined(Authentication authentication) {
+    return ResponseEntity.ok(activityService.getByParticipantId(currentUserId(authentication)));
+  }
+
   private String currentUserId(Authentication authentication) {
     if (authentication != null && authentication.getPrincipal() instanceof Jwt jwt) {
       return jwt.getSubject();

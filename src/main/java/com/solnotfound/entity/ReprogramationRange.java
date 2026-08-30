@@ -25,7 +25,7 @@ public class ReprogramationRange {
    * @return {@code true} when the candidate satisfies every range constraint
    */
   public boolean isWithinRange(LocalDateTime originalDateTime, LocalDateTime candidateDateTime) {
-    LocalDateTime limit = originalDateTime.plusDays(maxDays);
+    LocalDateTime limit = originalDateTime.toLocalDate().plusDays(maxDays).atTime(LocalTime.MAX);
     LocalTime candidateTime = candidateDateTime.toLocalTime();
 
     return candidateDateTime.isAfter(originalDateTime)
