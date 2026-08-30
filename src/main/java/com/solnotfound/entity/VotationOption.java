@@ -22,7 +22,9 @@ public class VotationOption {
   }
 
   public synchronized void addUser(User user) {
-    this.users.add(user);
+    if (!this.users.contains(user)) {
+      this.users.add(user);
+    }
   }
 
   public synchronized boolean thisUserVoted(User user) {

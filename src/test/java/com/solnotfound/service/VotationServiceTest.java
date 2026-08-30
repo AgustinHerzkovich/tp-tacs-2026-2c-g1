@@ -15,10 +15,12 @@ import com.solnotfound.entity.Location;
 import com.solnotfound.entity.ReprogramationRange;
 import com.solnotfound.entity.User;
 import com.solnotfound.entity.Votation;
+import com.solnotfound.entity.VotationOption;
 import com.solnotfound.entity.VotationStatus;
 import com.solnotfound.entity.WeatherForecast;
 import com.solnotfound.exception.AccessDeniedException;
 import com.solnotfound.exception.InvalidVotationOptionsException;
+import com.solnotfound.exception.ResourceNotFoundException;
 import com.solnotfound.repository.ActivityRepository;
 import com.solnotfound.repository.VotationRepository;
 import java.time.LocalDateTime;
@@ -77,7 +79,7 @@ class VotationServiceTest {
             "v-1", new UpdateVotationOptionsRequest(List.of(candidate)), "organizer");
 
     assertThat(result.options()).hasSize(1);
-    assertThat(result.options().getFirst().users()).isEmpty();
+    assertThat(result.options().getFirst().voteCount()).isZero();
     assertThat(votationRepository.findById("v-1").getOptions().getFirst().getUsers()).isEmpty();
   }
 
@@ -104,6 +106,94 @@ class VotationServiceTest {
         .isInstanceOf(InvalidVotationOptionsException.class);
   }
 
+  @Test
+  void participantVotesAndReceivesPartialResult() {
+    Activity activity = activity("a-1", "organizer", List.of("participant"));
+    activity.getParticipants().getFirst().setName("Jane Doe");
+    activityRepository.save(activity);
+    LocalDateTime firstOption = activity.getDateTime().plusDays(1);
+    Votation votation = votationWithOptions("v-1", "a-1", firstOption);
+    votationRepository.save(votation);
+
+    var result = service.vote("v-1", "participant", firstOption);
+
+    assertThat(result.options().getFirst().voteCount()).isEqualTo(1);
+    assertThat(result.options().getFirst().voterNames()).containsExactly("Jane Doe");
+    assertThat(votation.getOptions().getFirst().getUsers())
+        .containsExactly(activity.getParticipants().getFirst());
+  }
+
+  @Test
+  void repeatingSameVoteIsIdempotent() {
+    Activity activity = activity("a-1", "organizer", List.of("participant"));
+    activityRepository.save(activity);
+    LocalDateTime firstOption = activity.getDateTime().plusDays(1);
+    Votation votation = votationWithOptions("v-1", "a-1", firstOption);
+    votationRepository.save(votation);
+
+    service.vote("v-1", "participant", firstOption);
+    service.vote("v-1", "participant", firstOption);
+
+    assertThat(votation.getOptions().getFirst().getUsers()).hasSize(1);
+  }
+
+  @Test
+  void participantChangesVoteWithoutVotingTwice() {
+    Activity activity = activity("a-1", "organizer", List.of("participant"));
+    activityRepository.save(activity);
+    LocalDateTime firstOption = activity.getDateTime().plusDays(1);
+    LocalDateTime secondOption = activity.getDateTime().plusDays(2);
+    Votation votation = votationWithOptions("v-1", "a-1", firstOption, secondOption);
+    votationRepository.save(votation);
+
+    service.vote("v-1", "participant", firstOption);
+    var result = service.vote("v-1", "participant", secondOption);
+
+    assertThat(result.options().get(0).voteCount()).isZero();
+    assertThat(result.options().get(1).voteCount()).isEqualTo(1);
+    assertThat(votation.getOptions().get(0).getUsers()).isEmpty();
+    assertThat(votation.getOptions().get(1).getUsers()).hasSize(1);
+  }
+
+  @Test
+  void rejectsVoteWhenVotationActivityOptionOrUserDoesNotExist() {
+    Activity activity = activity("a-1", "organizer", List.of("participant"));
+    activityRepository.save(activity);
+    LocalDateTime option = activity.getDateTime().plusDays(1);
+
+    assertThatThrownBy(() -> service.vote("missing", "participant", option))
+        .isInstanceOf(ResourceNotFoundException.class)
+        .hasMessageContaining("Votation");
+
+    Votation votation = votationWithOptions("v-1", "missing", option);
+    votationRepository.save(votation);
+    assertThatThrownBy(() -> service.vote("v-1", "participant", option))
+        .isInstanceOf(ResourceNotFoundException.class)
+        .hasMessageContaining("Activity");
+
+    votation.setActivityId("a-1");
+    assertThatThrownBy(() -> service.vote("v-1", "participant", option.plusHours(1)))
+        .isInstanceOf(ResourceNotFoundException.class)
+        .hasMessageContaining("Option");
+    assertThatThrownBy(() -> service.vote("v-1", "outsider", option))
+        .isInstanceOf(ResourceNotFoundException.class)
+        .hasMessageContaining("User");
+  }
+
+  @Test
+  void rejectsVoteWhenVotationIsClosed() {
+    Activity activity = activity("a-1", "organizer", List.of("participant"));
+    activityRepository.save(activity);
+    LocalDateTime option = activity.getDateTime().plusDays(1);
+    Votation votation = votationWithOptions("v-1", "a-1", option);
+    votation.setStatus(VotationStatus.CLOSED);
+    votationRepository.save(votation);
+
+    assertThatThrownBy(() -> service.vote("v-1", "participant", option))
+        .isInstanceOf(AccessDeniedException.class)
+        .hasMessageContaining("closed");
+  }
+
   private Activity activity(String id, String organizerId, List<String> participantIds) {
     Activity activity = new Activity();
     activity.setId(id);
@@ -122,6 +212,20 @@ class VotationServiceTest {
     votation.setActivityId(activityId);
     votation.setCreationDate(LocalDateTime.now());
     votation.setStatus(VotationStatus.ACTIVE);
+    return votation;
+  }
+
+  private Votation votationWithOptions(String id, String activityId, LocalDateTime... optionDates) {
+    Votation votation = votation(id, activityId);
+    votation.setOptions(
+        java.util.Arrays.stream(optionDates)
+            .map(
+                date -> {
+                  VotationOption option = new VotationOption();
+                  option.setDateTime(date);
+                  return option;
+                })
+            .toList());
     return votation;
   }
 }

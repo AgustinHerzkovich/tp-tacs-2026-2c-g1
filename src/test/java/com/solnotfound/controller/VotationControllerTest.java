@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.solnotfound.dto.VotationDTO;
+import com.solnotfound.dto.VotationOptionDTO;
 import com.solnotfound.entity.VotationStatus;
 import com.solnotfound.exception.AccessDeniedException;
 import com.solnotfound.exception.GlobalExceptionHandler;
@@ -96,6 +97,31 @@ class VotationControllerTest {
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.title").value("Request validation failed"))
         .andExpect(jsonPath("$.errors.dates").exists());
+  }
+
+  @Test
+  void participantVotesAndReceivesPartialResult() throws Exception {
+    LocalDateTime option = LocalDateTime.of(2026, 9, 1, 12, 0);
+    when(service.vote("v-1", "participant", option))
+        .thenReturn(
+            new VotationDTO(
+                "v-1",
+                "activity-1",
+                LocalDateTime.now(),
+                VotationStatus.ACTIVE,
+                List.of(new VotationOptionDTO(option, 1, List.of("Jane Doe")))));
+
+    mockMvc
+        .perform(
+            put("/votations/v-1/vote")
+                .principal(authentication("participant"))
+                .contentType("application/json")
+                .content("\"2026-09-01T12:00:00\""))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.options[0].voteCount").value(1))
+        .andExpect(jsonPath("$.options[0].voterNames[0]").value("Jane Doe"));
+
+    verify(service).vote("v-1", "participant", option);
   }
 
   private TestingAuthenticationToken authentication(String userId) {

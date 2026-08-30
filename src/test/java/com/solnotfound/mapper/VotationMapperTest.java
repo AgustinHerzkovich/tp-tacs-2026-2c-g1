@@ -32,8 +32,8 @@ class VotationMapperTest {
     assertThat(dto.status()).isEqualTo(VotationStatus.ACTIVE);
     assertThat(dto.options()).hasSize(1);
     assertThat(dto.options().getFirst().dateTime()).isEqualTo(optionDate);
-    assertThat(dto.options().getFirst().users()).hasSize(1);
-    assertThat(dto.options().getFirst().users().getFirst().id()).isEqualTo("2");
+    assertThat(dto.options().getFirst().voteCount()).isEqualTo(1);
+    assertThat(dto.options().getFirst().voterNames()).containsExactly("Jane Doe");
   }
 
   @Test
