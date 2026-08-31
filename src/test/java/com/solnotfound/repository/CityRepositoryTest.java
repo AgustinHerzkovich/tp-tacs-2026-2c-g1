@@ -2,7 +2,7 @@ package com.solnotfound.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.solnotfound.entity.City;
+import com.solnotfound.entity.activity.City;
 import org.junit.jupiter.api.Test;
 
 class CityRepositoryTest {

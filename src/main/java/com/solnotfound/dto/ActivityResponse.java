@@ -1,7 +1,7 @@
 package com.solnotfound.dto;
 
-import com.solnotfound.entity.ActivityStatus;
-import com.solnotfound.entity.ActivityType;
+import com.solnotfound.entity.activity.ActivityStatus;
+import com.solnotfound.entity.activity.ActivityType;
 import java.time.LocalDateTime;
 import java.util.List;
 

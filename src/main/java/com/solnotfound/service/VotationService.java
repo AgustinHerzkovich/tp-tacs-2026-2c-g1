@@ -4,13 +4,13 @@ import com.solnotfound.adapters.IWeatherAdapter;
 import com.solnotfound.dto.UpdateVotationOptionsRequest;
 import com.solnotfound.dto.UpdateVotationSettingsRequest;
 import com.solnotfound.dto.VotationDTO;
-import com.solnotfound.entity.Activity;
-import com.solnotfound.entity.IBadWeatherChecker;
-import com.solnotfound.entity.User;
-import com.solnotfound.entity.Votation;
-import com.solnotfound.entity.VotationOption;
-import com.solnotfound.entity.VotationStatus;
-import com.solnotfound.entity.WeatherForecast;
+import com.solnotfound.entity.activity.Activity;
+import com.solnotfound.entity.user.User;
+import com.solnotfound.entity.votation.Votation;
+import com.solnotfound.entity.votation.VotationOption;
+import com.solnotfound.entity.votation.VotationStatus;
+import com.solnotfound.entity.weather.IBadWeatherChecker;
+import com.solnotfound.entity.weather.WeatherForecast;
 import com.solnotfound.exception.AccessDeniedException;
 import com.solnotfound.exception.InvalidVotationOptionsException;
 import com.solnotfound.exception.InvalidVotationSettingsException;
@@ -69,14 +69,11 @@ public class VotationService {
       throw new ResourceNotFoundException("Votation not found: " + votationId);
     }
 
-    Activity activity = activityRepository.findById(votation.getActivityId());
-    if (activity == null) {
-      throw new ResourceNotFoundException("Activity not found: " + votation.getActivityId());
-    }
+    Activity activity = votation.getActivity();
     if (activity.getOrganizer() == null || !userId.equals(activity.getOrganizer().getId())) {
       throw new AccessDeniedException("Only the activity organizer can update votation options");
     }
-    if (votation.getStatus() != com.solnotfound.entity.VotationStatus.ACTIVE) {
+    if (votation.getStatus() != com.solnotfound.entity.votation.VotationStatus.ACTIVE) {
       throw new InvalidVotationOptionsException(request.dates());
     }
     if (new HashSet<>(request.dates()).size() != request.dates().size()) {
@@ -178,9 +175,9 @@ public class VotationService {
   }
 
   private Activity findActivity(Votation votation) {
-    Activity activity = activityRepository.findById(votation.getActivityId());
+    Activity activity = votation.getActivity();
     if (activity == null) {
-      throw new ResourceNotFoundException("Activity not found: " + votation.getActivityId());
+      throw new ResourceNotFoundException("Activity not found for votation: " + votation.getId());
     }
     return activity;
   }
@@ -210,9 +207,9 @@ public class VotationService {
     if (!votation.isAnOption(vote)) {
       throw new ResourceNotFoundException("Option not found: " + vote);
     }
-    final Activity activity = activityRepository.findById(votation.getActivityId());
+    final Activity activity = votation.getActivity();
     if (activity == null) {
-      throw new ResourceNotFoundException("Activity not found: " + votation.getActivityId());
+      throw new ResourceNotFoundException("Activity not found for votation: " + votation.getId());
     }
     final User user =
         activity

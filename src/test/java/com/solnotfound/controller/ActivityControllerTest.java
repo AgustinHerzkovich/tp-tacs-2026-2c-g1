@@ -18,8 +18,8 @@ import com.solnotfound.dto.LocationDTO;
 import com.solnotfound.dto.ParticipantDTO;
 import com.solnotfound.dto.ReprogramationRangeDTO;
 import com.solnotfound.dto.WeatherConditionsDTO;
-import com.solnotfound.entity.ActivityType;
-import com.solnotfound.entity.WeatherForecast;
+import com.solnotfound.entity.activity.ActivityType;
+import com.solnotfound.entity.weather.WeatherForecast;
 import com.solnotfound.repository.ActivityRepository;
 import com.solnotfound.repository.CityRepository;
 import com.solnotfound.service.ActivityService;
@@ -203,7 +203,7 @@ class ActivityControllerTest {
     MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
     mockMvc
-        .perform(get("/activities/organized/me").principal(authentication("user-1")))
+        .perform(get("/activities/organizers/me").principal(authentication("user-1")))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$").isEmpty());
     verify(service).getByOrganizerId("user-1");
@@ -218,7 +218,7 @@ class ActivityControllerTest {
     MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
     mockMvc
-        .perform(get("/activities/joined/me").principal(authentication("user-1")))
+        .perform(get("/activities/participants/me").principal(authentication("user-1")))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$").isEmpty());
     verify(service).getByParticipantId("user-1");

@@ -1,6 +1,6 @@
 package com.solnotfound.repository;
 
-import com.solnotfound.entity.City;
+import com.solnotfound.entity.activity.City;
 import java.text.Normalizer;
 import java.util.Locale;
 import java.util.Map;

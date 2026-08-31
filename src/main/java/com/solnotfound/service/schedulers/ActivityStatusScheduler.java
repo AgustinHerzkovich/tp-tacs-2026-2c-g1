@@ -1,8 +1,8 @@
 package com.solnotfound.service.schedulers;
 
-import com.solnotfound.entity.Activity;
-import com.solnotfound.entity.ActivityStatus;
-import com.solnotfound.entity.notifications.StartingSoonNotificationType;
+import com.solnotfound.entity.activity.Activity;
+import com.solnotfound.entity.activity.ActivityStatus;
+import com.solnotfound.entity.notification.StartingSoonNotificationType;
 import com.solnotfound.listener.ActivityNotificationEvent;
 import com.solnotfound.repository.IActivityRepository;
 import com.solnotfound.service.ActivityStatusTransitionService;

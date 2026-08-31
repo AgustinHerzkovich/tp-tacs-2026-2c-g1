@@ -119,6 +119,7 @@ public class GlobalExceptionHandler {
 
     return problemDetail;
   }
+
   @ExceptionHandler(ResourceNotFoundException.class)
   public ResponseEntity<ProblemDetail> handleResourceNotFound(ResourceNotFoundException exception) {
     ProblemDetail problem =

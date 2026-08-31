@@ -2,6 +2,10 @@ package com.solnotfound.entity;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.solnotfound.entity.weather.MaxRainProbabilityCondition;
+import com.solnotfound.entity.weather.MaxWindCondition;
+import com.solnotfound.entity.weather.TemperatureRangeCondition;
+import com.solnotfound.entity.weather.WeatherForecast;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
 

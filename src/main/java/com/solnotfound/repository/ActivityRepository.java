@@ -1,7 +1,7 @@
 package com.solnotfound.repository;
 
-import com.solnotfound.entity.Activity;
-import com.solnotfound.entity.ActivityStatus;
+import com.solnotfound.entity.activity.Activity;
+import com.solnotfound.entity.activity.ActivityStatus;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;

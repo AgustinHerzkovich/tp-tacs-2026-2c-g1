@@ -3,7 +3,7 @@ package com.solnotfound.mapper;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.solnotfound.dto.UserDTO;
-import com.solnotfound.entity.User;
+import com.solnotfound.entity.user.User;
 import org.junit.jupiter.api.Test;
 
 class UserMapperTest {

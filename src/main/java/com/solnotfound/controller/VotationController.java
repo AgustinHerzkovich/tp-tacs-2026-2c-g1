@@ -45,7 +45,7 @@ public class VotationController {
         votationService.updateVotationSettings(votationId, request, currentUserId(authentication)));
   }
 
-  @GetMapping("/me")
+  @GetMapping
   public ResponseEntity<List<VotationDTO>> getMine(Authentication authentication) {
     return ResponseEntity.ok(
         votationService.getByOrganizerOrParticipantId(currentUserId(authentication)));
@@ -61,7 +61,7 @@ public class VotationController {
     return "development-user";
   }
 
-  @PutMapping("/{votationId}/vote")
+  @PutMapping("/{votationId}/votes/me")
   public ResponseEntity<VotationDTO> vote(
       @PathVariable String votationId,
       @Valid @RequestBody LocalDateTime vote,

@@ -1,10 +1,10 @@
 package com.solnotfound.service;
 
-import com.solnotfound.entity.Activity;
-import com.solnotfound.entity.ActivityStatus;
-import com.solnotfound.entity.notifications.CancelledNotificationType;
-import com.solnotfound.entity.notifications.NotificationType;
-import com.solnotfound.entity.notifications.ReprogrammedNotificationType;
+import com.solnotfound.entity.activity.Activity;
+import com.solnotfound.entity.activity.ActivityStatus;
+import com.solnotfound.entity.notification.CancelledNotificationType;
+import com.solnotfound.entity.notification.NotificationType;
+import com.solnotfound.entity.notification.ReprogrammedNotificationType;
 import com.solnotfound.exception.InvalidActivityStatusTransitionException;
 import com.solnotfound.listener.ActivityNotificationEvent;
 import com.solnotfound.repository.IActivityRepository;

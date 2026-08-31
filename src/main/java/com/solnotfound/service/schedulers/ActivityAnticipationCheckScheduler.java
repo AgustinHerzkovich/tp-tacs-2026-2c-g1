@@ -1,15 +1,15 @@
 package com.solnotfound.service.schedulers;
 
 import com.solnotfound.adapters.IWeatherAdapter;
-import com.solnotfound.entity.Activity;
-import com.solnotfound.entity.ActivityStatus;
-import com.solnotfound.entity.IBadWeatherChecker;
-import com.solnotfound.entity.Location;
-import com.solnotfound.entity.Votation;
-import com.solnotfound.entity.VotationOption;
-import com.solnotfound.entity.VotationStatus;
-import com.solnotfound.entity.WeatherForecast;
-import com.solnotfound.entity.notifications.BadWeatherAlertNotificationType;
+import com.solnotfound.entity.activity.Activity;
+import com.solnotfound.entity.activity.ActivityStatus;
+import com.solnotfound.entity.activity.Location;
+import com.solnotfound.entity.notification.BadWeatherAlertNotificationType;
+import com.solnotfound.entity.votation.Votation;
+import com.solnotfound.entity.votation.VotationOption;
+import com.solnotfound.entity.votation.VotationStatus;
+import com.solnotfound.entity.weather.IBadWeatherChecker;
+import com.solnotfound.entity.weather.WeatherForecast;
 import com.solnotfound.exception.WeatherUnavailableException;
 import com.solnotfound.listener.ActivityNotificationEvent;
 import com.solnotfound.repository.IActivityRepository;
@@ -146,7 +146,7 @@ public class ActivityAnticipationCheckScheduler {
     }
 
     Votation votation = new Votation();
-    votation.setActivityId(activity.getId());
+    votation.setActivity(activity);
     votation.setStatus(VotationStatus.ACTIVE);
     LocalDateTime creationDate = LocalDateTime.now();
     votation.setCreationDate(creationDate);

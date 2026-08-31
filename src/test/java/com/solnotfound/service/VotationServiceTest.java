@@ -10,15 +10,15 @@ import static org.mockito.Mockito.when;
 import com.solnotfound.adapters.IWeatherAdapter;
 import com.solnotfound.dto.UpdateVotationOptionsRequest;
 import com.solnotfound.dto.UpdateVotationSettingsRequest;
-import com.solnotfound.entity.Activity;
-import com.solnotfound.entity.IBadWeatherChecker;
-import com.solnotfound.entity.Location;
-import com.solnotfound.entity.ReprogramationRange;
-import com.solnotfound.entity.User;
-import com.solnotfound.entity.Votation;
-import com.solnotfound.entity.VotationOption;
-import com.solnotfound.entity.VotationStatus;
-import com.solnotfound.entity.WeatherForecast;
+import com.solnotfound.entity.activity.Activity;
+import com.solnotfound.entity.activity.Location;
+import com.solnotfound.entity.activity.ReprogramationRange;
+import com.solnotfound.entity.user.User;
+import com.solnotfound.entity.votation.Votation;
+import com.solnotfound.entity.votation.VotationOption;
+import com.solnotfound.entity.votation.VotationStatus;
+import com.solnotfound.entity.weather.IBadWeatherChecker;
+import com.solnotfound.entity.weather.WeatherForecast;
 import com.solnotfound.exception.AccessDeniedException;
 import com.solnotfound.exception.InvalidVotationOptionsException;
 import com.solnotfound.exception.InvalidVotationSettingsException;
@@ -57,8 +57,8 @@ class VotationServiceTest {
     Activity joined = activity("a-2", "user-3", List.of("user-1"));
     activityRepository.save(organized);
     activityRepository.save(joined);
-    votationRepository.save(votation("v-1", "a-1"));
-    votationRepository.save(votation("v-2", "a-2"));
+    votationRepository.save(votation("v-1", organized));
+    votationRepository.save(votation("v-2", joined));
     votationRepository.save(votation("v-3", "missing"));
 
     assertThat(service.getByOrganizerOrParticipantId("user-1"))
@@ -71,6 +71,7 @@ class VotationServiceTest {
     Activity activity = activity("a-1", "organizer", List.of("participant"));
     activityRepository.save(activity);
     Votation votation = votation("v-1", "a-1");
+    votation.setActivity(activity);
     votationRepository.save(votation);
     LocalDateTime candidate = activity.getDateTime().plusDays(1).withHour(12);
     when(weatherAdapter.getForecastRange(any(Location.class), anyList()))
@@ -94,6 +95,7 @@ class VotationServiceTest {
     LocalDateTime removed = activity.getDateTime().plusDays(2).withHour(12);
     LocalDateTime added = activity.getDateTime().plusDays(3).withHour(12);
     Votation votation = votationWithOptions("v-1", "a-1", retained, removed);
+    votation.setActivity(activity);
     votation.getOptions().get(0).setUsers(List.of(activity.getParticipants().get(0)));
     votation.getOptions().get(1).setUsers(List.of(activity.getParticipants().get(1)));
     votationRepository.save(votation);
@@ -115,6 +117,7 @@ class VotationServiceTest {
     Activity activity = activity("a-1", "organizer", List.of("participant"));
     activityRepository.save(activity);
     Votation votation = votationWithOptions("v-1", "a-1", LocalDateTime.now().plusHours(4));
+    votation.setActivity(activity);
     votationRepository.save(votation);
     LocalDateTime beforeUpdate = LocalDateTime.now();
 
@@ -131,6 +134,7 @@ class VotationServiceTest {
     Activity activity = activity("a-1", "organizer", List.of("participant"));
     activityRepository.save(activity);
     Votation votation = votationWithOptions("v-1", "a-1", LocalDateTime.now().plusHours(2));
+    votation.setActivity(activity);
     votationRepository.save(votation);
 
     assertThatThrownBy(
@@ -159,7 +163,8 @@ class VotationServiceTest {
   void rejectsNonOrganizerAndInvalidWeather() {
     Activity activity = activity("a-1", "organizer", List.of("participant"));
     activityRepository.save(activity);
-    votationRepository.save(votation("v-1", "a-1"));
+    Votation votation = votation("v-1", activity);
+    votationRepository.save(votation);
     LocalDateTime candidate = activity.getDateTime().plusDays(1).withHour(12);
 
     assertThatThrownBy(
@@ -185,6 +190,7 @@ class VotationServiceTest {
     activityRepository.save(activity);
     LocalDateTime firstOption = activity.getDateTime().plusDays(1);
     Votation votation = votationWithOptions("v-1", "a-1", firstOption);
+    votation.setActivity(activity);
     votationRepository.save(votation);
 
     var result = service.vote("v-1", "participant", firstOption);
@@ -201,6 +207,7 @@ class VotationServiceTest {
     activityRepository.save(activity);
     LocalDateTime firstOption = activity.getDateTime().plusDays(1);
     Votation votation = votationWithOptions("v-1", "a-1", firstOption);
+    votation.setActivity(activity);
     votationRepository.save(votation);
 
     service.vote("v-1", "participant", firstOption);
@@ -216,6 +223,7 @@ class VotationServiceTest {
     LocalDateTime firstOption = activity.getDateTime().plusDays(1);
     LocalDateTime secondOption = activity.getDateTime().plusDays(2);
     Votation votation = votationWithOptions("v-1", "a-1", firstOption, secondOption);
+    votation.setActivity(activity);
     votationRepository.save(votation);
 
     service.vote("v-1", "participant", firstOption);
@@ -238,12 +246,13 @@ class VotationServiceTest {
         .hasMessageContaining("Votation");
 
     Votation votation = votationWithOptions("v-1", "missing", option);
+    votation.setActivity(null);
     votationRepository.save(votation);
     assertThatThrownBy(() -> service.vote("v-1", "participant", option))
         .isInstanceOf(ResourceNotFoundException.class)
         .hasMessageContaining("Activity");
 
-    votation.setActivityId("a-1");
+    votation.setActivity(activity);
     assertThatThrownBy(() -> service.vote("v-1", "participant", option.plusHours(1)))
         .isInstanceOf(ResourceNotFoundException.class)
         .hasMessageContaining("Option");
@@ -258,6 +267,7 @@ class VotationServiceTest {
     activityRepository.save(activity);
     LocalDateTime option = activity.getDateTime().plusDays(1);
     Votation votation = votationWithOptions("v-1", "a-1", option);
+    votation.setActivity(activity);
     votation.setStatus(VotationStatus.CLOSED);
     votationRepository.save(votation);
 
@@ -281,9 +291,17 @@ class VotationServiceTest {
   private Votation votation(String id, String activityId) {
     Votation votation = new Votation();
     votation.setId(id);
-    votation.setActivityId(activityId);
+    Activity activity = new Activity();
+    activity.setId(activityId);
+    votation.setActivity(activity);
     votation.setCreationDate(LocalDateTime.now());
     votation.setStatus(VotationStatus.ACTIVE);
+    return votation;
+  }
+
+  private Votation votation(String id, Activity activity) {
+    Votation votation = votation(id, activity.getId());
+    votation.setActivity(activity);
     return votation;
   }
 

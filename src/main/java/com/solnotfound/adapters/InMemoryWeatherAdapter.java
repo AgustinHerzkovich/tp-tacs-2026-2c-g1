@@ -1,7 +1,7 @@
 package com.solnotfound.adapters;
 
-import com.solnotfound.entity.Location;
-import com.solnotfound.entity.WeatherForecast;
+import com.solnotfound.entity.activity.Location;
+import com.solnotfound.entity.weather.WeatherForecast;
 import java.time.LocalDateTime;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;

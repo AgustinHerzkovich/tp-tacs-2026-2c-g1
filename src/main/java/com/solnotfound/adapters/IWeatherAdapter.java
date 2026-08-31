@@ -1,7 +1,7 @@
 package com.solnotfound.adapters;
 
-import com.solnotfound.entity.Location;
-import com.solnotfound.entity.WeatherForecast;
+import com.solnotfound.entity.activity.Location;
+import com.solnotfound.entity.weather.WeatherForecast;
 import java.time.LocalDateTime;
 import java.util.List;
 

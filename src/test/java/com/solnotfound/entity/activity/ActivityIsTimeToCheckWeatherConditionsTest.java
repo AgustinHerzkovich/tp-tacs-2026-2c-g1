@@ -2,7 +2,6 @@ package com.solnotfound.entity.activity;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.solnotfound.entity.Activity;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
 

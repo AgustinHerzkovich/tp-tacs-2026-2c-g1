@@ -9,9 +9,9 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.solnotfound.entity.Activity;
-import com.solnotfound.entity.ActivityStatus;
-import com.solnotfound.entity.notifications.StartingSoonNotificationType;
+import com.solnotfound.entity.activity.Activity;
+import com.solnotfound.entity.activity.ActivityStatus;
+import com.solnotfound.entity.notification.StartingSoonNotificationType;
 import com.solnotfound.listener.ActivityNotificationEvent;
 import com.solnotfound.repository.IActivityRepository;
 import com.solnotfound.service.schedulers.ActivityStatusScheduler;

@@ -1,8 +1,8 @@
 package com.solnotfound.adapters.openmeteo;
 
 import com.solnotfound.adapters.IWeatherAdapter;
-import com.solnotfound.entity.Location;
-import com.solnotfound.entity.WeatherForecast;
+import com.solnotfound.entity.activity.Location;
+import com.solnotfound.entity.weather.WeatherForecast;
 import com.solnotfound.exception.WeatherUnavailableException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;

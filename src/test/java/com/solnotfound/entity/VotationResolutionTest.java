@@ -2,6 +2,10 @@ package com.solnotfound.entity;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.solnotfound.entity.user.User;
+import com.solnotfound.entity.votation.Votation;
+import com.solnotfound.entity.votation.VotationOption;
+import com.solnotfound.entity.votation.VotationStatus;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;

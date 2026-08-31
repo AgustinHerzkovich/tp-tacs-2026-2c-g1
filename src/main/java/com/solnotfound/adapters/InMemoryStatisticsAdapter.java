@@ -1,8 +1,8 @@
 package com.solnotfound.adapters;
 
-import com.solnotfound.entity.ActivityStatistics;
-import com.solnotfound.entity.ActivityStatus;
-import com.solnotfound.entity.WeatherForecastStatistics;
+import com.solnotfound.entity.activity.ActivityStatistics;
+import com.solnotfound.entity.activity.ActivityStatus;
+import com.solnotfound.entity.weather.WeatherForecastStatistics;
 import java.time.LocalDate;
 import org.springframework.stereotype.Component;
 

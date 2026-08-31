@@ -2,7 +2,7 @@ package com.solnotfound.controller;
 
 import com.solnotfound.dto.ActivityStatisticsResponse;
 import com.solnotfound.dto.WeatherForecastStatisticsResponse;
-import com.solnotfound.entity.ActivityStatus;
+import com.solnotfound.entity.activity.ActivityStatus;
 import com.solnotfound.exception.InvaildActivityStatusException;
 import com.solnotfound.service.StatisticsService;
 import java.time.LocalDate;
@@ -20,7 +20,7 @@ public class StatisticsController {
     this.statisticsService = statisticsService;
   }
 
-  @GetMapping("/weatherForecast")
+  @GetMapping("/weather-forecasts")
   public ResponseEntity<WeatherForecastStatisticsResponse> getWeatherForecastServiceStatistics(
       @RequestParam(name = "startDate", required = false)
           @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
@@ -36,7 +36,7 @@ public class StatisticsController {
     return ResponseEntity.ok(weatherForecastStatisticsResponse);
   }
 
-  @GetMapping("/activity")
+  @GetMapping("/activities")
   public ResponseEntity<ActivityStatisticsResponse> getActivityStatistics(
       @RequestParam(name = "activityStatus") Optional<ActivityStatus> activityStatus) {
     ActivityStatus status =

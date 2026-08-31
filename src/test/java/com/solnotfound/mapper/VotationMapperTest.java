@@ -3,10 +3,10 @@ package com.solnotfound.mapper;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.solnotfound.dto.VotationDTO;
-import com.solnotfound.entity.User;
-import com.solnotfound.entity.Votation;
-import com.solnotfound.entity.VotationOption;
-import com.solnotfound.entity.VotationStatus;
+import com.solnotfound.entity.user.User;
+import com.solnotfound.entity.votation.Votation;
+import com.solnotfound.entity.votation.VotationOption;
+import com.solnotfound.entity.votation.VotationStatus;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -19,7 +19,11 @@ class VotationMapperTest {
     LocalDateTime optionDate = LocalDateTime.of(2026, 8, 29, 10, 0);
     Votation votation = new Votation();
     votation.setId("1");
-    votation.setActivityId("activity-1");
+    com.solnotfound.entity.activity.Activity activity =
+        new com.solnotfound.entity.activity.Activity();
+    activity.setId("activity-1");
+    votation.setActivity(activity);
+    assertThat(votation.getActivity()).isSameAs(activity);
     votation.setCreationDate(creationDate);
     votation.setStatus(VotationStatus.ACTIVE);
     votation.setOptions(List.of(option(optionDate, user("2", "Jane Doe", "jane@example.com"))));

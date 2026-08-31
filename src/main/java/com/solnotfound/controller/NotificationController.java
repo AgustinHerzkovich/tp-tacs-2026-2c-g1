@@ -22,14 +22,14 @@ public class NotificationController {
     this.notificationService = notificationService;
   }
 
-  @GetMapping("/me")
+  @GetMapping
   public ResponseEntity<List<NotificationResponse>> getNotifications(
       Authentication authentication) {
     return ResponseEntity.ok(
         notificationService.getNotificationsByUser(currentUserId(authentication)));
   }
 
-  @PatchMapping("/{id}")
+  @PatchMapping("/{id}/read")
   public ResponseEntity<Void> markAsRead(@PathVariable String id, Authentication authentication) {
     notificationService.markAsRead(id, currentUserId(authentication));
     return ResponseEntity.ok().build();

@@ -1,10 +1,10 @@
 package com.solnotfound.service;
 
 import com.solnotfound.dto.NotificationResponse;
-import com.solnotfound.entity.Activity;
-import com.solnotfound.entity.User;
-import com.solnotfound.entity.notifications.Notification;
-import com.solnotfound.entity.notifications.NotificationType;
+import com.solnotfound.entity.activity.Activity;
+import com.solnotfound.entity.notification.Notification;
+import com.solnotfound.entity.notification.NotificationType;
+import com.solnotfound.entity.user.User;
 import com.solnotfound.exception.AccessDeniedException;
 import com.solnotfound.exception.ResourceNotFoundException;
 import com.solnotfound.repository.INotificationRepository;
@@ -42,14 +42,13 @@ public class NotificationService {
   public void generateNotificationsForActivityEvent(Activity activity, NotificationType type) {
     List<Notification> notificationsToSave = new ArrayList<>();
 
-    String creatorId = activity.getOrganizer().getId();
-    notificationsToSave.add(new Notification(creatorId, activity, type));
+    User creator = activity.getOrganizer();
+    String creatorId = creator.getId();
+    notificationsToSave.add(new Notification(creator, activity, type));
 
-    List<String> participantIds = activity.getParticipants().stream().map(User::getId).toList();
-
-    for (String participantId : participantIds) {
-      if (!participantId.equals(creatorId)) {
-        notificationsToSave.add(new Notification(participantId, activity, type));
+    for (User participant : activity.getParticipants()) {
+      if (!participant.getId().equals(creatorId)) {
+        notificationsToSave.add(new Notification(participant, activity, type));
       }
     }
 
@@ -73,7 +72,7 @@ public class NotificationService {
                     new ResourceNotFoundException(
                         "No se encontró la notificación con el ID: " + notificationId));
 
-    if (!notification.getReceiverUser().equals(currentUserId)) {
+    if (!notification.getReceiverUser().getId().equals(currentUserId)) {
       throw new AccessDeniedException("La notificación no pertenece al usuario actual.");
     }
 
@@ -84,7 +83,7 @@ public class NotificationService {
   private NotificationResponse toDto(Notification notification) {
     return new NotificationResponse(
         notification.getId(),
-        notification.getActivityId(),
+        notification.getActivity().getId(),
         notification.getType().code(),
         notification.getTitle(),
         notification.getMessage(),

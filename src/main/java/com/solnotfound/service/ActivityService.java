@@ -10,14 +10,14 @@ import com.solnotfound.dto.ParticipantDTO;
 import com.solnotfound.dto.ReprogramationRangeDTO;
 import com.solnotfound.dto.WeatherConditionsDTO;
 import com.solnotfound.dto.WeatherForecastDTO;
-import com.solnotfound.entity.Activity;
-import com.solnotfound.entity.Location;
-import com.solnotfound.entity.MaxRainProbabilityCondition;
-import com.solnotfound.entity.MaxWindCondition;
-import com.solnotfound.entity.ReprogramationRange;
-import com.solnotfound.entity.TemperatureRangeCondition;
-import com.solnotfound.entity.WeatherCondition;
-import com.solnotfound.entity.WeatherForecast;
+import com.solnotfound.entity.activity.Activity;
+import com.solnotfound.entity.activity.Location;
+import com.solnotfound.entity.activity.ReprogramationRange;
+import com.solnotfound.entity.weather.MaxRainProbabilityCondition;
+import com.solnotfound.entity.weather.MaxWindCondition;
+import com.solnotfound.entity.weather.TemperatureRangeCondition;
+import com.solnotfound.entity.weather.WeatherCondition;
+import com.solnotfound.entity.weather.WeatherForecast;
 import com.solnotfound.exception.ActivityAccessDeniedException;
 import com.solnotfound.exception.ActivityNotFoundException;
 import com.solnotfound.exception.InvalidActivityException;
@@ -63,7 +63,7 @@ public class ActivityService {
 
     Activity activity = new Activity();
     activity.setId(UUID.randomUUID().toString());
-    activity.setOrganizer(com.solnotfound.entity.User.withId(creatorUserId));
+    activity.setOrganizer(com.solnotfound.entity.user.User.withId(creatorUserId));
     activity.setTitle(request.title());
     activity.setDescription(request.description());
     activity.setType(request.type());
@@ -341,7 +341,8 @@ public class ActivityService {
         maxRainProbability, minTemperature, maxTemperature, maxWindSpeed);
   }
 
-  private List<ParticipantDTO> toParticipantsDTO(List<com.solnotfound.entity.User> participants) {
+  private List<ParticipantDTO> toParticipantsDTO(
+      List<com.solnotfound.entity.user.User> participants) {
     return participants.stream()
         .map(participant -> new ParticipantDTO(participant.getId()))
         .toList();

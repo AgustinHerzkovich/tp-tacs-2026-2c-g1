@@ -1,8 +1,8 @@
 package com.solnotfound.mapper;
 
 import com.solnotfound.dto.VotationOptionDTO;
-import com.solnotfound.entity.User;
-import com.solnotfound.entity.VotationOption;
+import com.solnotfound.entity.user.User;
+import com.solnotfound.entity.votation.VotationOption;
 
 public final class VotationOptionMapper {
 
