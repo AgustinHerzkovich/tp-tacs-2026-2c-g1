@@ -12,6 +12,7 @@ import com.solnotfound.listener.ActivityNotificationEvent;
 import com.solnotfound.repository.IActivityRepository;
 import com.solnotfound.repository.IVotationRepository;
 import com.solnotfound.service.schedulers.ActivityAnticipationCheckScheduler;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
@@ -54,7 +55,8 @@ class ActivityAnticipationCheckSchedulerTest {
             votationRepository,
             weatherAdapter,
             badWeatherChecker,
-            eventPublisher);
+            eventPublisher,
+            Duration.ofHours(24));
     location = new Location(new City("ba", "Buenos Aires"), -34.6037, -58.3816);
     dateTime = LocalDateTime.now().plusHours(2);
     weather = mock(WeatherForecast.class);
@@ -270,6 +272,7 @@ class ActivityAnticipationCheckSchedulerTest {
 
     assertThat(saved.getStatus()).isEqualTo(VotationStatus.ACTIVE);
     assertThat(saved.getActivityId()).isEqualTo("activity-1");
+    assertThat(saved.getClosingDate()).isEqualTo(saved.getCreationDate().plusHours(24));
     assertThat(saved.getOptions()).allSatisfy(option -> assertThat(option.getUsers()).isEmpty());
     assertThat(saved.getOptions())
         .extracting(VotationOption::getDateTime)

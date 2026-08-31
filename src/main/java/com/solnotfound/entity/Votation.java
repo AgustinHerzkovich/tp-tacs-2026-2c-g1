@@ -2,20 +2,22 @@ package com.solnotfound.entity;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import lombok.Getter;
 import lombok.Setter;
 
-@Getter
-@Setter
 public class Votation {
 
-  private String id;
-  private String activityId;
-  private LocalDateTime creationDate;
+  @Getter @Setter private String id;
+  @Getter @Setter private String activityId;
+  @Getter @Setter private LocalDateTime creationDate;
+  private LocalDateTime closingDate;
   private Double minQuorum = 0.50; // 50%
-  private VotationStatus status;
+  @Getter @Setter private VotationStatus status;
   private List<VotationOption> options = new ArrayList<>();
 
   public synchronized List<VotationOption> getOptions() {
@@ -24,6 +26,22 @@ public class Votation {
 
   public synchronized void setOptions(List<VotationOption> options) {
     this.options = new ArrayList<>(options);
+  }
+
+  public synchronized LocalDateTime getClosingDate() {
+    return closingDate;
+  }
+
+  public synchronized void setClosingDate(LocalDateTime closingDate) {
+    this.closingDate = closingDate;
+  }
+
+  public synchronized Double getMinQuorum() {
+    return minQuorum;
+  }
+
+  public synchronized void setMinQuorum(Double minQuorum) {
+    this.minQuorum = minQuorum;
   }
 
   public synchronized boolean isAnOption(LocalDateTime option) {
@@ -59,5 +77,47 @@ public class Votation {
       }
     }
     return Optional.empty();
+  }
+
+  /**
+   * Indicates whether this active votation reached its configured closing instant.
+   *
+   * @param now instant used for the comparison
+   * @return {@code true} when the votation is active and its closing date is not after {@code now}
+   */
+  public synchronized boolean isDueToClose(LocalDateTime now) {
+    return status == VotationStatus.ACTIVE && closingDate != null && !closingDate.isAfter(now);
+  }
+
+  /**
+   * Determines whether total participation reaches the configured quorum. A user is counted once
+   * across the whole votation, independently of the selected option.
+   *
+   * @param eligibleVoters organizer and participants allowed to vote
+   * @return {@code true} when the number of distinct voters reaches the rounded-up quorum
+   */
+  public synchronized boolean reachesQuorum(int eligibleVoters) {
+    if (eligibleVoters <= 0 || minQuorum == null || minQuorum < 0 || minQuorum > 1) {
+      return false;
+    }
+    Set<String> voterIds = new HashSet<>();
+    for (VotationOption option : options) {
+      option.getUsers().stream().map(User::getId).forEach(voterIds::add);
+    }
+    return voterIds.size() >= Math.ceil(eligibleVoters * minQuorum);
+  }
+
+  /**
+   * Selects the option with the most votes. Ties are resolved deterministically in favor of the
+   * earliest date.
+   *
+   * @return the winning date, or empty when there are no options
+   */
+  public synchronized Optional<LocalDateTime> winningOption() {
+    return options.stream()
+        .max(
+            Comparator.comparingInt((VotationOption option) -> option.getUsers().size())
+                .thenComparing(VotationOption::getDateTime, Comparator.reverseOrder()))
+        .map(VotationOption::getDateTime);
   }
 }

@@ -14,18 +14,18 @@ import com.solnotfound.exception.WeatherUnavailableException;
 import com.solnotfound.listener.ActivityNotificationEvent;
 import com.solnotfound.repository.IActivityRepository;
 import com.solnotfound.repository.IVotationRepository;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 @edu.umd.cs.findbugs.annotations.SuppressFBWarnings(
     value = "EI_EXPOSE_REP2",
     justification = "Spring injects shared application collaborators")
@@ -36,6 +36,22 @@ public class ActivityAnticipationCheckScheduler {
   private final IWeatherAdapter weatherAdapter;
   private final IBadWeatherChecker badWeatherChecker;
   private final ApplicationEventPublisher eventPublisher;
+  private final Duration votationDuration;
+
+  public ActivityAnticipationCheckScheduler(
+      IActivityRepository activityRepository,
+      IVotationRepository votationRepository,
+      IWeatherAdapter weatherAdapter,
+      IBadWeatherChecker badWeatherChecker,
+      ApplicationEventPublisher eventPublisher,
+      @Value("${votation.duration:24h}") Duration votationDuration) {
+    this.activityRepository = activityRepository;
+    this.votationRepository = votationRepository;
+    this.weatherAdapter = weatherAdapter;
+    this.badWeatherChecker = badWeatherChecker;
+    this.eventPublisher = eventPublisher;
+    this.votationDuration = votationDuration;
+  }
 
   /**
    * Checks due active activities once per hour. For bad weather, alternatives and the resulting
@@ -129,7 +145,9 @@ public class ActivityAnticipationCheckScheduler {
     Votation votation = new Votation();
     votation.setActivityId(activity.getId());
     votation.setStatus(VotationStatus.ACTIVE);
-    votation.setCreationDate(LocalDateTime.now());
+    LocalDateTime creationDate = LocalDateTime.now();
+    votation.setCreationDate(creationDate);
+    votation.setClosingDate(creationDate.plus(votationDuration));
     votation.setOptions(options);
     votationRepository.save(votation);
     activity.setStatus(ActivityStatus.PROPOSED);

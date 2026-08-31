@@ -1,6 +1,7 @@
 package com.solnotfound.controller;
 
 import com.solnotfound.dto.UpdateVotationOptionsRequest;
+import com.solnotfound.dto.UpdateVotationSettingsRequest;
 import com.solnotfound.dto.VotationDTO;
 import com.solnotfound.service.VotationService;
 import jakarta.validation.Valid;
@@ -33,6 +34,15 @@ public class VotationController {
       Authentication authentication) {
     return ResponseEntity.ok(
         votationService.updateVotationOptions(votationId, request, currentUserId(authentication)));
+  }
+
+  @PutMapping("/{votationId}/settings")
+  public ResponseEntity<VotationDTO> updateVotationSettings(
+      @PathVariable String votationId,
+      @Valid @RequestBody UpdateVotationSettingsRequest request,
+      Authentication authentication) {
+    return ResponseEntity.ok(
+        votationService.updateVotationSettings(votationId, request, currentUserId(authentication)));
   }
 
   @GetMapping("/me")

@@ -124,6 +124,37 @@ class VotationControllerTest {
     verify(service).vote("v-1", "participant", option);
   }
 
+  @Test
+  void organizerUpdatesVotationSettings() throws Exception {
+    when(service.updateVotationSettings(eq("v-1"), any(), eq("organizer")))
+        .thenReturn(
+            new VotationDTO(
+                "v-1", "activity-1", LocalDateTime.now(), VotationStatus.ACTIVE, List.of()));
+
+    mockMvc
+        .perform(
+            put("/votations/v-1/settings")
+                .principal(authentication("organizer"))
+                .contentType("application/json")
+                .content("{\"minQuorum\":0.75,\"duration\":\"PT2H\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value("v-1"));
+
+    verify(service).updateVotationSettings(eq("v-1"), any(), eq("organizer"));
+  }
+
+  @Test
+  void rejectsOutOfRangeQuorum() throws Exception {
+    mockMvc
+        .perform(
+            put("/votations/v-1/settings")
+                .principal(authentication("organizer"))
+                .contentType("application/json")
+                .content("{\"minQuorum\":1.1,\"duration\":\"PT2H\"}"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.errors.minQuorum").exists());
+  }
+
   private TestingAuthenticationToken authentication(String userId) {
     TestingAuthenticationToken authentication = new TestingAuthenticationToken(userId, null);
     authentication.setAuthenticated(true);
