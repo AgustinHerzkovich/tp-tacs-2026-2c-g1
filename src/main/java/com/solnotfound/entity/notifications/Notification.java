@@ -17,8 +17,6 @@ public class Notification {
   private final String title;
   private final String message;
 
-  @Setter private NotificationStatus status;
-
   private boolean read;
 
   public Notification(String receiverUser, Activity activity, NotificationType type) {
@@ -30,7 +28,6 @@ public class Notification {
     this.message = type.generateMessage(activity);
     this.title = type.generateTitle(activity);
 
-    this.status = NotificationStatus.PENDING;
     this.read = false;
   }
 

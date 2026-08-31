@@ -39,8 +39,10 @@ class VotationClosingSchedulerTest {
     votationRepository = mock(IVotationRepository.class);
     activityRepository = mock(IActivityRepository.class);
     eventPublisher = mock(ApplicationEventPublisher.class);
+    ActivityStatusTransitionService transitionService =
+        new ActivityStatusTransitionService(activityRepository, eventPublisher);
     scheduler =
-        new VotationClosingScheduler(votationRepository, activityRepository, eventPublisher);
+        new VotationClosingScheduler(votationRepository, activityRepository, transitionService);
   }
 
   @Test
@@ -121,6 +123,7 @@ class VotationClosingSchedulerTest {
             .mapToObj(index -> namedUser("participant-" + index))
             .toList());
     activity.setDateTime(LocalDateTime.of(2026, 9, 1, 10, 0));
+    activity.setStatus(ActivityStatus.PROPOSED);
     return activity;
   }
 

@@ -43,6 +43,16 @@ class NotificationTypeTest {
   }
 
   @Test
+  void shouldGenerateCorrectTitleAndMessageForStartingSoon() {
+    NotificationType type = new StartingSoonNotificationType();
+
+    assertEquals("La actividad Partido de Fútbol esta por comenzar", type.generateTitle(activity));
+    assertEquals(
+        "La actividad Partido de Fútbol comenzara el 15/10/2026 18:30 hs.",
+        type.generateMessage(activity));
+  }
+
+  @Test
   void shouldGenerateCorrectTitleAndMessageForReprogrammed() {
     NotificationType type = new ReprogrammedNotificationType();
     String title = type.generateTitle(activity);

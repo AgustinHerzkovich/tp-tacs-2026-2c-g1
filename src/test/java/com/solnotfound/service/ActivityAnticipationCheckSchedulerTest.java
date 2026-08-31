@@ -8,6 +8,7 @@ import static org.mockito.Mockito.*;
 import com.solnotfound.adapters.IWeatherAdapter;
 import com.solnotfound.entity.*;
 import com.solnotfound.entity.notifications.BadWeatherAlertNotificationType;
+import com.solnotfound.entity.notifications.CancelledNotificationType;
 import com.solnotfound.listener.ActivityNotificationEvent;
 import com.solnotfound.repository.IActivityRepository;
 import com.solnotfound.repository.IVotationRepository;
@@ -56,12 +57,14 @@ class ActivityAnticipationCheckSchedulerTest {
             weatherAdapter,
             badWeatherChecker,
             eventPublisher,
+            new ActivityStatusTransitionService(activityRepository, eventPublisher),
             Duration.ofHours(24));
     location = new Location(new City("ba", "Buenos Aires"), -34.6037, -58.3816);
     dateTime = LocalDateTime.now().plusHours(2);
     weather = mock(WeatherForecast.class);
 
     activityToCheck = mock(Activity.class);
+    lenient().when(activityToCheck.getStatus()).thenReturn(ActivityStatus.CONFIRMED);
     lenient().when(activityToCheck.isTimeToCheckWeatherConditions()).thenReturn(true);
     lenient().when(activityToCheck.getLocation()).thenReturn(location);
     lenient().when(activityToCheck.getDateTime()).thenReturn(dateTime);
@@ -109,9 +112,13 @@ class ActivityAnticipationCheckSchedulerTest {
 
     ArgumentCaptor<ActivityNotificationEvent> eventCaptor =
         ArgumentCaptor.forClass(ActivityNotificationEvent.class);
-    verify(eventPublisher, times(1)).publishEvent(eventCaptor.capture());
+    verify(eventPublisher, times(2)).publishEvent(eventCaptor.capture());
 
-    ActivityNotificationEvent firedEvent = eventCaptor.getValue();
+    ActivityNotificationEvent firedEvent =
+        eventCaptor.getAllValues().stream()
+            .filter(event -> event.type() instanceof BadWeatherAlertNotificationType)
+            .findFirst()
+            .orElseThrow();
     assertThat(firedEvent.activityId()).isEqualTo(activityToCheck.getId());
     assertThat(firedEvent.type()).isInstanceOf(BadWeatherAlertNotificationType.class);
   }
@@ -139,6 +146,7 @@ class ActivityAnticipationCheckSchedulerTest {
   @Test
   void continuesProcessingRemainingActivitiesWhenWeatherAdapterThrows() throws Exception {
     Activity anotherActivity = mock(Activity.class);
+    when(anotherActivity.getStatus()).thenReturn(ActivityStatus.CONFIRMED);
     Location anotherLocation = new Location(new City("cordoba", "Cordoba"), -31.4201, -64.1888);
     LocalDateTime anotherDateTime = LocalDateTime.now().plusHours(3);
     WeatherForecast anotherWeather = mock(WeatherForecast.class);
@@ -355,5 +363,11 @@ class ActivityAnticipationCheckSchedulerTest {
     verify(activityToCheck).setStatus(ActivityStatus.CANCELLED);
     verify(activityToCheck).markWeatherChecked();
     verify(activityRepository).save(activityToCheck);
+    ArgumentCaptor<ActivityNotificationEvent> eventCaptor =
+        ArgumentCaptor.forClass(ActivityNotificationEvent.class);
+    verify(eventPublisher, times(2)).publishEvent(eventCaptor.capture());
+    assertThat(eventCaptor.getAllValues())
+        .extracting(ActivityNotificationEvent::type)
+        .anyMatch(CancelledNotificationType.class::isInstance);
   }
 }

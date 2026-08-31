@@ -4,15 +4,11 @@ import com.solnotfound.entity.Activity;
 import com.solnotfound.entity.ActivityStatus;
 import com.solnotfound.entity.Votation;
 import com.solnotfound.entity.VotationStatus;
-import com.solnotfound.entity.notifications.CancelledNotificationType;
-import com.solnotfound.entity.notifications.NotificationType;
-import com.solnotfound.entity.notifications.ReprogrammedNotificationType;
-import com.solnotfound.listener.ActivityNotificationEvent;
 import com.solnotfound.repository.IActivityRepository;
 import com.solnotfound.repository.IVotationRepository;
+import com.solnotfound.service.ActivityStatusTransitionService;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -25,7 +21,7 @@ public class VotationClosingScheduler {
 
   private final IVotationRepository votationRepository;
   private final IActivityRepository activityRepository;
-  private final ApplicationEventPublisher eventPublisher;
+  private final ActivityStatusTransitionService transitionService;
 
   /**
    * Closes due votations and persists their activity outcome. Participation quorum is evaluated
@@ -51,25 +47,21 @@ public class VotationClosingScheduler {
             + (activity.getOrganizer() != null && !activity.isAParticipant(activity.getOrganizer())
                 ? 1
                 : 0);
-    NotificationType notificationType;
+    ActivityStatus outcome;
     if (votation.reachesQuorum(eligibleVoters)) {
       LocalDateTime winner = votation.winningOption().orElse(null);
       if (winner == null) {
-        activity.setStatus(ActivityStatus.CANCELLED);
-        notificationType = new CancelledNotificationType();
+        outcome = ActivityStatus.CANCELLED;
       } else {
         activity.setDateTime(winner);
-        activity.setStatus(ActivityStatus.RESCHEDULED);
-        notificationType = new ReprogrammedNotificationType();
+        outcome = ActivityStatus.RESCHEDULED;
       }
     } else {
-      activity.setStatus(ActivityStatus.CANCELLED);
-      notificationType = new CancelledNotificationType();
+      outcome = ActivityStatus.CANCELLED;
     }
 
     votation.setStatus(VotationStatus.CLOSED);
     votationRepository.save(votation);
-    activityRepository.save(activity);
-    eventPublisher.publishEvent(ActivityNotificationEvent.from(activity, notificationType));
+    transitionService.transition(activity, outcome);
   }
 }

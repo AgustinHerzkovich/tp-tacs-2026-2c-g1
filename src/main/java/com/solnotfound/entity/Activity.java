@@ -29,6 +29,7 @@ public class Activity {
   @Getter private ActivityStatus status = ActivityStatus.CONFIRMED;
   private List<ActivityStatus> statusHistory = new ArrayList<>(List.of(ActivityStatus.CONFIRMED));
   @Setter @Getter private Boolean weatherChecked = false;
+  @Getter private LocalDateTime startingSoonNotificationDateTime;
   private User organizer;
 
   // las condiciones del clima y avisar a los usuarios
@@ -185,5 +186,47 @@ public class Activity {
       return Optional.of(organizer);
     }
     return participants.stream().filter(user -> user.getId().equals(userId)).findFirst();
+  }
+
+  /**
+   * Checks if the activity is near its start time for notification purposes.
+   *
+   * @param now the current time
+   * @param notificationThreshold the number of hours before the activity starts to trigger a
+   *     notification
+   * @return {@code true} if the activity is near its start time
+   */
+  public boolean nearStart(LocalDateTime now, int notificationThreshold) {
+    return nearStart(now, java.time.Duration.ofHours(notificationThreshold));
+  }
+
+  /**
+   * Checks whether the activity is inside the configured notification window, including the exact
+   * window start and excluding the activity start itself.
+   *
+   * @param now current time
+   * @param notificationThreshold duration before the activity starts
+   * @return {@code true} when a starting-soon notification is due
+   */
+  public boolean nearStart(LocalDateTime now, java.time.Duration notificationThreshold) {
+    LocalDateTime notificationTime = dateTime.minus(notificationThreshold);
+    return !now.isBefore(notificationTime) && now.isBefore(dateTime);
+  }
+
+  /**
+   * Marks the starting-soon notification as sent for the current scheduled date. A later
+   * rescheduling changes the date and therefore makes the activity eligible for a new reminder.
+   */
+  public void markStartingSoonNotificationSent() {
+    startingSoonNotificationDateTime = dateTime;
+  }
+
+  /**
+   * Indicates whether a starting-soon notification was already sent for the current scheduled date.
+   *
+   * @return {@code true} when the current schedule has already been notified
+   */
+  public boolean wasStartingSoonNotificationSent() {
+    return dateTime.equals(startingSoonNotificationDateTime);
   }
 }

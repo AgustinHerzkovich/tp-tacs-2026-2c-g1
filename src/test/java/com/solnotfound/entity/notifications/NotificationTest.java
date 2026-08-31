@@ -29,8 +29,7 @@ class NotificationTest {
     assertNotNull(notification.getTitle());
     assertNotNull(notification.getMessage());
 
-    // Verify initial status and read flag
-    assertEquals(NotificationStatus.PENDING, notification.getStatus());
+    // Verify initial read flag
     assertFalse(notification.isRead());
   }
 
