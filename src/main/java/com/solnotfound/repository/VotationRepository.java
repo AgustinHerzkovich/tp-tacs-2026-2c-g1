@@ -2,6 +2,7 @@ package com.solnotfound.repository;
 
 import com.solnotfound.entity.Votation;
 import com.solnotfound.entity.VotationStatus;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -46,5 +47,10 @@ public class VotationRepository implements IVotationRepository {
         .filter(votation -> activityId.equals(votation.getActivityId()))
         .findFirst()
         .orElse(null);
+  }
+
+  @Override
+  public List<Votation> findActiveDueToClose(LocalDateTime now) {
+    return votations.values().stream().filter(votation -> votation.isDueToClose(now)).toList();
   }
 }

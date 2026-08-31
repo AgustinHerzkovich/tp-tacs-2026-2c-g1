@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import com.solnotfound.adapters.IWeatherAdapter;
 import com.solnotfound.dto.UpdateVotationOptionsRequest;
+import com.solnotfound.dto.UpdateVotationSettingsRequest;
 import com.solnotfound.entity.Activity;
 import com.solnotfound.entity.IBadWeatherChecker;
 import com.solnotfound.entity.Location;
@@ -20,9 +21,11 @@ import com.solnotfound.entity.VotationStatus;
 import com.solnotfound.entity.WeatherForecast;
 import com.solnotfound.exception.AccessDeniedException;
 import com.solnotfound.exception.InvalidVotationOptionsException;
+import com.solnotfound.exception.InvalidVotationSettingsException;
 import com.solnotfound.exception.ResourceNotFoundException;
 import com.solnotfound.repository.ActivityRepository;
 import com.solnotfound.repository.VotationRepository;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
@@ -64,7 +67,7 @@ class VotationServiceTest {
   }
 
   @Test
-  void organizerReplacesOptionsAndVotesAreReset() {
+  void organizerReplacesOptionsAndNewOptionsHaveNoVotes() {
     Activity activity = activity("a-1", "organizer", List.of("participant"));
     activityRepository.save(activity);
     Votation votation = votation("v-1", "a-1");
@@ -81,6 +84,75 @@ class VotationServiceTest {
     assertThat(result.options()).hasSize(1);
     assertThat(result.options().getFirst().voteCount()).isZero();
     assertThat(votationRepository.findById("v-1").getOptions().getFirst().getUsers()).isEmpty();
+  }
+
+  @Test
+  void editingOptionsKeepsVotesOnlyForRetainedAlternatives() {
+    Activity activity = activity("a-1", "organizer", List.of("first", "second"));
+    activityRepository.save(activity);
+    LocalDateTime retained = activity.getDateTime().plusDays(1).withHour(12);
+    LocalDateTime removed = activity.getDateTime().plusDays(2).withHour(12);
+    LocalDateTime added = activity.getDateTime().plusDays(3).withHour(12);
+    Votation votation = votationWithOptions("v-1", "a-1", retained, removed);
+    votation.getOptions().get(0).setUsers(List.of(activity.getParticipants().get(0)));
+    votation.getOptions().get(1).setUsers(List.of(activity.getParticipants().get(1)));
+    votationRepository.save(votation);
+    when(weatherAdapter.getForecastRange(any(Location.class), anyList()))
+        .thenReturn(List.of(mock(WeatherForecast.class), mock(WeatherForecast.class)));
+    when(badWeatherChecker.isBadWeatherForActivity(any(), any())).thenReturn(false);
+
+    service.updateVotationOptions(
+        "v-1", new UpdateVotationOptionsRequest(List.of(retained, added)), "organizer");
+
+    assertThat(votation.getOptions().get(0).getUsers())
+        .containsExactly(activity.getParticipants().get(0));
+    assertThat(votation.getOptions().get(1).getUsers()).isEmpty();
+    assertThat(votation.getVoteByUser(activity.getParticipants().get(1))).isEmpty();
+  }
+
+  @Test
+  void organizerUpdatesQuorumAndRemainingDuration() {
+    Activity activity = activity("a-1", "organizer", List.of("participant"));
+    activityRepository.save(activity);
+    Votation votation = votationWithOptions("v-1", "a-1", LocalDateTime.now().plusHours(4));
+    votationRepository.save(votation);
+    LocalDateTime beforeUpdate = LocalDateTime.now();
+
+    service.updateVotationSettings(
+        "v-1", new UpdateVotationSettingsRequest(0.75, Duration.ofHours(2)), "organizer");
+
+    assertThat(votation.getMinQuorum()).isEqualTo(0.75);
+    assertThat(votation.getClosingDate())
+        .isBetween(beforeUpdate.plusHours(2), LocalDateTime.now().plusHours(2));
+  }
+
+  @Test
+  void rejectsInvalidDurationOrClosingDateAndNonOrganizer() {
+    Activity activity = activity("a-1", "organizer", List.of("participant"));
+    activityRepository.save(activity);
+    Votation votation = votationWithOptions("v-1", "a-1", LocalDateTime.now().plusHours(2));
+    votationRepository.save(votation);
+
+    assertThatThrownBy(
+            () ->
+                service.updateVotationSettings(
+                    "v-1", new UpdateVotationSettingsRequest(0.5, Duration.ZERO), "organizer"))
+        .isInstanceOf(InvalidVotationSettingsException.class);
+    assertThatThrownBy(
+            () ->
+                service.updateVotationSettings(
+                    "v-1",
+                    new UpdateVotationSettingsRequest(0.5, Duration.ofHours(2)),
+                    "organizer"))
+        .isInstanceOf(InvalidVotationSettingsException.class)
+        .hasMessageContaining("earliest alternative");
+    assertThatThrownBy(
+            () ->
+                service.updateVotationSettings(
+                    "v-1",
+                    new UpdateVotationSettingsRequest(0.5, Duration.ofHours(1)),
+                    "participant"))
+        .isInstanceOf(AccessDeniedException.class);
   }
 
   @Test

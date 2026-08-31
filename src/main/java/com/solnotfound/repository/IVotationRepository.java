@@ -1,6 +1,7 @@
 package com.solnotfound.repository;
 
 import com.solnotfound.entity.Votation;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface IVotationRepository {
@@ -14,4 +15,6 @@ public interface IVotationRepository {
   List<Votation> findByActivityIds(List<String> activityIds);
 
   Votation findActiveByActivityId(String activityId);
+
+  List<Votation> findActiveDueToClose(LocalDateTime now);
 }

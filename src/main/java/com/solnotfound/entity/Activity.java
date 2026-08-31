@@ -174,10 +174,6 @@ public class Activity {
     return participants.contains(user);
   }
 
-  public synchronized boolean isAnOrganizerOrAParticipant(User user) {
-    return organizer.equals(user) || isAParticipant(user);
-  }
-
   /**
    * Finds an organizer or participant by identifier.
    *
