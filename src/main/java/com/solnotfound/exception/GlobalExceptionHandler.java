@@ -97,6 +97,15 @@ public class GlobalExceptionHandler {
     return ResponseEntity.badRequest().body(problem);
   }
 
+  @ExceptionHandler(InvalidStatisticsRangeException.class)
+  public ResponseEntity<ProblemDetail> handleInvalidStatisticsRange(
+      InvalidStatisticsRangeException exception) {
+    ProblemDetail problem =
+        ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, exception.getMessage());
+    problem.setTitle("Invalid statistics range");
+    return ResponseEntity.badRequest().body(problem);
+  }
+
   @ExceptionHandler(CouldNotRetrieveStatisticsException.class)
   public ProblemDetail handleStatisticsServiceUnavailable(CouldNotRetrieveStatisticsException ex) {
     ProblemDetail problemDetail =

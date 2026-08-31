@@ -5,12 +5,16 @@ import com.solnotfound.entity.activity.ActivityStatus;
 import com.solnotfound.entity.notification.CancelledNotificationType;
 import com.solnotfound.entity.notification.NotificationType;
 import com.solnotfound.entity.notification.ReprogrammedNotificationType;
+import com.solnotfound.entity.statistics.ActivityTransitionReason;
+import com.solnotfound.entity.statistics.StatisticsEventType;
 import com.solnotfound.exception.InvalidActivityStatusTransitionException;
 import com.solnotfound.listener.ActivityNotificationEvent;
 import com.solnotfound.repository.IActivityRepository;
+import com.solnotfound.repository.InMemoryStatisticsEventRepository;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.Set;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
@@ -25,11 +29,28 @@ public class ActivityStatusTransitionService {
 
   private final IActivityRepository activityRepository;
   private final ApplicationEventPublisher eventPublisher;
+  private final StatisticsEventRecorder statisticsRecorder;
+
+  @Autowired
+  public ActivityStatusTransitionService(
+      IActivityRepository activityRepository,
+      ApplicationEventPublisher eventPublisher,
+      StatisticsEventRecorder statisticsRecorder) {
+    this.activityRepository = activityRepository;
+    this.eventPublisher = eventPublisher;
+    this.statisticsRecorder = statisticsRecorder;
+  }
 
   public ActivityStatusTransitionService(
       IActivityRepository activityRepository, ApplicationEventPublisher eventPublisher) {
-    this.activityRepository = activityRepository;
-    this.eventPublisher = eventPublisher;
+    this(
+        activityRepository,
+        eventPublisher,
+        new StatisticsEventRecorder(new InMemoryStatisticsEventRepository()));
+  }
+
+  public void transition(Activity activity, ActivityStatus newStatus) {
+    transition(activity, newStatus, null);
   }
 
   /**
@@ -39,9 +60,11 @@ public class ActivityStatusTransitionService {
    *
    * @param activity activity to transition
    * @param newStatus destination status
+   * @param reason business reason for the transition, when relevant
    * @throws InvalidActivityStatusTransitionException when the transition is not allowed
    */
-  public void transition(Activity activity, ActivityStatus newStatus) {
+  public void transition(
+      Activity activity, ActivityStatus newStatus, ActivityTransitionReason reason) {
     ActivityStatus currentStatus = activity.getStatus();
     if (!ALLOWED_TRANSITIONS.getOrDefault(currentStatus, Set.of()).contains(newStatus)) {
       throw new InvalidActivityStatusTransitionException(
@@ -51,10 +74,23 @@ public class ActivityStatusTransitionService {
     activity.setStatus(newStatus);
     activityRepository.save(activity);
 
+    StatisticsEventType statisticsType = statisticsTypeFor(newStatus);
+    if (statisticsType != null) {
+      statisticsRecorder.recordActivity(statisticsType, activity.getId(), reason);
+    }
+
     NotificationType notificationType = notificationFor(newStatus);
     if (notificationType != null) {
       eventPublisher.publishEvent(ActivityNotificationEvent.from(activity, notificationType));
     }
+  }
+
+  private StatisticsEventType statisticsTypeFor(ActivityStatus status) {
+    return switch (status) {
+      case CANCELLED -> StatisticsEventType.ACTIVITY_CANCELLED;
+      case RESCHEDULED -> StatisticsEventType.ACTIVITY_RESCHEDULED;
+      default -> null;
+    };
   }
 
   private static Map<ActivityStatus, Set<ActivityStatus>> allowedTransitions() {

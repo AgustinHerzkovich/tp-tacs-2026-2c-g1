@@ -5,6 +5,7 @@ import com.solnotfound.entity.activity.Activity;
 import com.solnotfound.entity.activity.ActivityStatus;
 import com.solnotfound.entity.activity.Location;
 import com.solnotfound.entity.notification.BadWeatherAlertNotificationType;
+import com.solnotfound.entity.statistics.ActivityTransitionReason;
 import com.solnotfound.entity.votation.Votation;
 import com.solnotfound.entity.votation.VotationOption;
 import com.solnotfound.entity.votation.VotationStatus;
@@ -141,7 +142,8 @@ public class ActivityAnticipationCheckScheduler {
 
     activity.markWeatherChecked();
     if (options.isEmpty()) {
-      transitionService.transition(activity, ActivityStatus.CANCELLED);
+      transitionService.transition(
+          activity, ActivityStatus.CANCELLED, ActivityTransitionReason.NO_WEATHER_ALTERNATIVES);
       return;
     }
 
@@ -153,6 +155,7 @@ public class ActivityAnticipationCheckScheduler {
     votation.setClosingDate(creationDate.plus(votationDuration));
     votation.setOptions(options);
     votationRepository.save(votation);
-    transitionService.transition(activity, ActivityStatus.PROPOSED);
+    transitionService.transition(
+        activity, ActivityStatus.PROPOSED, ActivityTransitionReason.BAD_WEATHER);
   }
 }

@@ -3,6 +3,7 @@ package com.solnotfound.service.schedulers;
 import com.solnotfound.entity.activity.Activity;
 import com.solnotfound.entity.activity.ActivityStatus;
 import com.solnotfound.entity.notification.StartingSoonNotificationType;
+import com.solnotfound.entity.statistics.ActivityTransitionReason;
 import com.solnotfound.listener.ActivityNotificationEvent;
 import com.solnotfound.repository.IActivityRepository;
 import com.solnotfound.service.ActivityStatusTransitionService;
@@ -49,7 +50,8 @@ public class ActivityStatusScheduler {
     for (Activity activity : activityRepository.findActive()) {
       try {
         if (activity.getDateTime().isBefore(now)) {
-          transitionService.transition(activity, ActivityStatus.FINISHED);
+          transitionService.transition(
+              activity, ActivityStatus.FINISHED, ActivityTransitionReason.SCHEDULED_TIME_PASSED);
         } else if (activity.nearStart(now, notificationThreshold)
             && !activity.wasStartingSoonNotificationSent()) {
           eventPublisher.publishEvent(

@@ -1,15 +1,14 @@
 package com.solnotfound.controller;
 
-import com.solnotfound.dto.ActivityStatisticsResponse;
-import com.solnotfound.dto.WeatherForecastStatisticsResponse;
-import com.solnotfound.entity.activity.ActivityStatus;
-import com.solnotfound.exception.InvaildActivityStatusException;
+import com.solnotfound.dto.StatisticsResponse;
 import com.solnotfound.service.StatisticsService;
-import java.time.LocalDate;
-import java.util.Optional;
+import java.time.Instant;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/statistics")
@@ -20,30 +19,13 @@ public class StatisticsController {
     this.statisticsService = statisticsService;
   }
 
-  @GetMapping("/weather-forecasts")
-  public ResponseEntity<WeatherForecastStatisticsResponse> getWeatherForecastServiceStatistics(
-      @RequestParam(name = "startDate", required = false)
-          @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-          Optional<LocalDate> startDate,
-      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-          Optional<LocalDate> endDate) {
-
-    LocalDate from = startDate.orElse(LocalDate.now().minusDays(7));
-    LocalDate to = endDate.orElse(LocalDate.now());
-
-    WeatherForecastStatisticsResponse weatherForecastStatisticsResponse =
-        statisticsService.getWeatherForecastServiceStatistics(from, to);
-    return ResponseEntity.ok(weatherForecastStatisticsResponse);
-  }
-
-  @GetMapping("/activities")
-  public ResponseEntity<ActivityStatisticsResponse> getActivityStatistics(
-      @RequestParam(name = "activityStatus") Optional<ActivityStatus> activityStatus) {
-    ActivityStatus status =
-        activityStatus.orElseThrow(
-            () -> new InvaildActivityStatusException("Invalid or missing activityType parameter"));
-    ActivityStatisticsResponse activityStatisticsResponse =
-        statisticsService.getActivityStatistics(status);
-    return ResponseEntity.ok(activityStatisticsResponse);
+  /** Returns statistics for the requested inclusive range or the last seven days by default. */
+  @GetMapping
+  public ResponseEntity<StatisticsResponse> getStatistics(
+      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+          Instant from,
+      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+          Instant to) {
+    return ResponseEntity.ok(statisticsService.getStatistics(from, to));
   }
 }

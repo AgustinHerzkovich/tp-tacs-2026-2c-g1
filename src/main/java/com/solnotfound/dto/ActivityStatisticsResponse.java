@@ -1,5 +1,4 @@
 package com.solnotfound.dto;
 
-import com.solnotfound.entity.activity.ActivityStatus;
-
-public record ActivityStatisticsResponse(ActivityStatus type, long totalActivities) {}
+public record ActivityStatisticsResponse(
+    long created, long rescheduled, long cancelled, long cancelledByWeather) {}

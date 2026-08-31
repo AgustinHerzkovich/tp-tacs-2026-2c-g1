@@ -2,6 +2,7 @@ package com.solnotfound.service.schedulers;
 
 import com.solnotfound.entity.activity.Activity;
 import com.solnotfound.entity.activity.ActivityStatus;
+import com.solnotfound.entity.statistics.ActivityTransitionReason;
 import com.solnotfound.entity.votation.Votation;
 import com.solnotfound.entity.votation.VotationStatus;
 import com.solnotfound.repository.IVotationRepository;
@@ -43,20 +44,24 @@ public class VotationClosingScheduler {
                 ? 1
                 : 0);
     ActivityStatus outcome;
+    ActivityTransitionReason reason;
     if (votation.reachesQuorum(eligibleVoters)) {
       LocalDateTime winner = votation.winningOption().orElse(null);
       if (winner == null) {
         outcome = ActivityStatus.CANCELLED;
+        reason = ActivityTransitionReason.VOTATION_WITHOUT_WINNER;
       } else {
         activity.setDateTime(winner);
         outcome = ActivityStatus.RESCHEDULED;
+        reason = ActivityTransitionReason.VOTATION_RESOLVED;
       }
     } else {
       outcome = ActivityStatus.CANCELLED;
+      reason = ActivityTransitionReason.QUORUM_NOT_REACHED;
     }
 
     votation.setStatus(VotationStatus.CLOSED);
     votationRepository.save(votation);
-    transitionService.transition(activity, outcome);
+    transitionService.transition(activity, outcome, reason);
   }
 }
