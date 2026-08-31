@@ -7,10 +7,8 @@ import lombok.Setter;
 
 @Getter
 public class Notification {
-  @Setter
-  private String id;
-  @Setter
-  private LocalDateTime createdAt;
+  @Setter private String id;
+  @Setter private LocalDateTime createdAt;
 
   private final String receiverUser;
   private final String activityId;

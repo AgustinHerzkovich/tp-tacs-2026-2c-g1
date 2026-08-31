@@ -14,6 +14,7 @@ import com.solnotfound.exception.WeatherUnavailableException;
 import com.solnotfound.listener.ActivityNotificationEvent;
 import com.solnotfound.repository.IActivityRepository;
 import com.solnotfound.repository.IVotationRepository;
+import com.solnotfound.service.ActivityStatusTransitionService;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -36,6 +37,7 @@ public class ActivityAnticipationCheckScheduler {
   private final IWeatherAdapter weatherAdapter;
   private final IBadWeatherChecker badWeatherChecker;
   private final ApplicationEventPublisher eventPublisher;
+  private final ActivityStatusTransitionService transitionService;
   private final Duration votationDuration;
 
   public ActivityAnticipationCheckScheduler(
@@ -44,12 +46,14 @@ public class ActivityAnticipationCheckScheduler {
       IWeatherAdapter weatherAdapter,
       IBadWeatherChecker badWeatherChecker,
       ApplicationEventPublisher eventPublisher,
+      ActivityStatusTransitionService transitionService,
       @Value("${votation.duration:24h}") Duration votationDuration) {
     this.activityRepository = activityRepository;
     this.votationRepository = votationRepository;
     this.weatherAdapter = weatherAdapter;
     this.badWeatherChecker = badWeatherChecker;
     this.eventPublisher = eventPublisher;
+    this.transitionService = transitionService;
     this.votationDuration = votationDuration;
   }
 
@@ -137,8 +141,7 @@ public class ActivityAnticipationCheckScheduler {
 
     activity.markWeatherChecked();
     if (options.isEmpty()) {
-      activity.setStatus(ActivityStatus.CANCELLED);
-      activityRepository.save(activity);
+      transitionService.transition(activity, ActivityStatus.CANCELLED);
       return;
     }
 
@@ -150,7 +153,6 @@ public class ActivityAnticipationCheckScheduler {
     votation.setClosingDate(creationDate.plus(votationDuration));
     votation.setOptions(options);
     votationRepository.save(votation);
-    activity.setStatus(ActivityStatus.PROPOSED);
-    activityRepository.save(activity);
+    transitionService.transition(activity, ActivityStatus.PROPOSED);
   }
 }
