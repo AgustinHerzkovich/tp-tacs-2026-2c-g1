@@ -7,8 +7,10 @@ import lombok.Setter;
 
 @Getter
 public class Notification {
-  @Setter private String id;
-  @Setter private LocalDateTime createdAt;
+  @Setter
+  private String id;
+  @Setter
+  private LocalDateTime createdAt;
 
   private final String receiverUser;
   private final String activityId;
@@ -16,8 +18,6 @@ public class Notification {
   private final NotificationType type;
   private final String title;
   private final String message;
-
-  @Setter private NotificationStatus status;
 
   private boolean read;
 
@@ -30,7 +30,6 @@ public class Notification {
     this.message = type.generateMessage(activity);
     this.title = type.generateTitle(activity);
 
-    this.status = NotificationStatus.PENDING;
     this.read = false;
   }
 
