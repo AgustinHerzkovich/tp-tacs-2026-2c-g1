@@ -1,6 +1,6 @@
 package com.solnotfound.repository;
 
-import com.solnotfound.entity.Votation;
+import com.solnotfound.entity.votation.Votation;
 import java.time.LocalDateTime;
 import java.util.List;
 

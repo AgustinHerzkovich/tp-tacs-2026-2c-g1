@@ -12,7 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.solnotfound.dto.VotationDTO;
 import com.solnotfound.dto.VotationOptionDTO;
-import com.solnotfound.entity.VotationStatus;
+import com.solnotfound.entity.votation.VotationStatus;
 import com.solnotfound.exception.AccessDeniedException;
 import com.solnotfound.exception.GlobalExceptionHandler;
 import com.solnotfound.service.VotationService;
@@ -43,7 +43,7 @@ class VotationControllerTest {
     when(service.getByOrganizerOrParticipantId("user-1")).thenReturn(List.of());
 
     mockMvc
-        .perform(get("/votations/me").principal(authentication("user-1")))
+        .perform(get("/votations").principal(authentication("user-1")))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$").isArray())
         .andExpect(jsonPath("$").isEmpty());
@@ -113,7 +113,7 @@ class VotationControllerTest {
 
     mockMvc
         .perform(
-            put("/votations/v-1/vote")
+            put("/votations/v-1/votes/me")
                 .principal(authentication("participant"))
                 .contentType("application/json")
                 .content("\"2026-09-01T12:00:00\""))

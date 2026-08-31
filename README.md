@@ -2,11 +2,13 @@
 
 ## Cómo levantar la aplicación
 
-La aplicación queda disponible en `http://localhost:8080` y su API de actividades en
-`http://localhost:8080/activities`.
+La aplicación queda disponible en `http://localhost:8080`, la documentación interactiva en
+`http://localhost:8080/swagger-ui.html` y la especificación OpenAPI en
+`http://localhost:8080/v3/api-docs`.
 
-Ejemplo de request para generar actividad
-POST http://localhost:8080/activities
+Ejemplo de request para generar una actividad mediante `POST /activities`:
+
+```json
 {
     "title": "Asado en la plaza",
     "description": "Junta con amigos, llevar sillas",
@@ -31,7 +33,8 @@ POST http://localhost:8080/activities
       "initialHour": "10:00:00",
       "finalHour": "20:00:00"
     }
-  }
+}
+```
 
 ### Con Docker
 
@@ -57,6 +60,63 @@ Maven. Desde la raíz del proyecto, ejecutar:
 ```
 
 Actualmente los datos se almacenan en memoria y se pierden al reiniciar la aplicación.
+
+## Alcance de la Entrega 1
+
+Esta entrega implementa el modelo de actividades, participantes, reglas climáticas, votaciones,
+notificaciones y estadísticas mediante repositorios en memoria. Las rutas REST están documentadas
+con OpenAPI. La persistencia NoSQL y la interfaz de usuario corresponden a la Entrega 2, mientras
+que el despliegue portable en cloud corresponde a la Entrega 3.
+
+La matriz de trazabilidad entre user stories, implementación y pruebas está disponible en
+[`docs/DELIVERY_1_TRACEABILITY.md`](docs/DELIVERY_1_TRACEABILITY.md). Los casos manuales para
+Swagger están en [`docs/SWAGGER_TEST_CASES.md`](docs/SWAGGER_TEST_CASES.md).
+
+## API y autenticación
+
+Swagger UI permite explorar y ejecutar las rutas REST. Las rutas generales permanecen públicas en
+esta etapa y, cuando no se presenta identidad, utilizan `development-user`. El endpoint
+`/statistics` exige un JWT con autoridad `ROLE_ADMIN`.
+
+El backend valida JWT HMAC-SHA256 mediante Spring Security. La clave local predeterminada sirve
+solo para desarrollo y puede reemplazarse con `SECURITY_JWT_SECRET`. Firebase Auth no está
+integrado actualmente.
+
+## Decisiones de diseño
+
+Estas decisiones cubren aspectos no definidos de forma exhaustiva por el enunciado:
+
+- **Repositorios intercambiables y almacenamiento en memoria:** los servicios dependen de
+  interfaces de repositorio. La Entrega 1 usa implementaciones con `ConcurrentHashMap`; en la
+  Entrega 2 podrán reemplazarse por MongoDB sin cambiar los casos de uso.
+- **Backend sin sesión HTTP:** la identidad se obtiene del `subject` de un JWT y no se mantiene
+  estado de sesión en el backend. En desarrollo se admite `development-user` para facilitar las
+  pruebas de esta entrega.
+- **Monitoreo periódico configurable:** Spring Scheduler evalúa clima, cierre de votaciones,
+  finalización y avisos de inicio con periodicidades configurables.
+- **Organizador como participante:** el organizador puede sumarse y bajarse como participante. Para
+  el quórum, solo se cuenta una vez aunque también figure entre los participantes.
+- **Votación sin opciones favorables:** si no se encuentran alternativas dentro del rango con clima
+  aceptable, no se abre una votación vacía y la actividad se cancela.
+- **Quórum global:** el quórum mínimo se aplica a la participación total de la votación. Alcanzado el
+  quórum, gana la alternativa más votada; si no hay ganadora o no se alcanza el quórum, la actividad
+  se cancela.
+- **Opciones manuales validadas:** el organizador puede reemplazar las alternativas mientras la
+  votación está activa, pero todas deben pertenecer al rango permitido y tener clima aceptable.
+- **Consumo responsable del clima:** Open-Meteo se encapsula detrás de `IWeatherAdapter`; se usan
+  cachés acotadas, timeout, retry y circuit breaker. La indisponibilidad no se interpreta como clima
+  favorable.
+- **Estadísticas mediante eventos:** las métricas históricas se registran como eventos inmutables en
+  memoria. Se cuentan las llamadas HTTP reales a Open-Meteo, no los accesos resueltos por caché. El
+  diseño permite migrar la colección de eventos a MongoDB.
+- **Rangos estadísticos inclusivos:** `from` y `to` incluyen ambos extremos; sin parámetros se
+  consultan los últimos siete días. Una cancelación climática incluye mal clima y ausencia de
+  alternativas favorables.
+
+No se adoptaron las decisiones antiguas de CDC/Stream ETL ni de filtros ejecutados por una base de
+datos porque no existe persistencia en la Entrega 1. Tampoco se documenta Firebase Auth como una
+decisión vigente: la implementación actual usa JWT HMAC local. Esas alternativas deberán evaluarse
+nuevamente cuando exista una necesidad concreta de volumen, persistencia o proveedor de identidad.
 
 ## Servicio meteorológico
 

@@ -1,6 +1,6 @@
 package com.solnotfound.dto;
 
-import com.solnotfound.entity.VotationStatus;
+import com.solnotfound.entity.votation.VotationStatus;
 import java.time.LocalDateTime;
 import java.util.List;
 

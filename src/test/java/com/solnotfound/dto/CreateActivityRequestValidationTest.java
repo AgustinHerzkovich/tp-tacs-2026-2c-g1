@@ -2,7 +2,7 @@ package com.solnotfound.dto;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.solnotfound.entity.ActivityType;
+import com.solnotfound.entity.activity.ActivityType;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import java.time.LocalDateTime;

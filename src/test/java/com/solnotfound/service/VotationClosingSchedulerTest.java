@@ -8,14 +8,14 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.solnotfound.entity.Activity;
-import com.solnotfound.entity.ActivityStatus;
-import com.solnotfound.entity.User;
-import com.solnotfound.entity.Votation;
-import com.solnotfound.entity.VotationOption;
-import com.solnotfound.entity.VotationStatus;
-import com.solnotfound.entity.notifications.CancelledNotificationType;
-import com.solnotfound.entity.notifications.ReprogrammedNotificationType;
+import com.solnotfound.entity.activity.Activity;
+import com.solnotfound.entity.activity.ActivityStatus;
+import com.solnotfound.entity.notification.CancelledNotificationType;
+import com.solnotfound.entity.notification.ReprogrammedNotificationType;
+import com.solnotfound.entity.user.User;
+import com.solnotfound.entity.votation.Votation;
+import com.solnotfound.entity.votation.VotationOption;
+import com.solnotfound.entity.votation.VotationStatus;
 import com.solnotfound.listener.ActivityNotificationEvent;
 import com.solnotfound.repository.IActivityRepository;
 import com.solnotfound.repository.IVotationRepository;
@@ -41,8 +41,7 @@ class VotationClosingSchedulerTest {
     eventPublisher = mock(ApplicationEventPublisher.class);
     ActivityStatusTransitionService transitionService =
         new ActivityStatusTransitionService(activityRepository, eventPublisher);
-    scheduler =
-        new VotationClosingScheduler(votationRepository, activityRepository, transitionService);
+    scheduler = new VotationClosingScheduler(votationRepository, transitionService);
   }
 
   @Test
@@ -55,6 +54,7 @@ class VotationClosingSchedulerTest {
             option(winner.plusHours(1), activity.getParticipants().get(2)));
     when(votationRepository.findActiveDueToClose(any())).thenReturn(List.of(votation));
     when(activityRepository.findById("activity-1")).thenReturn(activity);
+    votation.setActivity(activity);
 
     scheduler.closeDueVotations();
 
@@ -74,6 +74,7 @@ class VotationClosingSchedulerTest {
             option(LocalDateTime.of(2026, 9, 3, 10, 0), activity.getParticipants().getFirst()));
     when(votationRepository.findActiveDueToClose(any())).thenReturn(List.of(votation));
     when(activityRepository.findById("activity-1")).thenReturn(activity);
+    votation.setActivity(activity);
 
     scheduler.closeDueVotations();
 
@@ -90,6 +91,7 @@ class VotationClosingSchedulerTest {
             option(LocalDateTime.of(2026, 9, 3, 10, 0), activity.getParticipants().getFirst()));
     when(votationRepository.findActiveDueToClose(any())).thenReturn(List.of(votation));
     when(activityRepository.findById("activity-1")).thenReturn(activity);
+    votation.setActivity(activity);
     doThrow(new RuntimeException("notification failed"))
         .when(eventPublisher)
         .publishEvent(any(ActivityNotificationEvent.class));
@@ -136,7 +138,6 @@ class VotationClosingSchedulerTest {
   private Votation votation(VotationOption... options) {
     Votation votation = new Votation();
     votation.setId("votation-1");
-    votation.setActivityId("activity-1");
     votation.setStatus(VotationStatus.ACTIVE);
     votation.setMinQuorum(0.5);
     votation.setOptions(List.of(options));

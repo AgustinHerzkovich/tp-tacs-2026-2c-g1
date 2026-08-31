@@ -1,6 +1,6 @@
 package com.solnotfound.repository;
 
-import com.solnotfound.entity.notifications.Notification;
+import com.solnotfound.entity.notification.Notification;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -66,7 +66,7 @@ public class NotificationRepository implements INotificationRepository {
   @Override
   public List<Notification> findByReadAndReceiverUserId(Boolean read, String receiverUserId) {
     return storage.values().stream()
-        .filter(n -> Objects.equals(n.getReceiverUser(), receiverUserId))
+        .filter(n -> Objects.equals(n.getReceiverUser().getId(), receiverUserId))
         .filter(n -> Objects.equals(n.isRead(), read))
         .sorted(
             Comparator.comparing(

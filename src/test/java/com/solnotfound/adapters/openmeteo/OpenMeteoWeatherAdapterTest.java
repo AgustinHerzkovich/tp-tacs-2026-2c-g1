@@ -3,9 +3,9 @@ package com.solnotfound.adapters.openmeteo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.solnotfound.entity.City;
-import com.solnotfound.entity.Location;
-import com.solnotfound.entity.WeatherForecast;
+import com.solnotfound.entity.activity.City;
+import com.solnotfound.entity.activity.Location;
+import com.solnotfound.entity.weather.WeatherForecast;
 import com.solnotfound.exception.WeatherUnavailableException;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;

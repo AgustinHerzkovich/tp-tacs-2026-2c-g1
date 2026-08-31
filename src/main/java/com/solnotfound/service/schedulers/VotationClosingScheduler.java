@@ -1,10 +1,10 @@
 package com.solnotfound.service.schedulers;
 
-import com.solnotfound.entity.Activity;
-import com.solnotfound.entity.ActivityStatus;
-import com.solnotfound.entity.Votation;
-import com.solnotfound.entity.VotationStatus;
-import com.solnotfound.repository.IActivityRepository;
+import com.solnotfound.entity.activity.Activity;
+import com.solnotfound.entity.activity.ActivityStatus;
+import com.solnotfound.entity.statistics.ActivityTransitionReason;
+import com.solnotfound.entity.votation.Votation;
+import com.solnotfound.entity.votation.VotationStatus;
 import com.solnotfound.repository.IVotationRepository;
 import com.solnotfound.service.ActivityStatusTransitionService;
 import java.time.LocalDateTime;
@@ -14,13 +14,9 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-@edu.umd.cs.findbugs.annotations.SuppressFBWarnings(
-    value = "EI_EXPOSE_REP2",
-    justification = "Spring injects shared application collaborators")
 public class VotationClosingScheduler {
 
   private final IVotationRepository votationRepository;
-  private final IActivityRepository activityRepository;
   private final ActivityStatusTransitionService transitionService;
 
   /**
@@ -37,7 +33,7 @@ public class VotationClosingScheduler {
   }
 
   private void resolve(Votation votation) {
-    Activity activity = activityRepository.findById(votation.getActivityId());
+    Activity activity = votation.getActivity();
     if (activity == null || votation.getStatus() != VotationStatus.ACTIVE) {
       return;
     }
@@ -48,20 +44,24 @@ public class VotationClosingScheduler {
                 ? 1
                 : 0);
     ActivityStatus outcome;
+    ActivityTransitionReason reason;
     if (votation.reachesQuorum(eligibleVoters)) {
       LocalDateTime winner = votation.winningOption().orElse(null);
       if (winner == null) {
         outcome = ActivityStatus.CANCELLED;
+        reason = ActivityTransitionReason.VOTATION_WITHOUT_WINNER;
       } else {
         activity.setDateTime(winner);
         outcome = ActivityStatus.RESCHEDULED;
+        reason = ActivityTransitionReason.VOTATION_RESOLVED;
       }
     } else {
       outcome = ActivityStatus.CANCELLED;
+      reason = ActivityTransitionReason.QUORUM_NOT_REACHED;
     }
 
     votation.setStatus(VotationStatus.CLOSED);
     votationRepository.save(votation);
-    transitionService.transition(activity, outcome);
+    transitionService.transition(activity, outcome, reason);
   }
 }

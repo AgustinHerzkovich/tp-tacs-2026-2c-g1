@@ -4,7 +4,7 @@ import com.solnotfound.dto.ActivityFilterDTO;
 import com.solnotfound.dto.ActivityResponse;
 import com.solnotfound.dto.ActivityWeatherResponse;
 import com.solnotfound.dto.CreateActivityRequest;
-import com.solnotfound.entity.ActivityType;
+import com.solnotfound.entity.activity.ActivityType;
 import com.solnotfound.service.ActivityService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -83,12 +83,12 @@ public class ActivityController {
     return ResponseEntity.ok(activityService.getWeather(id, currentUserId(authentication)));
   }
 
-  @GetMapping("/organized/me")
+  @GetMapping("/organizers/me")
   public ResponseEntity<List<ActivityResponse>> getOrganized(Authentication authentication) {
     return ResponseEntity.ok(activityService.getByOrganizerId(currentUserId(authentication)));
   }
 
-  @GetMapping("/joined/me")
+  @GetMapping("/participants/me")
   public ResponseEntity<List<ActivityResponse>> getJoined(Authentication authentication) {
     return ResponseEntity.ok(activityService.getByParticipantId(currentUserId(authentication)));
   }

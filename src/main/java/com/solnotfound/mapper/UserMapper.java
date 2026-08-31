@@ -1,7 +1,7 @@
 package com.solnotfound.mapper;
 
 import com.solnotfound.dto.UserDTO;
-import com.solnotfound.entity.User;
+import com.solnotfound.entity.user.User;
 
 public final class UserMapper {
 

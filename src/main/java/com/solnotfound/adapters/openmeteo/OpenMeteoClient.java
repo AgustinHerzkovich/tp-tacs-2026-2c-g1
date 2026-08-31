@@ -1,9 +1,13 @@
 package com.solnotfound.adapters.openmeteo;
 
 import com.solnotfound.exception.WeatherUnavailableException;
+import com.solnotfound.repository.InMemoryStatisticsEventRepository;
+import com.solnotfound.service.StatisticsEventRecorder;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import java.time.LocalDate;
+import java.util.function.Supplier;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -17,33 +21,41 @@ public class OpenMeteoClient {
 
   private final RestClient restClient;
   private final OpenMeteoProperties properties;
+  private final StatisticsEventRecorder statisticsRecorder;
 
-  public OpenMeteoClient(RestClient.Builder builder, OpenMeteoProperties properties) {
+  @Autowired
+  public OpenMeteoClient(
+      RestClient.Builder builder,
+      OpenMeteoProperties properties,
+      StatisticsEventRecorder statisticsRecorder) {
     this.restClient = builder.build();
     this.properties = properties;
+    this.statisticsRecorder = statisticsRecorder;
+  }
+
+  public OpenMeteoClient(RestClient.Builder builder, OpenMeteoProperties properties) {
+    this(builder, properties, new StatisticsEventRecorder(new InMemoryStatisticsEventRepository()));
   }
 
   @Cacheable(cacheNames = "weather-current", key = "#latitude + ',' + #longitude", sync = true)
   @CircuitBreaker(name = "openMeteo")
   @Retry(name = "openMeteo")
   public OpenMeteoDtos.ForecastResponse getCurrent(Double latitude, Double longitude) {
-    try {
-      return restClient
-          .get()
-          .uri(
-              properties.forecastUrl().toString(),
-              builder ->
-                  builder
-                      .queryParam("latitude", latitude)
-                      .queryParam("longitude", longitude)
-                      .queryParam("current", WEATHER_FIELDS)
-                      .queryParam("timezone", "auto")
-                      .build())
-          .retrieve()
-          .body(OpenMeteoDtos.ForecastResponse.class);
-    } catch (RestClientException exception) {
-      throw unavailable(exception);
-    }
+    return executeRequest(
+        () ->
+            restClient
+                .get()
+                .uri(
+                    properties.forecastUrl().toString(),
+                    builder ->
+                        builder
+                            .queryParam("latitude", latitude)
+                            .queryParam("longitude", longitude)
+                            .queryParam("current", WEATHER_FIELDS)
+                            .queryParam("timezone", "auto")
+                            .build())
+                .retrieve()
+                .body(OpenMeteoDtos.ForecastResponse.class));
   }
 
   /**
@@ -64,48 +76,60 @@ public class OpenMeteoClient {
   @Retry(name = "openMeteo")
   public OpenMeteoDtos.ForecastResponse getForecast(
       Double latitude, Double longitude, LocalDate startDate, LocalDate endDate) {
-    try {
-      return restClient
-          .get()
-          .uri(
-              properties.forecastUrl().toString(),
-              builder ->
-                  builder
-                      .queryParam("latitude", latitude)
-                      .queryParam("longitude", longitude)
-                      .queryParam("hourly", WEATHER_FIELDS)
-                      .queryParam("timezone", "auto")
-                      .queryParam("start_date", startDate)
-                      .queryParam("end_date", endDate)
-                      .build())
-          .retrieve()
-          .body(OpenMeteoDtos.ForecastResponse.class);
-    } catch (RestClientException exception) {
-      throw unavailable(exception);
-    }
+    return executeRequest(
+        () ->
+            restClient
+                .get()
+                .uri(
+                    properties.forecastUrl().toString(),
+                    builder ->
+                        builder
+                            .queryParam("latitude", latitude)
+                            .queryParam("longitude", longitude)
+                            .queryParam("hourly", WEATHER_FIELDS)
+                            .queryParam("timezone", "auto")
+                            .queryParam("start_date", startDate)
+                            .queryParam("end_date", endDate)
+                            .build())
+                .retrieve()
+                .body(OpenMeteoDtos.ForecastResponse.class));
   }
 
   @Cacheable(cacheNames = "weather-geocoding", key = "#city.toLowerCase()", sync = true)
   @CircuitBreaker(name = "openMeteo")
   @Retry(name = "openMeteo")
   public OpenMeteoDtos.GeocodingResponse geocode(String city) {
+    return executeRequest(
+        () ->
+            restClient
+                .get()
+                .uri(
+                    properties.geocodingUrl().toString(),
+                    builder ->
+                        builder
+                            .queryParam("name", city)
+                            .queryParam("count", 1)
+                            .queryParam("language", "es")
+                            .queryParam("format", "json")
+                            .build())
+                .retrieve()
+                .body(OpenMeteoDtos.GeocodingResponse.class));
+  }
+
+  private <T> T executeRequest(Supplier<T> request) {
+    long startedAt = System.nanoTime();
     try {
-      return restClient
-          .get()
-          .uri(
-              properties.geocodingUrl().toString(),
-              builder ->
-                  builder
-                      .queryParam("name", city)
-                      .queryParam("count", 1)
-                      .queryParam("language", "es")
-                      .queryParam("format", "json")
-                      .build())
-          .retrieve()
-          .body(OpenMeteoDtos.GeocodingResponse.class);
+      T response = request.get();
+      statisticsRecorder.recordWeatherRequest(true, elapsedMilliseconds(startedAt));
+      return response;
     } catch (RestClientException exception) {
+      statisticsRecorder.recordWeatherRequest(false, elapsedMilliseconds(startedAt));
       throw unavailable(exception);
     }
+  }
+
+  private long elapsedMilliseconds(long startedAt) {
+    return (System.nanoTime() - startedAt) / 1_000_000;
   }
 
   private WeatherUnavailableException unavailable(RestClientException exception) {

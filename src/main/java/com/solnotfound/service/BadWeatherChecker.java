@@ -1,8 +1,8 @@
 package com.solnotfound.service;
 
-import com.solnotfound.entity.Activity;
-import com.solnotfound.entity.IBadWeatherChecker;
-import com.solnotfound.entity.WeatherForecast;
+import com.solnotfound.entity.activity.Activity;
+import com.solnotfound.entity.weather.IBadWeatherChecker;
+import com.solnotfound.entity.weather.WeatherForecast;
 import org.springframework.stereotype.Component;
 
 /**

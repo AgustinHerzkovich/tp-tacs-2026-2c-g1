@@ -3,9 +3,7 @@ package com.solnotfound.entity.activity;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.solnotfound.entity.Activity;
-import com.solnotfound.entity.ActivityStatus;
-import com.solnotfound.entity.User;
+import com.solnotfound.entity.user.User;
 import com.solnotfound.exception.IllegalStateActivityException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;

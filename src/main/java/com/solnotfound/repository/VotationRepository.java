@@ -1,7 +1,7 @@
 package com.solnotfound.repository;
 
-import com.solnotfound.entity.Votation;
-import com.solnotfound.entity.VotationStatus;
+import com.solnotfound.entity.votation.Votation;
+import com.solnotfound.entity.votation.VotationStatus;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -36,7 +36,7 @@ public class VotationRepository implements IVotationRepository {
   @Override
   public List<Votation> findByActivityIds(List<String> activityIds) {
     return votations.values().stream()
-        .filter(votation -> activityIds.contains(votation.getActivityId()))
+        .filter(votation -> activityIds.contains(votation.getActivity().getId()))
         .toList();
   }
 
@@ -44,7 +44,7 @@ public class VotationRepository implements IVotationRepository {
   public Votation findActiveByActivityId(String activityId) {
     return votations.values().stream()
         .filter(votation -> votation.getStatus() == VotationStatus.ACTIVE)
-        .filter(votation -> activityId.equals(votation.getActivityId()))
+        .filter(votation -> activityId.equals(votation.getActivity().getId()))
         .findFirst()
         .orElse(null);
   }

@@ -20,7 +20,15 @@ public class SecurityConfig {
   SecurityFilterChain securityFilterChain(HttpSecurity http) {
     try {
       return http.csrf(csrf -> csrf.disable())
-          .authorizeHttpRequests(requests -> requests.anyRequest().permitAll())
+          .authorizeHttpRequests(
+              requests ->
+                  requests
+                      .requestMatchers("/swagger-ui/**", "/v3/api-docs/**")
+                      .permitAll()
+                      .requestMatchers("/statistics/**")
+                      .hasRole("ADMIN")
+                      .anyRequest()
+                      .permitAll())
           .oauth2ResourceServer(resourceServer -> resourceServer.jwt(Customizer.withDefaults()))
           .build();
     } catch (Exception exception) {

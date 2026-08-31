@@ -1,5 +1,6 @@
 package com.solnotfound.exception;
 
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -94,6 +95,38 @@ public class GlobalExceptionHandler {
     problem.setTitle("Invalid request parameter");
     problem.setProperty("parameter", exception.getName());
     return ResponseEntity.badRequest().body(problem);
+  }
+
+  @ExceptionHandler(InvalidStatisticsRangeException.class)
+  public ResponseEntity<ProblemDetail> handleInvalidStatisticsRange(
+      InvalidStatisticsRangeException exception) {
+    ProblemDetail problem =
+        ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, exception.getMessage());
+    problem.setTitle("Invalid statistics range");
+    return ResponseEntity.badRequest().body(problem);
+  }
+
+  @ExceptionHandler(CouldNotRetrieveStatisticsException.class)
+  public ProblemDetail handleStatisticsServiceUnavailable(CouldNotRetrieveStatisticsException ex) {
+    ProblemDetail problemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage());
+    problemDetail.setTitle("Servicio No Disponible");
+
+    // Es buena práctica indicarle al cliente si vale la pena reintentar
+    problemDetail.setProperty("retryable", true);
+    problemDetail.setProperty("timestamp", Instant.now());
+
+    return problemDetail;
+  }
+
+  @ExceptionHandler(InvaildActivityStatusException.class)
+  public ProblemDetail handleInvalidActivityStatus(InvaildActivityStatusException ex) {
+    ProblemDetail problemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+    problemDetail.setTitle("Invalid Activity Status");
+    problemDetail.setProperty("timestamp", Instant.now());
+
+    return problemDetail;
   }
 
   @ExceptionHandler(ResourceNotFoundException.class)

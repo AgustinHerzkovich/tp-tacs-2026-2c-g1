@@ -6,9 +6,18 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import com.solnotfound.adapters.IWeatherAdapter;
-import com.solnotfound.entity.*;
-import com.solnotfound.entity.notifications.BadWeatherAlertNotificationType;
-import com.solnotfound.entity.notifications.CancelledNotificationType;
+import com.solnotfound.entity.activity.Activity;
+import com.solnotfound.entity.activity.ActivityStatus;
+import com.solnotfound.entity.activity.City;
+import com.solnotfound.entity.activity.Location;
+import com.solnotfound.entity.activity.ReprogramationRange;
+import com.solnotfound.entity.notification.BadWeatherAlertNotificationType;
+import com.solnotfound.entity.notification.CancelledNotificationType;
+import com.solnotfound.entity.votation.Votation;
+import com.solnotfound.entity.votation.VotationOption;
+import com.solnotfound.entity.votation.VotationStatus;
+import com.solnotfound.entity.weather.IBadWeatherChecker;
+import com.solnotfound.entity.weather.WeatherForecast;
 import com.solnotfound.listener.ActivityNotificationEvent;
 import com.solnotfound.repository.IActivityRepository;
 import com.solnotfound.repository.IVotationRepository;
@@ -279,7 +288,7 @@ class ActivityAnticipationCheckSchedulerTest {
     Votation saved = votationCaptor.getValue();
 
     assertThat(saved.getStatus()).isEqualTo(VotationStatus.ACTIVE);
-    assertThat(saved.getActivityId()).isEqualTo("activity-1");
+    assertThat(saved.getActivity()).isSameAs(activityToCheck);
     assertThat(saved.getClosingDate()).isEqualTo(saved.getCreationDate().plusHours(24));
     assertThat(saved.getOptions()).allSatisfy(option -> assertThat(option.getUsers()).isEmpty());
     assertThat(saved.getOptions())

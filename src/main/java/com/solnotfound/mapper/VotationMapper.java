@@ -1,7 +1,7 @@
 package com.solnotfound.mapper;
 
 import com.solnotfound.dto.VotationDTO;
-import com.solnotfound.entity.Votation;
+import com.solnotfound.entity.votation.Votation;
 import java.util.List;
 
 public final class VotationMapper {
@@ -15,7 +15,7 @@ public final class VotationMapper {
 
     return new VotationDTO(
         votation.getId(),
-        votation.getActivityId(),
+        votation.getActivity().getId(),
         votation.getCreationDate(),
         votation.getStatus(),
         toOptionDTOs(votation));

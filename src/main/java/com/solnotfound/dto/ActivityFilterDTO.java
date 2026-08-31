@@ -1,6 +1,6 @@
 package com.solnotfound.dto;
 
-import com.solnotfound.entity.ActivityType;
+import com.solnotfound.entity.activity.ActivityType;
 import java.time.LocalDateTime;
 
 public record ActivityFilterDTO(

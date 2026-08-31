@@ -3,10 +3,10 @@ package com.solnotfound.service;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import com.solnotfound.entity.Activity;
-import com.solnotfound.entity.User;
-import com.solnotfound.entity.notifications.BadWeatherAlertNotificationType;
-import com.solnotfound.entity.notifications.Notification;
+import com.solnotfound.entity.activity.Activity;
+import com.solnotfound.entity.notification.BadWeatherAlertNotificationType;
+import com.solnotfound.entity.notification.Notification;
+import com.solnotfound.entity.user.User;
 import com.solnotfound.exception.AccessDeniedException;
 import com.solnotfound.exception.ResourceNotFoundException;
 import com.solnotfound.repository.INotificationRepository;
@@ -36,7 +36,8 @@ class NotificationServiceTest {
     activity.setId("act-1");
 
     notification =
-        new Notification("user-auth-123", activity, new BadWeatherAlertNotificationType());
+        new Notification(
+            User.withId("user-auth-123"), activity, new BadWeatherAlertNotificationType());
     notification.setId("notif-1");
   }
 
@@ -91,6 +92,7 @@ class NotificationServiceTest {
     List<String> receivers =
         StreamSupport.stream(captor.getValue().spliterator(), false)
             .map(Notification::getReceiverUser)
+            .map(User::getId)
             .toList();
     assertEquals(List.of("creator-1", "participant-1"), receivers);
   }

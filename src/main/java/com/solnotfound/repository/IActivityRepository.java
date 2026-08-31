@@ -1,6 +1,6 @@
 package com.solnotfound.repository;
 
-import com.solnotfound.entity.Activity;
+import com.solnotfound.entity.activity.Activity;
 import java.util.List;
 
 public interface IActivityRepository {

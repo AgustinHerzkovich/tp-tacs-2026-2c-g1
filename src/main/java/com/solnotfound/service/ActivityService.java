@@ -10,22 +10,25 @@ import com.solnotfound.dto.ParticipantDTO;
 import com.solnotfound.dto.ReprogramationRangeDTO;
 import com.solnotfound.dto.WeatherConditionsDTO;
 import com.solnotfound.dto.WeatherForecastDTO;
-import com.solnotfound.entity.Activity;
-import com.solnotfound.entity.Location;
-import com.solnotfound.entity.MaxRainProbabilityCondition;
-import com.solnotfound.entity.MaxWindCondition;
-import com.solnotfound.entity.ReprogramationRange;
-import com.solnotfound.entity.TemperatureRangeCondition;
-import com.solnotfound.entity.WeatherCondition;
-import com.solnotfound.entity.WeatherForecast;
+import com.solnotfound.entity.activity.Activity;
+import com.solnotfound.entity.activity.Location;
+import com.solnotfound.entity.activity.ReprogramationRange;
+import com.solnotfound.entity.statistics.StatisticsEventType;
+import com.solnotfound.entity.weather.MaxRainProbabilityCondition;
+import com.solnotfound.entity.weather.MaxWindCondition;
+import com.solnotfound.entity.weather.TemperatureRangeCondition;
+import com.solnotfound.entity.weather.WeatherCondition;
+import com.solnotfound.entity.weather.WeatherForecast;
 import com.solnotfound.exception.ActivityAccessDeniedException;
 import com.solnotfound.exception.ActivityNotFoundException;
 import com.solnotfound.exception.InvalidActivityException;
 import com.solnotfound.repository.IActivityRepository;
 import com.solnotfound.repository.ICityRepository;
+import com.solnotfound.repository.InMemoryStatisticsEventRepository;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -33,17 +36,32 @@ public class ActivityService {
   private final IActivityRepository activityRepository;
   private final IWeatherAdapter weatherAdapter;
   private final ICityRepository cityRepository;
+  private final StatisticsEventRecorder statisticsRecorder;
 
   @edu.umd.cs.findbugs.annotations.SuppressFBWarnings(
       value = "EI_EXPOSE_REP2",
       justification = "Spring injects the shared in-memory repository")
+  @Autowired
+  public ActivityService(
+      IActivityRepository activityRepository,
+      IWeatherAdapter weatherAdapter,
+      ICityRepository cityRepository,
+      StatisticsEventRecorder statisticsRecorder) {
+    this.activityRepository = activityRepository;
+    this.weatherAdapter = weatherAdapter;
+    this.cityRepository = cityRepository;
+    this.statisticsRecorder = statisticsRecorder;
+  }
+
   public ActivityService(
       IActivityRepository activityRepository,
       IWeatherAdapter weatherAdapter,
       ICityRepository cityRepository) {
-    this.activityRepository = activityRepository;
-    this.weatherAdapter = weatherAdapter;
-    this.cityRepository = cityRepository;
+    this(
+        activityRepository,
+        weatherAdapter,
+        cityRepository,
+        new StatisticsEventRecorder(new InMemoryStatisticsEventRepository()));
   }
 
   public ActivityResponse create(CreateActivityRequest request) {
@@ -63,7 +81,7 @@ public class ActivityService {
 
     Activity activity = new Activity();
     activity.setId(UUID.randomUUID().toString());
-    activity.setOrganizer(com.solnotfound.entity.User.withId(creatorUserId));
+    activity.setOrganizer(com.solnotfound.entity.user.User.withId(creatorUserId));
     activity.setTitle(request.title());
     activity.setDescription(request.description());
     activity.setType(request.type());
@@ -76,6 +94,7 @@ public class ActivityService {
     activity.setReprogramationRange(toReprogramationRange(request.reprogramationRange()));
 
     activityRepository.save(activity);
+    statisticsRecorder.recordActivity(StatisticsEventType.ACTIVITY_CREATED, activity.getId(), null);
 
     return toResponse(activity);
   }
@@ -341,7 +360,8 @@ public class ActivityService {
         maxRainProbability, minTemperature, maxTemperature, maxWindSpeed);
   }
 
-  private List<ParticipantDTO> toParticipantsDTO(List<com.solnotfound.entity.User> participants) {
+  private List<ParticipantDTO> toParticipantsDTO(
+      List<com.solnotfound.entity.user.User> participants) {
     return participants.stream()
         .map(participant -> new ParticipantDTO(participant.getId()))
         .toList();
