@@ -186,4 +186,16 @@ public class Activity {
     }
     return participants.stream().filter(user -> user.getId().equals(userId)).findFirst();
   }
+
+  /**
+   * Checks if the activity is near its start time for notification purposes.
+   *
+   * @param now the current time
+   * @param notificationThreshold the number of hours before the activity starts to trigger a notification
+   * @return {@code true} if the activity is near its start time
+   */
+  public boolean nearStart(LocalDateTime now, int notificationThreshold) {
+    LocalDateTime notificationTime = dateTime.minusHours(notificationThreshold);
+    return now.isAfter(notificationTime) && now.isBefore(dateTime);
+  }
 }
