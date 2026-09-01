@@ -202,6 +202,46 @@ class VotationServiceTest {
   }
 
   @Test
+  void organizerCanVoteAndCountsInPartialResult() {
+    Activity activity = activity("a-1", "organizer", List.of("participant"));
+    activity.getOrganizer().setName("Organizer Name");
+    activityRepository.save(activity);
+    LocalDateTime option = activity.getDateTime().plusDays(1);
+    Votation votation = votationWithOptions("v-1", "a-1", option);
+    votation.setActivity(activity);
+    votationRepository.save(votation);
+
+    var result = service.vote("v-1", "organizer", option);
+
+    assertThat(result.options().getFirst().voteCount()).isEqualTo(1);
+    assertThat(result.options().getFirst().voterNames()).containsExactly("Organizer Name");
+    assertThat(votation.getOptions().getFirst().getUsers())
+        .containsExactly(activity.getOrganizer());
+  }
+
+  @Test
+  void partialResultShowsCountsForAllOptions() {
+    Activity activity = activity("a-1", "organizer", List.of("first", "second"));
+    activity.getParticipants().get(0).setName("Jane Doe");
+    activity.getParticipants().get(1).setName("John Smith");
+    activityRepository.save(activity);
+    LocalDateTime firstOption = activity.getDateTime().plusDays(1);
+    LocalDateTime secondOption = activity.getDateTime().plusDays(2);
+    Votation votation = votationWithOptions("v-1", "a-1", firstOption, secondOption);
+    votation.setActivity(activity);
+    votationRepository.save(votation);
+
+    service.vote("v-1", "first", firstOption);
+    var result = service.vote("v-1", "second", secondOption);
+
+    assertThat(result.options()).hasSize(2);
+    assertThat(result.options().get(0).voteCount()).isEqualTo(1);
+    assertThat(result.options().get(0).voterNames()).containsExactly("Jane Doe");
+    assertThat(result.options().get(1).voteCount()).isEqualTo(1);
+    assertThat(result.options().get(1).voterNames()).containsExactly("John Smith");
+  }
+
+  @Test
   void repeatingSameVoteIsIdempotent() {
     Activity activity = activity("a-1", "organizer", List.of("participant"));
     activityRepository.save(activity);

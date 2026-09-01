@@ -45,6 +45,23 @@ class VotationMapperTest {
     assertThat(VotationMapper.toDTO(null)).isNull();
   }
 
+  @Test
+  void voterNamesFallsBackToUserIdWhenNameIsMissing() {
+    LocalDateTime optionDate = LocalDateTime.of(2026, 8, 29, 10, 0);
+    User unnamed = user("participant-1", null, null);
+    Votation votation = new Votation();
+    com.solnotfound.entity.activity.Activity activity =
+        new com.solnotfound.entity.activity.Activity();
+    activity.setId("activity-1");
+    votation.setActivity(activity);
+    votation.setStatus(VotationStatus.ACTIVE);
+    votation.setOptions(List.of(option(optionDate, unnamed)));
+
+    VotationDTO dto = VotationMapper.toDTO(votation);
+
+    assertThat(dto.options().getFirst().voterNames()).containsExactly("participant-1");
+  }
+
   private VotationOption option(LocalDateTime dateTime, User user) {
     VotationOption option = new VotationOption();
     option.setDateTime(dateTime);
