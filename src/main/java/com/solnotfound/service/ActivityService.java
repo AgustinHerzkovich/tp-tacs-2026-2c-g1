@@ -24,7 +24,6 @@ import com.solnotfound.exception.ActivityNotFoundException;
 import com.solnotfound.exception.InvalidActivityException;
 import com.solnotfound.repository.IActivityRepository;
 import com.solnotfound.repository.ICityRepository;
-import com.solnotfound.repository.InMemoryStatisticsEventRepository;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -51,17 +50,6 @@ public class ActivityService {
     this.weatherAdapter = weatherAdapter;
     this.cityRepository = cityRepository;
     this.statisticsRecorder = statisticsRecorder;
-  }
-
-  public ActivityService(
-      IActivityRepository activityRepository,
-      IWeatherAdapter weatherAdapter,
-      ICityRepository cityRepository) {
-    this(
-        activityRepository,
-        weatherAdapter,
-        cityRepository,
-        new StatisticsEventRecorder(new InMemoryStatisticsEventRepository()));
   }
 
   public ActivityResponse create(CreateActivityRequest request) {

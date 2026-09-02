@@ -66,7 +66,8 @@ class ActivityAnticipationCheckSchedulerTest {
             weatherAdapter,
             badWeatherChecker,
             eventPublisher,
-            new ActivityStatusTransitionService(activityRepository, eventPublisher),
+            new ActivityStatusTransitionService(
+                activityRepository, eventPublisher, mock(StatisticsEventRecorder.class)),
             Duration.ofHours(24));
     location = new Location(new City("ba", "Buenos Aires"), -34.6037, -58.3816);
     dateTime = LocalDateTime.now().plusHours(2);
