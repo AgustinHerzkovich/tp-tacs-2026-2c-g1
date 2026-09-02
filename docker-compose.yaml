@@ -19,6 +19,22 @@ services:
         condition: service_healthy
     networks:
       - tacs-network
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    networks:
+      - tacs-network
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE}
+    volumes:
+      - mongodb_data:/data/db
+volumes:
+  mongodb_data:
 
   minio:
     image: minio/minio:RELEASE.2025-07-23T15-54-02Z
