@@ -23,7 +23,7 @@ de IA. La base NoSQL y la UI corresponden a la Entrega 2; cloud corresponde a la
 | 11 | Resolver votacion | Cumplida | `VotationClosingScheduler` | `VotationClosingSchedulerTest` |
 | 12 | Ver actividades y votaciones propias | Cumplida | `/activities/organizers/me`, `/activities/participants/me`, `/votations` | tests de controllers y servicios |
 | 13 | Notificaciones de inicio, reprogramacion y cancelacion | Cumplida | schedulers, listener y `/notifications` | tests de notificaciones y transiciones |
-| 14 | Estadisticas administrativas | Cumplida en memoria | `GET /statistics`, eventos estadisticos | `StatisticsServiceTest`, `InMemoryStatisticsEventRepositoryTest` |
+| 14 | Estadisticas administrativas | Cumplida en memoria | `GET /statistics`, eventos estadisticos | `StatisticsServiceTest` |
 
 ## Requisitos no funcionales
 

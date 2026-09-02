@@ -49,14 +49,17 @@ class ActivityServiceTest {
   private ActivityRepository activityRepository;
   private IWeatherAdapter weatherAdapter;
   private ICityRepository cityRepository;
+  private StatisticsEventRecorder statisticsRecorder;
 
   @BeforeEach
   void setUp() {
     activityRepository = new ActivityRepository();
     weatherAdapter = org.mockito.Mockito.mock(IWeatherAdapter.class);
     cityRepository = new CityRepository();
+    statisticsRecorder = org.mockito.Mockito.mock(StatisticsEventRecorder.class);
 
-    activityService = new ActivityService(activityRepository, weatherAdapter, cityRepository);
+    activityService =
+        new ActivityService(activityRepository, weatherAdapter, cityRepository, statisticsRecorder);
   }
 
   @Test
@@ -587,7 +590,8 @@ class ActivityServiceTest {
   void organizerQueryRejectsInvalidRepositoryResult() {
     ActivityRepository repository = mock(ActivityRepository.class);
     when(repository.findActivitiesByOrganizerId("1")).thenReturn(null);
-    ActivityService service = new ActivityService(repository, weatherAdapter, cityRepository);
+    ActivityService service =
+        new ActivityService(repository, weatherAdapter, cityRepository, statisticsRecorder);
 
     assertThatThrownBy(() -> service.getByOrganizerId("1"))
         .isInstanceOf(NullPointerException.class);
@@ -644,7 +648,8 @@ class ActivityServiceTest {
   void participantQueryRejectsInvalidRepositoryResult() {
     ActivityRepository repository = mock(ActivityRepository.class);
     when(repository.findActivitiesByParticipantId("1")).thenReturn(null);
-    ActivityService service = new ActivityService(repository, weatherAdapter, cityRepository);
+    ActivityService service =
+        new ActivityService(repository, weatherAdapter, cityRepository, statisticsRecorder);
 
     assertThatThrownBy(() -> service.getByParticipantId("1"))
         .isInstanceOf(NullPointerException.class);

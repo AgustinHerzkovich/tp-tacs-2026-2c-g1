@@ -30,7 +30,9 @@ class ActivityStatusTransitionServiceTest {
   void setUp() {
     repository = mock(IActivityRepository.class);
     publisher = mock(ApplicationEventPublisher.class);
-    service = new ActivityStatusTransitionService(repository, publisher);
+    service =
+        new ActivityStatusTransitionService(
+            repository, publisher, mock(StatisticsEventRecorder.class));
     activity = new Activity();
     activity.setId("activity-1");
   }

@@ -9,6 +9,7 @@ import com.solnotfound.exception.GlobalExceptionHandler;
 import com.solnotfound.repository.ActivityRepository;
 import com.solnotfound.repository.CityRepository;
 import com.solnotfound.service.ActivityService;
+import com.solnotfound.service.StatisticsEventRecorder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MockMvc;
@@ -25,7 +26,11 @@ class ActivitySearchControllerTest {
 
     ActivityController controller =
         new ActivityController(
-            new ActivityService(new ActivityRepository(), weatherAdapter, new CityRepository()));
+            new ActivityService(
+                new ActivityRepository(),
+                weatherAdapter,
+                new CityRepository(),
+                org.mockito.Mockito.mock(StatisticsEventRecorder.class)));
     mockMvc =
         MockMvcBuilders.standaloneSetup(controller)
             .setControllerAdvice(new GlobalExceptionHandler())
