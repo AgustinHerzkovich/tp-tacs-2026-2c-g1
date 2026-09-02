@@ -9,6 +9,22 @@ services:
       WEATHER_PROVIDER: ${WEATHER_PROVIDER:-open-meteo}
     networks:
       - tacs-network
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    networks:
+      - tacs-network
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE}
+    volumes:
+      - mongodb_data:/data/db
+volumes:
+  mongodb_data:
 
 networks:
   tacs-network:
