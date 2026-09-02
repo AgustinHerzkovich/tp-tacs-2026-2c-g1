@@ -10,7 +10,6 @@ import com.solnotfound.entity.statistics.StatisticsEventType;
 import com.solnotfound.exception.InvalidActivityStatusTransitionException;
 import com.solnotfound.listener.ActivityNotificationEvent;
 import com.solnotfound.repository.IActivityRepository;
-import com.solnotfound.repository.InMemoryStatisticsEventRepository;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.Set;
@@ -39,14 +38,6 @@ public class ActivityStatusTransitionService {
     this.activityRepository = activityRepository;
     this.eventPublisher = eventPublisher;
     this.statisticsRecorder = statisticsRecorder;
-  }
-
-  public ActivityStatusTransitionService(
-      IActivityRepository activityRepository, ApplicationEventPublisher eventPublisher) {
-    this(
-        activityRepository,
-        eventPublisher,
-        new StatisticsEventRecorder(new InMemoryStatisticsEventRepository()));
   }
 
   public void transition(Activity activity, ActivityStatus newStatus) {

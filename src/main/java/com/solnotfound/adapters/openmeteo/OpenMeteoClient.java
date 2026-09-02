@@ -1,7 +1,6 @@
 package com.solnotfound.adapters.openmeteo;
 
 import com.solnotfound.exception.WeatherUnavailableException;
-import com.solnotfound.repository.InMemoryStatisticsEventRepository;
 import com.solnotfound.service.StatisticsEventRecorder;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
@@ -31,10 +30,6 @@ public class OpenMeteoClient {
     this.restClient = builder.build();
     this.properties = properties;
     this.statisticsRecorder = statisticsRecorder;
-  }
-
-  public OpenMeteoClient(RestClient.Builder builder, OpenMeteoProperties properties) {
-    this(builder, properties, new StatisticsEventRecorder(new InMemoryStatisticsEventRepository()));
   }
 
   @Cacheable(cacheNames = "weather-current", key = "#latitude + ',' + #longitude", sync = true)

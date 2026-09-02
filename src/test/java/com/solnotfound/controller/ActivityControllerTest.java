@@ -23,6 +23,7 @@ import com.solnotfound.entity.weather.WeatherForecast;
 import com.solnotfound.repository.ActivityRepository;
 import com.solnotfound.repository.CityRepository;
 import com.solnotfound.service.ActivityService;
+import com.solnotfound.service.StatisticsEventRecorder;
 import java.net.URI;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -41,7 +42,11 @@ class ActivityControllerTest {
     IWeatherAdapter weatherAdapter = mock(IWeatherAdapter.class);
     ActivityController controller =
         new ActivityController(
-            new ActivityService(new ActivityRepository(), weatherAdapter, new CityRepository()));
+            new ActivityService(
+                new ActivityRepository(),
+                weatherAdapter,
+                new CityRepository(),
+                mock(StatisticsEventRecorder.class)));
     LocationDTO location = new LocationDTO("Buenos Aires", null, null);
     CreateActivityRequest request =
         new CreateActivityRequest(
@@ -70,7 +75,11 @@ class ActivityControllerTest {
     IWeatherAdapter weatherAdapter = mock(IWeatherAdapter.class);
     ActivityController controller =
         new ActivityController(
-            new ActivityService(new ActivityRepository(), weatherAdapter, new CityRepository()));
+            new ActivityService(
+                new ActivityRepository(),
+                weatherAdapter,
+                new CityRepository(),
+                mock(StatisticsEventRecorder.class)));
 
     CreateActivityRequest request =
         new CreateActivityRequest(
@@ -107,7 +116,11 @@ class ActivityControllerTest {
     IWeatherAdapter weatherAdapter = mock(IWeatherAdapter.class);
     ActivityController controller =
         new ActivityController(
-            new ActivityService(new ActivityRepository(), weatherAdapter, new CityRepository()));
+            new ActivityService(
+                new ActivityRepository(),
+                weatherAdapter,
+                new CityRepository(),
+                mock(StatisticsEventRecorder.class)));
 
     CreateActivityRequest request =
         new CreateActivityRequest(
@@ -145,7 +158,11 @@ class ActivityControllerTest {
 
     ActivityController controller =
         new ActivityController(
-            new ActivityService(new ActivityRepository(), weatherAdapter, new CityRepository()));
+            new ActivityService(
+                new ActivityRepository(),
+                weatherAdapter,
+                new CityRepository(),
+                mock(StatisticsEventRecorder.class)));
 
     CreateActivityRequest request =
         new CreateActivityRequest(

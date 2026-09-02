@@ -10,7 +10,9 @@ RUN ./mvnw dependency:go-offline
 
 COPY src src
 
-RUN ./mvnw clean verify
+# ServerApplicationTest uses Testcontainers (MongoDB container), which cannot run
+# inside the build image because it has no access to the Docker daemon.
+RUN ./mvnw clean verify -Dtest='!ServerApplicationTest'
 
 FROM eclipse-temurin:21-jre-alpine
 

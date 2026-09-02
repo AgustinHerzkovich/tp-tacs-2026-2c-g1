@@ -40,7 +40,8 @@ class VotationClosingSchedulerTest {
     activityRepository = mock(IActivityRepository.class);
     eventPublisher = mock(ApplicationEventPublisher.class);
     ActivityStatusTransitionService transitionService =
-        new ActivityStatusTransitionService(activityRepository, eventPublisher);
+        new ActivityStatusTransitionService(
+            activityRepository, eventPublisher, mock(StatisticsEventRecorder.class));
     scheduler = new VotationClosingScheduler(votationRepository, transitionService);
   }
 
