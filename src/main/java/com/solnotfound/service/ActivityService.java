@@ -24,7 +24,6 @@ import com.solnotfound.exception.ActivityNotFoundException;
 import com.solnotfound.exception.InvalidActivityException;
 import com.solnotfound.repository.IActivityRepository;
 import com.solnotfound.repository.ICityRepository;
-import com.solnotfound.repository.InMemoryStatisticsEventRepository;
 import com.solnotfound.storage.ImageFile;
 import com.solnotfound.storage.ImageStorage;
 import com.solnotfound.storage.NoOpImageStorage;
@@ -70,12 +69,13 @@ public class ActivityService {
   public ActivityService(
       IActivityRepository activityRepository,
       IWeatherAdapter weatherAdapter,
-      ICityRepository cityRepository) {
+      ICityRepository cityRepository,
+      StatisticsEventRecorder statisticsRecorder) {
     this(
         activityRepository,
         weatherAdapter,
         cityRepository,
-        new StatisticsEventRecorder(new InMemoryStatisticsEventRepository()),
+        statisticsRecorder,
         new NoOpImageStorage());
   }
 

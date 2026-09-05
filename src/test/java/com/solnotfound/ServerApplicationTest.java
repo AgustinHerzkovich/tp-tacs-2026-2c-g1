@@ -25,7 +25,7 @@ class ServerApplicationTest {
     @Bean
     @ServiceConnection
     MongoDBContainer mongoDbContainer() {
-      return new MongoDBContainer("mongo:latest");
+      return new MongoDBContainer("mongo:8.0.14");
     }
   }
 

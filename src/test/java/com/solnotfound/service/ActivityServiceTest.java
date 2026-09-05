@@ -31,7 +31,6 @@ import com.solnotfound.exception.InvalidActivityException;
 import com.solnotfound.repository.ActivityRepository;
 import com.solnotfound.repository.CityRepository;
 import com.solnotfound.repository.ICityRepository;
-import com.solnotfound.repository.InMemoryStatisticsEventRepository;
 import com.solnotfound.storage.ImageFile;
 import com.solnotfound.storage.ImageStorage;
 import java.io.ByteArrayInputStream;
@@ -122,11 +121,7 @@ class ActivityServiceTest {
 
   private ActivityService serviceWith(ImageStorage imageStorage) {
     return new ActivityService(
-        activityRepository,
-        weatherAdapter,
-        cityRepository,
-        new StatisticsEventRecorder(new InMemoryStatisticsEventRepository()),
-        imageStorage);
+        activityRepository, weatherAdapter, cityRepository, statisticsRecorder, imageStorage);
   }
 
   private ImageFile image(String contentType) {
