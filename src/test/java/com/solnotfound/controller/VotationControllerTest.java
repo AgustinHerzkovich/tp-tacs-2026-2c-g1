@@ -15,6 +15,7 @@ import com.solnotfound.dto.VotationOptionDTO;
 import com.solnotfound.entity.votation.VotationStatus;
 import com.solnotfound.exception.AccessDeniedException;
 import com.solnotfound.exception.GlobalExceptionHandler;
+import com.solnotfound.exception.ResourceNotFoundException;
 import com.solnotfound.service.VotationService;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -122,6 +123,81 @@ class VotationControllerTest {
         .andExpect(jsonPath("$.options[0].voterNames[0]").value("Jane Doe"));
 
     verify(service).vote("v-1", "participant", option);
+  }
+
+  @Test
+  void rejectsVoteOnUnknownVotation() throws Exception {
+    LocalDateTime option = LocalDateTime.of(2026, 9, 1, 12, 0);
+    when(service.vote("v-1", "participant", option))
+        .thenThrow(new ResourceNotFoundException("Votation not found: v-1"));
+
+    mockMvc
+        .perform(
+            put("/votations/v-1/votes/me")
+                .principal(authentication("participant"))
+                .contentType("application/json")
+                .content("\"2026-09-01T12:00:00\""))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.title").value("Resource not found"));
+  }
+
+  @Test
+  void rejectsVoteOnUnknownOption() throws Exception {
+    LocalDateTime option = LocalDateTime.of(2026, 9, 1, 12, 0);
+    when(service.vote("v-1", "participant", option))
+        .thenThrow(new ResourceNotFoundException("Option not found: " + option));
+
+    mockMvc
+        .perform(
+            put("/votations/v-1/votes/me")
+                .principal(authentication("participant"))
+                .contentType("application/json")
+                .content("\"2026-09-01T12:00:00\""))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.title").value("Resource not found"));
+  }
+
+  @Test
+  void rejectsVoteByUserOutsideActivity() throws Exception {
+    LocalDateTime option = LocalDateTime.of(2026, 9, 1, 12, 0);
+    when(service.vote("v-1", "outsider", option))
+        .thenThrow(new ResourceNotFoundException("User doesn't belong to this activity: outsider"));
+
+    mockMvc
+        .perform(
+            put("/votations/v-1/votes/me")
+                .principal(authentication("outsider"))
+                .contentType("application/json")
+                .content("\"2026-09-01T12:00:00\""))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.title").value("Resource not found"));
+  }
+
+  @Test
+  void rejectsVoteOnClosedVotation() throws Exception {
+    LocalDateTime option = LocalDateTime.of(2026, 9, 1, 12, 0);
+    when(service.vote("v-1", "participant", option))
+        .thenThrow(new AccessDeniedException("Votation already closed: v-1"));
+
+    mockMvc
+        .perform(
+            put("/votations/v-1/votes/me")
+                .principal(authentication("participant"))
+                .contentType("application/json")
+                .content("\"2026-09-01T12:00:00\""))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.title").value("Access denied"));
+  }
+
+  @Test
+  void rejectsMalformedVoteBody() throws Exception {
+    mockMvc
+        .perform(
+            put("/votations/v-1/votes/me")
+                .principal(authentication("participant"))
+                .contentType("application/json")
+                .content("\"not-a-date\""))
+        .andExpect(status().isBadRequest());
   }
 
   @Test
