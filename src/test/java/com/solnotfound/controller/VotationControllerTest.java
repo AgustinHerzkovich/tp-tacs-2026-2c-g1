@@ -142,6 +142,38 @@ class VotationControllerTest {
   }
 
   @Test
+  void rejectsVoteOnUnknownOption() throws Exception {
+    LocalDateTime option = LocalDateTime.of(2026, 9, 1, 12, 0);
+    when(service.vote("v-1", "participant", option))
+        .thenThrow(new ResourceNotFoundException("Option not found: " + option));
+
+    mockMvc
+        .perform(
+            put("/votations/v-1/votes/me")
+                .principal(authentication("participant"))
+                .contentType("application/json")
+                .content("\"2026-09-01T12:00:00\""))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.title").value("Resource not found"));
+  }
+
+  @Test
+  void rejectsVoteByUserOutsideActivity() throws Exception {
+    LocalDateTime option = LocalDateTime.of(2026, 9, 1, 12, 0);
+    when(service.vote("v-1", "outsider", option))
+        .thenThrow(new ResourceNotFoundException("User doesn't belong to this activity: outsider"));
+
+    mockMvc
+        .perform(
+            put("/votations/v-1/votes/me")
+                .principal(authentication("outsider"))
+                .contentType("application/json")
+                .content("\"2026-09-01T12:00:00\""))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.title").value("Resource not found"));
+  }
+
+  @Test
   void rejectsVoteOnClosedVotation() throws Exception {
     LocalDateTime option = LocalDateTime.of(2026, 9, 1, 12, 0);
     when(service.vote("v-1", "participant", option))

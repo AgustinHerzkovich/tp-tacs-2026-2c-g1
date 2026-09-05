@@ -276,7 +276,7 @@ class VotationServiceTest {
   }
 
   @Test
-  void rejectsVoteWhenVotationActivityOptionOrUserDoesNotExist() {
+  void rejectsVoteWhenVotationDoesNotExist() {
     Activity activity = activity("a-1", "organizer", List.of("participant"));
     activityRepository.save(activity);
     LocalDateTime option = activity.getDateTime().plusDays(1);
@@ -284,18 +284,43 @@ class VotationServiceTest {
     assertThatThrownBy(() -> service.vote("missing", "participant", option))
         .isInstanceOf(ResourceNotFoundException.class)
         .hasMessageContaining("Votation");
+  }
 
+  @Test
+  void rejectsVoteWhenActivityDoesNotExist() {
+    LocalDateTime option = LocalDateTime.now().plusDays(2);
     Votation votation = votationWithOptions("v-1", "missing", option);
     votation.setActivity(null);
     votationRepository.save(votation);
+
     assertThatThrownBy(() -> service.vote("v-1", "participant", option))
         .isInstanceOf(ResourceNotFoundException.class)
         .hasMessageContaining("Activity");
+  }
 
+  @Test
+  void rejectsVoteWhenOptionDoesNotExist() {
+    Activity activity = activity("a-1", "organizer", List.of("participant"));
+    activityRepository.save(activity);
+    LocalDateTime option = activity.getDateTime().plusDays(1);
+    Votation votation = votationWithOptions("v-1", "a-1", option);
     votation.setActivity(activity);
+    votationRepository.save(votation);
+
     assertThatThrownBy(() -> service.vote("v-1", "participant", option.plusHours(1)))
         .isInstanceOf(ResourceNotFoundException.class)
         .hasMessageContaining("Option");
+  }
+
+  @Test
+  void rejectsVoteWhenUserDoesNotBelongToActivity() {
+    Activity activity = activity("a-1", "organizer", List.of("participant"));
+    activityRepository.save(activity);
+    LocalDateTime option = activity.getDateTime().plusDays(1);
+    Votation votation = votationWithOptions("v-1", "a-1", option);
+    votation.setActivity(activity);
+    votationRepository.save(votation);
+
     assertThatThrownBy(() -> service.vote("v-1", "outsider", option))
         .isInstanceOf(ResourceNotFoundException.class)
         .hasMessageContaining("User");

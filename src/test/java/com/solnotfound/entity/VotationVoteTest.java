@@ -46,16 +46,6 @@ class VotationVoteTest {
   }
 
   @Test
-  void votingForUnknownDateIsIgnored() {
-    User user = User.withId("participant");
-    Votation votation = votation(option(dateAt(10)));
-
-    votation.vote(dateAt(11), user);
-
-    assertThat(votation.thisUserVoted(user)).isFalse();
-  }
-
-  @Test
   void unvoteRemovesUserFromOption() {
     LocalDateTime chosen = dateAt(10);
     User user = User.withId("participant");
