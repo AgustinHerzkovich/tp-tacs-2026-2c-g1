@@ -6,11 +6,18 @@ import com.solnotfound.dto.ActivityWeatherResponse;
 import com.solnotfound.dto.CreateActivityRequest;
 import com.solnotfound.entity.activity.ActivityType;
 import com.solnotfound.service.ActivityService;
+import com.solnotfound.storage.MultipartImageFile;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Encoding;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -19,28 +26,61 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/activities")
 public class ActivityController {
   private final ActivityService activityService;
 
+  @edu.umd.cs.findbugs.annotations.SuppressFBWarnings(
+      value = "EI_EXPOSE_REP2",
+      justification = "Spring injects the shared activity service")
   public ActivityController(ActivityService activityService) {
     this.activityService = activityService;
   }
 
-  @PostMapping
+  /**
+   * Creates an activity and stores its optional images in the configured object storage.
+   *
+   * @param request JSON activity data from the multipart {@code activity} part
+   * @param images optional image parts
+   * @param authentication current authenticated user
+   * @return the created activity with temporary image URLs
+   */
+  @Operation(
+      requestBody =
+          @io.swagger.v3.oas.annotations.parameters.RequestBody(
+              required = true,
+              content =
+                  @Content(
+                      mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
+                      schema = @Schema(implementation = CreateActivityMultipartRequest.class),
+                      encoding =
+                          @Encoding(
+                              name = "activity",
+                              contentType = MediaType.APPLICATION_JSON_VALUE))))
+  @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<ActivityResponse> create(
-      @Valid @RequestBody CreateActivityRequest request, Authentication authentication) {
+      @Valid @RequestPart("activity") CreateActivityRequest request,
+      @RequestPart(value = "images", required = false) List<MultipartFile> images,
+      Authentication authentication) {
+    List<MultipartImageFile> imageFiles =
+        Objects.requireNonNullElse(images, List.<MultipartFile>of()).stream()
+            .map(MultipartImageFile::new)
+            .toList();
     ActivityResponse createdActivity =
-        activityService.create(request, currentUserId(authentication));
+        activityService.create(request, currentUserId(authentication), imageFiles);
     return ResponseEntity.created(URI.create("/activities/" + createdActivity.id()))
         .body(createdActivity);
   }
+
+  private record CreateActivityMultipartRequest(
+      CreateActivityRequest activity, List<MultipartFile> images) {}
 
   @GetMapping
   public ResponseEntity<List<ActivityResponse>> getAll(

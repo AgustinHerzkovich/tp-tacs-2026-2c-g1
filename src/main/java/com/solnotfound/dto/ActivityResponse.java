@@ -20,9 +20,11 @@ public record ActivityResponse(
     WeatherConditionsDTO weatherConditions,
     Integer anticipationWindow,
     ReprogramationRangeDTO reprogramationRange,
-    ActivityStatus status) {
+    ActivityStatus status,
+    List<String> imageUrls) {
 
   public ActivityResponse {
     participants = List.copyOf(participants);
+    imageUrls = List.copyOf(imageUrls);
   }
 }

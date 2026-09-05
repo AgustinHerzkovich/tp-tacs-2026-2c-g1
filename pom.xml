@@ -31,6 +31,8 @@
 		<maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
 		<spotbugs-maven-plugin.version>4.9.3.0</spotbugs-maven-plugin.version>
 		<spotless-maven-plugin.version>2.44.5</spotless-maven-plugin.version>
+		<minio.version>8.5.17</minio.version>
+		<google-cloud-storage.version>2.56.0</google-cloud-storage.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -74,6 +76,16 @@
 			<groupId>org.springdoc</groupId>
 			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
 			<version>3.0.1</version>
+		</dependency>
+		<dependency>
+			<groupId>io.minio</groupId>
+			<artifactId>minio</artifactId>
+			<version>${minio.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.cloud</groupId>
+			<artifactId>google-cloud-storage</artifactId>
+			<version>${google-cloud-storage.version}</version>
 		</dependency>
 
 		<dependency>

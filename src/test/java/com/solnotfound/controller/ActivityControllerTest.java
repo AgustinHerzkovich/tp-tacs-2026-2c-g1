@@ -7,9 +7,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.solnotfound.adapters.IWeatherAdapter;
 import com.solnotfound.dto.ActivityResponse;
 import com.solnotfound.dto.ActivityWeatherResponse;
@@ -29,7 +31,9 @@ import java.time.LocalTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -57,12 +61,47 @@ class ActivityControllerTest {
             new ReprogramationRangeDTO(3, LocalTime.of(10, 0), LocalTime.of(20, 0)));
 
     ResponseEntity<ActivityResponse> response =
-        controller.create(request, authentication("creator-1"));
+        controller.create(request, List.of(), authentication("creator-1"));
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
     assertThat(response.getBody()).isNotNull();
     assertThat(response.getHeaders().getLocation())
         .isEqualTo(URI.create("/activities/" + response.getBody().id()));
+  }
+
+  @Test
+  void acceptsMultipartCreationWithoutImages() throws Exception {
+    ActivityService service = mock(ActivityService.class);
+    ActivityResponse response = mock(ActivityResponse.class);
+    when(response.id()).thenReturn("activity-1");
+    when(service.create(any(), eq("creator-1"), eq(List.of()))).thenReturn(response);
+    ActivityController controller = new ActivityController(service);
+    MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+    MockMultipartFile activityPart =
+        new MockMultipartFile(
+            "activity",
+            "",
+            MediaType.APPLICATION_JSON_VALUE,
+            new ObjectMapper().findAndRegisterModules().writeValueAsBytes(validRequest()));
+
+    mockMvc
+        .perform(multipart("/activities").file(activityPart).principal(authentication("creator-1")))
+        .andExpect(status().isCreated());
+    verify(service).create(any(), eq("creator-1"), eq(List.of()));
+  }
+
+  private CreateActivityRequest validRequest() {
+    return new CreateActivityRequest(
+        "Football match",
+        "Friendly match",
+        ActivityType.OUTDOOR,
+        new LocationDTO("Buenos Aires", null, null),
+        LocalDateTime.now().plusDays(1),
+        1,
+        10,
+        new WeatherConditionsDTO(30, 10, 28, 25.0),
+        15,
+        new ReprogramationRangeDTO(3, LocalTime.of(10, 0), LocalTime.of(20, 0)));
   }
 
   @Test
@@ -86,7 +125,7 @@ class ActivityControllerTest {
             new ReprogramationRangeDTO(3, LocalTime.of(10, 0), LocalTime.of(20, 0)));
 
     ActivityResponse activity =
-        controller.create(request, authentication("development-user")).getBody();
+        controller.create(request, List.of(), authentication("development-user")).getBody();
 
     ResponseEntity<ActivityResponse> response =
         controller.join(activity.id(), authentication("user-1"));
@@ -123,7 +162,7 @@ class ActivityControllerTest {
             new ReprogramationRangeDTO(3, LocalTime.of(10, 0), LocalTime.of(20, 0)));
 
     ActivityResponse activity =
-        controller.create(request, authentication("development-user")).getBody();
+        controller.create(request, List.of(), authentication("development-user")).getBody();
 
     controller.join(activity.id(), authentication("user-1"));
 
@@ -161,7 +200,7 @@ class ActivityControllerTest {
             new ReprogramationRangeDTO(3, LocalTime.of(10, 0), LocalTime.of(20, 0)));
 
     ActivityResponse activity =
-        controller.create(request, authentication("development-user")).getBody();
+        controller.create(request, List.of(), authentication("development-user")).getBody();
 
     controller.join(activity.id(), authentication("user-1"));
 
