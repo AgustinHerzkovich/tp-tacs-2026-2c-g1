@@ -22,6 +22,7 @@ public class Activity {
   @Getter @Setter private Integer maxParticipants;
   private List<User> participants = new ArrayList<>();
   private List<WeatherCondition> weatherConditions = List.of();
+  private List<String> imageKeys = List.of();
 
   @Setter @Getter
   private Integer
@@ -60,6 +61,14 @@ public class Activity {
 
   public void setWeatherConditions(List<WeatherCondition> weatherConditions) {
     this.weatherConditions = List.copyOf(weatherConditions);
+  }
+
+  public List<String> getImageKeys() {
+    return List.copyOf(imageKeys);
+  }
+
+  public void setImageKeys(List<String> imageKeys) {
+    this.imageKeys = List.copyOf(imageKeys);
   }
 
   public synchronized List<User> getParticipants() {

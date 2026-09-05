@@ -3,6 +3,7 @@ package com.solnotfound.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -25,10 +26,17 @@ import com.solnotfound.entity.weather.WeatherForecast;
 import com.solnotfound.exception.ActivityAccessDeniedException;
 import com.solnotfound.exception.ActivityNotFoundException;
 import com.solnotfound.exception.IllegalStateActivityException;
+import com.solnotfound.exception.ImageStorageException;
 import com.solnotfound.exception.InvalidActivityException;
 import com.solnotfound.repository.ActivityRepository;
 import com.solnotfound.repository.CityRepository;
 import com.solnotfound.repository.ICityRepository;
+import com.solnotfound.repository.InMemoryStatisticsEventRepository;
+import com.solnotfound.storage.ImageFile;
+import com.solnotfound.storage.ImageStorage;
+import java.io.ByteArrayInputStream;
+import java.net.URI;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
@@ -60,6 +68,81 @@ class ActivityServiceTest {
     assertThat(created.weatherConditions()).isEqualTo(new WeatherConditionsDTO(30, 10, 28, 25.0));
     assertThat(created.reprogramationRange()).isEqualTo(validReprogramationRange());
     assertThat(activityService.getById(created.id())).isEqualTo(created);
+  }
+
+  @Test
+  void createsActivityWithImagesAndReturnsSignedUrls() {
+    ImageStorage imageStorage = mock(ImageStorage.class);
+    when(imageStorage.signedReadUrl(any(), any(Duration.class)))
+        .thenAnswer(invocation -> URI.create("https://images.test/" + invocation.getArgument(0)));
+    activityService = serviceWith(imageStorage);
+
+    ActivityResponse created =
+        activityService.create(
+            validRequest(), "creator-1", List.of(image("image/jpeg"), image("image/webp")));
+
+    assertThat(created.imageUrls())
+        .hasSize(2)
+        .allMatch(url -> url.startsWith("https://images.test/activities/" + created.id() + "/"));
+    verify(imageStorage).upload(org.mockito.ArgumentMatchers.endsWith(".jpg"), any());
+    verify(imageStorage).upload(org.mockito.ArgumentMatchers.endsWith(".webp"), any());
+  }
+
+  @Test
+  void rejectsUnsupportedImageTypeBeforeUploading() {
+    ImageStorage imageStorage = mock(ImageStorage.class);
+    activityService = serviceWith(imageStorage);
+
+    assertThatThrownBy(
+            () -> activityService.create(validRequest(), "creator-1", List.of(image("image/gif"))))
+        .isInstanceOf(InvalidActivityException.class)
+        .hasMessage("Images must be JPEG, PNG, or WebP");
+    verify(imageStorage, never()).upload(any(), any());
+  }
+
+  @Test
+  void deletesUploadedImagesAndDoesNotPersistWhenAnUploadFails() {
+    ImageStorage imageStorage = mock(ImageStorage.class);
+    doThrow(new ImageStorageException("failed", null))
+        .when(imageStorage)
+        .upload(org.mockito.ArgumentMatchers.endsWith(".png"), any());
+    activityService = serviceWith(imageStorage);
+
+    assertThatThrownBy(
+            () ->
+                activityService.create(
+                    validRequest(), "creator-1", List.of(image("image/jpeg"), image("image/png"))))
+        .isInstanceOf(ImageStorageException.class);
+    verify(imageStorage).delete(org.mockito.ArgumentMatchers.endsWith(".jpg"));
+    assertThat(activityRepository.findAll()).isEmpty();
+  }
+
+  private ActivityService serviceWith(ImageStorage imageStorage) {
+    return new ActivityService(
+        activityRepository,
+        weatherAdapter,
+        cityRepository,
+        new StatisticsEventRecorder(new InMemoryStatisticsEventRepository()),
+        imageStorage);
+  }
+
+  private ImageFile image(String contentType) {
+    return new ImageFile() {
+      @Override
+      public String contentType() {
+        return contentType;
+      }
+
+      @Override
+      public long size() {
+        return 3;
+      }
+
+      @Override
+      public ByteArrayInputStream openStream() {
+        return new ByteArrayInputStream(new byte[] {1, 2, 3});
+      }
+    };
   }
 
   @Test

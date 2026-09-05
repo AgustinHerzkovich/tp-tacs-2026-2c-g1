@@ -6,7 +6,7 @@ La aplicación queda disponible en `http://localhost:8080`, la documentación in
 `http://localhost:8080/swagger-ui.html` y la especificación OpenAPI en
 `http://localhost:8080/v3/api-docs`.
 
-Ejemplo de request para generar una actividad mediante `POST /activities`:
+Ejemplo del JSON que debe enviarse en la parte `activity` de `POST /activities`:
 
 ```json
 {
@@ -207,3 +207,27 @@ como herramientas de apoyo. Su uso se concentró en las siguientes tareas:
 Las respuestas de estas herramientas se tomaron como sugerencias y no como resultados definitivos.
 El equipo revisó las propuestas, las adaptó al diseño y las convenciones del proyecto, y validó los
 cambios mediante revisión del código, ejecución de tests y el proceso de verificación de Maven.
+## Activity images
+
+Local development uses the private MinIO bucket started by `docker compose up --build`.
+The S3 API is available at `http://localhost:9000` and the administration console at
+`http://localhost:9001`. The default local credentials are `minioadmin` / `minioadmin` and can be
+overridden with `MINIO_ACCESS_KEY` and `MINIO_SECRET_KEY`.
+Presigned URLs use `MINIO_PUBLIC_ENDPOINT`, which defaults to `http://localhost:9000` in Docker
+Compose so browsers outside the Docker network can resolve them.
+Running only Maven defaults to `STORAGE_PROVIDER=none`; JSON activity creation remains available,
+but image uploads require MinIO, GCS, or another configured provider.
+
+Create every activity by sending `multipart/form-data` to `POST /activities` with:
+
+- `activity`: the activity JSON with content type `application/json`.
+- `images`: zero to five repeated JPEG, PNG, or WebP file parts, up to 5 MiB each.
+
+For an activity without images, omit the `images` parts and send only `activity`.
+
+Responses expose temporary `imageUrls`; only stable object keys are stored in the activity.
+
+Production on GCP should set `STORAGE_PROVIDER=gcs` and `STORAGE_BUCKET=<bucket-name>`. The
+application uses Google Application Default Credentials, so Cloud Run should be assigned a service
+account with object create, read, delete, and URL-signing permissions instead of mounting a JSON
+service-account key.

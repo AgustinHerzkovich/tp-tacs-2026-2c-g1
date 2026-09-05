@@ -25,8 +25,14 @@ import com.solnotfound.exception.InvalidActivityException;
 import com.solnotfound.repository.IActivityRepository;
 import com.solnotfound.repository.ICityRepository;
 import com.solnotfound.repository.InMemoryStatisticsEventRepository;
+import com.solnotfound.storage.ImageFile;
+import com.solnotfound.storage.ImageStorage;
+import com.solnotfound.storage.NoOpImageStorage;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -37,6 +43,12 @@ public class ActivityService {
   private final IWeatherAdapter weatherAdapter;
   private final ICityRepository cityRepository;
   private final StatisticsEventRecorder statisticsRecorder;
+  private final ImageStorage imageStorage;
+  private static final int MAX_IMAGES = 5;
+  private static final long MAX_IMAGE_SIZE = 5L * 1024 * 1024;
+  private static final Duration IMAGE_URL_VALIDITY = Duration.ofHours(1);
+  private static final Set<String> ALLOWED_IMAGE_TYPES =
+      Set.of("image/jpeg", "image/png", "image/webp");
 
   @edu.umd.cs.findbugs.annotations.SuppressFBWarnings(
       value = "EI_EXPOSE_REP2",
@@ -46,11 +58,13 @@ public class ActivityService {
       IActivityRepository activityRepository,
       IWeatherAdapter weatherAdapter,
       ICityRepository cityRepository,
-      StatisticsEventRecorder statisticsRecorder) {
+      StatisticsEventRecorder statisticsRecorder,
+      ImageStorage imageStorage) {
     this.activityRepository = activityRepository;
     this.weatherAdapter = weatherAdapter;
     this.cityRepository = cityRepository;
     this.statisticsRecorder = statisticsRecorder;
+    this.imageStorage = imageStorage;
   }
 
   public ActivityService(
@@ -61,7 +75,8 @@ public class ActivityService {
         activityRepository,
         weatherAdapter,
         cityRepository,
-        new StatisticsEventRecorder(new InMemoryStatisticsEventRepository()));
+        new StatisticsEventRecorder(new InMemoryStatisticsEventRepository()),
+        new NoOpImageStorage());
   }
 
   public ActivityResponse create(CreateActivityRequest request) {
@@ -77,7 +92,26 @@ public class ActivityService {
    * @throws InvalidActivityException when cross-field business constraints are not satisfied
    */
   public ActivityResponse create(CreateActivityRequest request, String creatorUserId) {
+    return create(request, creatorUserId, List.of());
+  }
+
+  /**
+   * Validates and creates an activity, uploading up to five optional JPEG, PNG, or WebP images.
+   * Uploaded objects are removed if a later upload fails, and the activity is not persisted.
+   *
+   * @param request activity data to validate and persist
+   * @param creatorUserId authenticated creator identifier
+   * @param images optional image content, each limited to five MiB
+   * @return the persisted activity representation with temporary image URLs
+   * @throws InvalidActivityException when activity or image constraints are not satisfied
+   */
+  @edu.umd.cs.findbugs.annotations.SuppressFBWarnings(
+      value = "THROWS_METHOD_THROWS_RUNTIMEEXCEPTION",
+      justification = "Storage failures are propagated after compensating object deletes")
+  public ActivityResponse create(
+      CreateActivityRequest request, String creatorUserId, List<? extends ImageFile> images) {
     validate(request);
+    validateImages(images);
 
     Activity activity = new Activity();
     activity.setId(UUID.randomUUID().toString());
@@ -93,10 +127,61 @@ public class ActivityService {
     activity.setAnticipationWindow(request.anticipationWindow());
     activity.setReprogramationRange(toReprogramationRange(request.reprogramationRange()));
 
+    List<String> uploadedKeys = new ArrayList<>();
+    try {
+      for (ImageFile image : images) {
+        String imageKey = createImageKey(activity.getId(), image.contentType());
+        imageStorage.upload(imageKey, image);
+        uploadedKeys.add(imageKey);
+      }
+    } catch (RuntimeException exception) {
+      uploadedKeys.forEach(this::deleteAfterFailedUpload);
+      throw exception;
+    }
+    activity.setImageKeys(uploadedKeys);
+
     activityRepository.save(activity);
     statisticsRecorder.recordActivity(StatisticsEventType.ACTIVITY_CREATED, activity.getId(), null);
 
     return toResponse(activity);
+  }
+
+  private void validateImages(List<? extends ImageFile> images) {
+    if (images.size() > MAX_IMAGES) {
+      throw new InvalidActivityException("An activity can have at most 5 images");
+    }
+    for (ImageFile image : images) {
+      String contentType = image.contentType();
+      if (image.size() <= 0) {
+        throw new InvalidActivityException("Images cannot be empty");
+      }
+      if (image.size() > MAX_IMAGE_SIZE) {
+        throw new InvalidActivityException("Each image must be at most 5 MiB");
+      }
+      if (contentType == null
+          || !ALLOWED_IMAGE_TYPES.contains(contentType.toLowerCase(Locale.ROOT))) {
+        throw new InvalidActivityException("Images must be JPEG, PNG, or WebP");
+      }
+    }
+  }
+
+  private String createImageKey(String activityId, String contentType) {
+    String extension =
+        switch (contentType.toLowerCase(Locale.ROOT)) {
+          case "image/jpeg" -> ".jpg";
+          case "image/png" -> ".png";
+          case "image/webp" -> ".webp";
+          default -> throw new InvalidActivityException("Unsupported image type");
+        };
+    return "activities/" + activityId + "/" + UUID.randomUUID() + extension;
+  }
+
+  private void deleteAfterFailedUpload(String imageKey) {
+    try {
+      imageStorage.delete(imageKey);
+    } catch (RuntimeException ignored) {
+      // Preserve the upload failure; orphan cleanup can be retried operationally.
+    }
   }
 
   public List<ActivityResponse> getAll() {
@@ -329,7 +414,10 @@ public class ActivityService {
         toWeatherConditionsDTO(activity.getWeatherConditions()),
         activity.getAnticipationWindow(),
         toReprogramationRangeDTO(activity.getReprogramationRange()),
-        activity.getStatus());
+        activity.getStatus(),
+        activity.getImageKeys().stream()
+            .map(key -> imageStorage.signedReadUrl(key, IMAGE_URL_VALIDITY).toString())
+            .toList());
   }
 
   private LocationDTO toLocationDTO(Location location) {
