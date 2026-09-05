@@ -2,40 +2,50 @@ package com.solnotfound.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.solnotfound.dto.StatisticsResponse;
 import com.solnotfound.entity.statistics.ActivityTransitionReason;
 import com.solnotfound.entity.statistics.StatisticsEvent;
 import com.solnotfound.entity.statistics.StatisticsEventType;
 import com.solnotfound.exception.InvalidStatisticsRangeException;
-import com.solnotfound.repository.InMemoryStatisticsEventRepository;
+import com.solnotfound.repository.IStatisticsEventRepository;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.Arrays;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class StatisticsServiceTest {
   private static final Instant NOW = Instant.parse("2026-08-31T12:00:00Z");
 
-  private InMemoryStatisticsEventRepository repository;
+  private IStatisticsEventRepository repository;
   private StatisticsService service;
 
   @BeforeEach
   void setUp() {
-    repository = new InMemoryStatisticsEventRepository();
+    repository = mock(IStatisticsEventRepository.class);
     service = new StatisticsService(repository, Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
   @Test
   void aggregatesActivityAndWeatherEvents() {
-    save(StatisticsEventType.ACTIVITY_CREATED, null, null);
-    save(
-        StatisticsEventType.ACTIVITY_RESCHEDULED, ActivityTransitionReason.VOTATION_RESOLVED, null);
-    save(StatisticsEventType.ACTIVITY_CANCELLED, ActivityTransitionReason.BAD_WEATHER, null);
-    save(StatisticsEventType.ACTIVITY_CANCELLED, ActivityTransitionReason.QUORUM_NOT_REACHED, null);
-    save(StatisticsEventType.WEATHER_PROVIDER_SUCCEEDED, null, 100L);
-    save(StatisticsEventType.WEATHER_PROVIDER_FAILED, null, 300L);
+    stubEvents(
+        event(StatisticsEventType.ACTIVITY_CREATED, null, null),
+        event(
+            StatisticsEventType.ACTIVITY_RESCHEDULED,
+            ActivityTransitionReason.VOTATION_RESOLVED,
+            null),
+        event(StatisticsEventType.ACTIVITY_CANCELLED, ActivityTransitionReason.BAD_WEATHER, null),
+        event(
+            StatisticsEventType.ACTIVITY_CANCELLED,
+            ActivityTransitionReason.QUORUM_NOT_REACHED,
+            null),
+        event(StatisticsEventType.WEATHER_PROVIDER_SUCCEEDED, null, 100L),
+        event(StatisticsEventType.WEATHER_PROVIDER_FAILED, null, 300L));
 
     StatisticsResponse response = service.getStatistics(NOW.minusSeconds(1), NOW.plusSeconds(1));
 
@@ -51,6 +61,8 @@ class StatisticsServiceTest {
 
   @Test
   void defaultsToLastSevenDaysAndReturnsZerosWithoutEvents() {
+    stubEvents();
+
     StatisticsResponse response = service.getStatistics(null, null);
 
     assertThat(response.from()).isEqualTo(NOW.minusSeconds(7 * 24 * 60 * 60));
@@ -66,10 +78,13 @@ class StatisticsServiceTest {
         .isInstanceOf(InvalidStatisticsRangeException.class);
   }
 
-  private void save(
+  private void stubEvents(StatisticsEvent... events) {
+    when(repository.findOccurredBetween(any(), any())).thenReturn(Arrays.asList(events));
+  }
+
+  private StatisticsEvent event(
       StatisticsEventType type, ActivityTransitionReason reason, Long durationMilliseconds) {
-    repository.save(
-        new StatisticsEvent(
-            null, type, NOW, "activity-1", reason, durationMilliseconds, "Open-Meteo"));
+    return new StatisticsEvent(
+        null, type, NOW, "activity-1", reason, durationMilliseconds, "Open-Meteo");
   }
 }

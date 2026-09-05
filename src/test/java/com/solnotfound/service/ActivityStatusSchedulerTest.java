@@ -34,7 +34,9 @@ class ActivityStatusSchedulerTest {
   void setUp() {
     activityRepository = mock(IActivityRepository.class);
     eventPublisher = mock(ApplicationEventPublisher.class);
-    transitionService = new ActivityStatusTransitionService(activityRepository, eventPublisher);
+    transitionService =
+        new ActivityStatusTransitionService(
+            activityRepository, eventPublisher, mock(StatisticsEventRecorder.class));
     scheduler =
         new ActivityStatusScheduler(
             activityRepository, eventPublisher, transitionService, Duration.ofMinutes(90));

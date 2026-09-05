@@ -14,9 +14,46 @@ services:
       MINIO_REGION: ${MINIO_REGION:-us-east-1}
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      MONGO_INITDB_ROOT_USER: ${MONGO_INITDB_ROOT_USER:-admin}
+      MONGO_INITDB_ROOT_PASS: ${MONGO_INITDB_ROOT_PASS:-password123}
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE:-mi_base_de_datos}
     depends_on:
       minio:
         condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    networks:
+      - tacs-network
+
+  mongodb:
+    image: mongo:8.0.14
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASS:-password123}
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE:-mi_base_de_datos}
+    volumes:
+      - mongodb-data:/data/db
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mongosh",
+          "--quiet",
+          "--username",
+          "${MONGO_INITDB_ROOT_USER:-admin}",
+          "--password",
+          "${MONGO_INITDB_ROOT_PASS:-password123}",
+          "--authenticationDatabase",
+          "admin",
+          "--eval",
+          "db.adminCommand('ping').ok",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     networks:
       - tacs-network
 
@@ -40,6 +77,7 @@ services:
       - tacs-network
 
 volumes:
+  mongodb-data:
   minio-data:
 
 networks:

@@ -2,11 +2,13 @@ package com.solnotfound.adapters.openmeteo;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
 
 import com.solnotfound.entity.activity.City;
 import com.solnotfound.entity.activity.Location;
 import com.solnotfound.entity.weather.WeatherForecast;
 import com.solnotfound.exception.WeatherUnavailableException;
+import com.solnotfound.service.StatisticsEventRecorder;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
@@ -112,7 +114,8 @@ class OpenMeteoWeatherAdapterTest {
   private OpenMeteoWeatherAdapter adapter() {
     OpenMeteoProperties properties =
         new OpenMeteoProperties(endpoint.resolve("/forecast"), endpoint.resolve("/geocoding"));
-    return new OpenMeteoWeatherAdapter(new OpenMeteoClient(RestClient.builder(), properties));
+    return new OpenMeteoWeatherAdapter(
+        new OpenMeteoClient(RestClient.builder(), properties, mock(StatisticsEventRecorder.class)));
   }
 
   private Location location() {

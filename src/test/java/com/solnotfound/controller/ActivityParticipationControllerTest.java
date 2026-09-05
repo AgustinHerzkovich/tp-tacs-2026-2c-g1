@@ -20,6 +20,7 @@ import com.solnotfound.entity.activity.ActivityType;
 import com.solnotfound.entity.activity.Location;
 import com.solnotfound.entity.weather.WeatherForecast;
 import com.solnotfound.repository.ActivityRepository;
+import com.solnotfound.repository.IStatisticsEventRepository;
 import com.solnotfound.service.ActivityService;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -39,6 +40,7 @@ class ActivityParticipationControllerTest {
   @Autowired private ActivityService service;
   @Autowired private MockMvc mockMvc;
   @MockitoBean private IWeatherAdapter weatherAdapter;
+  @MockitoBean private IStatisticsEventRepository statisticsEventRepository;
 
   @BeforeEach
   void setUp() {
