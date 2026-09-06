@@ -23,8 +23,11 @@ import com.solnotfound.exception.AccessDeniedException;
 import com.solnotfound.exception.InvalidVotationOptionsException;
 import com.solnotfound.exception.InvalidVotationSettingsException;
 import com.solnotfound.exception.ResourceNotFoundException;
-import com.solnotfound.repository.ActivityRepository;
-import com.solnotfound.repository.VotationRepository;
+import com.solnotfound.repository.IActivityRepository;
+import com.solnotfound.repository.IVotationRepository;
+import com.solnotfound.repository.InMemoryActivityRepository;
+import com.solnotfound.repository.InMemoryUserRepository;
+import com.solnotfound.repository.InMemoryVotationRepository;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -34,21 +37,25 @@ import org.junit.jupiter.api.Test;
 
 class VotationServiceTest {
 
-  private ActivityRepository activityRepository;
-  private VotationRepository votationRepository;
+  private IActivityRepository activityRepository;
+  private IVotationRepository votationRepository;
   private IWeatherAdapter weatherAdapter;
   private IBadWeatherChecker badWeatherChecker;
   private VotationService service;
 
   @BeforeEach
   void setUp() {
-    activityRepository = new ActivityRepository();
-    votationRepository = new VotationRepository();
+    activityRepository = new InMemoryActivityRepository();
+    votationRepository = new InMemoryVotationRepository();
     weatherAdapter = mock(IWeatherAdapter.class);
     badWeatherChecker = mock(IBadWeatherChecker.class);
     service =
         new VotationService(
-            votationRepository, activityRepository, weatherAdapter, badWeatherChecker);
+            votationRepository,
+            activityRepository,
+            weatherAdapter,
+            badWeatherChecker,
+            new InMemoryUserRepository());
   }
 
   @Test

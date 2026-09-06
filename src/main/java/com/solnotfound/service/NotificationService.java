@@ -8,6 +8,7 @@ import com.solnotfound.entity.user.User;
 import com.solnotfound.exception.AccessDeniedException;
 import com.solnotfound.exception.ResourceNotFoundException;
 import com.solnotfound.repository.INotificationRepository;
+import com.solnotfound.repository.IUserRepository;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Service;
@@ -15,9 +16,12 @@ import org.springframework.stereotype.Service;
 @Service
 public class NotificationService {
   private final INotificationRepository notificationRepository;
+  private final IUserRepository userRepository;
 
-  public NotificationService(INotificationRepository notificationRepository) {
+  public NotificationService(
+      INotificationRepository notificationRepository, IUserRepository userRepository) {
     this.notificationRepository = notificationRepository;
+    this.userRepository = userRepository;
   }
 
   /**
@@ -42,13 +46,13 @@ public class NotificationService {
   public void generateNotificationsForActivityEvent(Activity activity, NotificationType type) {
     List<Notification> notificationsToSave = new ArrayList<>();
 
-    User creator = activity.getOrganizer();
+    User creator = userRepository.save(activity.getOrganizer());
     String creatorId = creator.getId();
     notificationsToSave.add(new Notification(creator, activity, type));
 
     for (User participant : activity.getParticipants()) {
       if (!participant.getId().equals(creatorId)) {
-        notificationsToSave.add(new Notification(participant, activity, type));
+        notificationsToSave.add(new Notification(userRepository.save(participant), activity, type));
       }
     }
 

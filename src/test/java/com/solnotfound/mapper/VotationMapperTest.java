@@ -73,7 +73,6 @@ class VotationMapperTest {
     User user = new User();
     user.setId(id);
     user.setName(name);
-    user.setEmail(email);
     return user;
   }
 }

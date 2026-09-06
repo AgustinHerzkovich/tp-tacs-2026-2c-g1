@@ -3,20 +3,19 @@ package com.solnotfound.repository;
 import com.solnotfound.entity.notification.Notification;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public class NotificationRepository implements INotificationRepository {
 
-  private final Map<String, Notification> storage = new ConcurrentHashMap<>();
+  private final MongoNotificationRepository repository;
+
+  public NotificationRepository(MongoNotificationRepository repository) {
+    this.repository = repository;
+  }
 
   /**
    * Assigns missing identifiers and creation timestamps before storing a notification.
@@ -32,8 +31,7 @@ public class NotificationRepository implements INotificationRepository {
     if (notification.getCreatedAt() == null) {
       notification.setCreatedAt(LocalDateTime.now());
     }
-    storage.put(notification.getId(), notification);
-    return notification;
+    return repository.save(notification);
   }
 
   /**
@@ -53,7 +51,7 @@ public class NotificationRepository implements INotificationRepository {
 
   @Override
   public Optional<Notification> findById(String id) {
-    return Optional.ofNullable(storage.get(id));
+    return repository.findById(id);
   }
 
   /**
@@ -65,12 +63,6 @@ public class NotificationRepository implements INotificationRepository {
    */
   @Override
   public List<Notification> findByReadAndReceiverUserId(Boolean read, String receiverUserId) {
-    return storage.values().stream()
-        .filter(n -> Objects.equals(n.getReceiverUser().getId(), receiverUserId))
-        .filter(n -> Objects.equals(n.isRead(), read))
-        .sorted(
-            Comparator.comparing(
-                Notification::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
-        .collect(Collectors.toList());
+    return repository.findByReadAndReceiverUserId(read, receiverUserId);
   }
 }

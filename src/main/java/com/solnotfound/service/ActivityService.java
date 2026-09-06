@@ -11,6 +11,7 @@ import com.solnotfound.dto.ReprogramationRangeDTO;
 import com.solnotfound.dto.WeatherConditionsDTO;
 import com.solnotfound.dto.WeatherForecastDTO;
 import com.solnotfound.entity.activity.Activity;
+import com.solnotfound.entity.activity.City;
 import com.solnotfound.entity.activity.Location;
 import com.solnotfound.entity.activity.ReprogramationRange;
 import com.solnotfound.entity.statistics.StatisticsEventType;
@@ -23,7 +24,7 @@ import com.solnotfound.exception.ActivityAccessDeniedException;
 import com.solnotfound.exception.ActivityNotFoundException;
 import com.solnotfound.exception.InvalidActivityException;
 import com.solnotfound.repository.IActivityRepository;
-import com.solnotfound.repository.ICityRepository;
+import com.solnotfound.repository.IUserRepository;
 import com.solnotfound.storage.ImageFile;
 import com.solnotfound.storage.ImageStorage;
 import com.solnotfound.storage.NoOpImageStorage;
@@ -40,7 +41,7 @@ import org.springframework.stereotype.Service;
 public class ActivityService {
   private final IActivityRepository activityRepository;
   private final IWeatherAdapter weatherAdapter;
-  private final ICityRepository cityRepository;
+  private final IUserRepository userRepository;
   private final StatisticsEventRecorder statisticsRecorder;
   private final ImageStorage imageStorage;
   private static final int MAX_IMAGES = 5;
@@ -56,12 +57,12 @@ public class ActivityService {
   public ActivityService(
       IActivityRepository activityRepository,
       IWeatherAdapter weatherAdapter,
-      ICityRepository cityRepository,
+      IUserRepository userRepository,
       StatisticsEventRecorder statisticsRecorder,
       ImageStorage imageStorage) {
     this.activityRepository = activityRepository;
     this.weatherAdapter = weatherAdapter;
-    this.cityRepository = cityRepository;
+    this.userRepository = userRepository;
     this.statisticsRecorder = statisticsRecorder;
     this.imageStorage = imageStorage;
   }
@@ -69,12 +70,12 @@ public class ActivityService {
   public ActivityService(
       IActivityRepository activityRepository,
       IWeatherAdapter weatherAdapter,
-      ICityRepository cityRepository,
+      IUserRepository userRepository,
       StatisticsEventRecorder statisticsRecorder) {
     this(
         activityRepository,
         weatherAdapter,
-        cityRepository,
+        userRepository,
         statisticsRecorder,
         new NoOpImageStorage());
   }
@@ -115,7 +116,7 @@ public class ActivityService {
 
     Activity activity = new Activity();
     activity.setId(UUID.randomUUID().toString());
-    activity.setOrganizer(com.solnotfound.entity.user.User.withId(creatorUserId));
+    activity.setOrganizer(userRepository.findOrCreate(creatorUserId));
     activity.setTitle(request.title());
     activity.setDescription(request.description());
     activity.setType(request.type());
@@ -251,7 +252,7 @@ public class ActivityService {
   public ActivityResponse join(String activityId, String userId) {
     Activity activity = findActivityOrThrow(activityId);
 
-    activity.addParticipant(userId);
+    activity.addParticipant(userRepository.findOrCreate(userId));
 
     activityRepository.save(activity);
 
@@ -363,7 +364,9 @@ public class ActivityService {
   }
 
   private Location toLocation(LocationDTO dto) {
-    return new Location(cityRepository.findOrCreate(dto.city()), dto.latitude(), dto.longitude());
+    City city =
+        dto.city() == null || dto.city().isBlank() ? null : new City(null, dto.city().trim());
+    return new Location(city, dto.latitude(), dto.longitude());
   }
 
   private ReprogramationRange toReprogramationRange(ReprogramationRangeDTO dto) {

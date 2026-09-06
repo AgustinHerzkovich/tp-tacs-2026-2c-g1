@@ -6,12 +6,15 @@ import java.util.ArrayList;
 import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.data.mongodb.core.mapping.DocumentReference;
 
 @Getter
 @Setter
 public class VotationOption {
 
   private LocalDateTime dateTime;
+
+  @DocumentReference(lazy = true)
   private List<User> users = new ArrayList<>();
 
   public synchronized List<User> getUsers() {

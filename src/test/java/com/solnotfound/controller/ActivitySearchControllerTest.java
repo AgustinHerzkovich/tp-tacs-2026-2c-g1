@@ -6,8 +6,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.solnotfound.adapters.IWeatherAdapter;
 import com.solnotfound.exception.GlobalExceptionHandler;
-import com.solnotfound.repository.ActivityRepository;
-import com.solnotfound.repository.CityRepository;
+import com.solnotfound.repository.InMemoryActivityRepository;
+import com.solnotfound.repository.InMemoryUserRepository;
 import com.solnotfound.service.ActivityService;
 import com.solnotfound.service.StatisticsEventRecorder;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,9 +27,9 @@ class ActivitySearchControllerTest {
     ActivityController controller =
         new ActivityController(
             new ActivityService(
-                new ActivityRepository(),
+                new InMemoryActivityRepository(),
                 weatherAdapter,
-                new CityRepository(),
+                new InMemoryUserRepository(),
                 org.mockito.Mockito.mock(StatisticsEventRecorder.class)));
     mockMvc =
         MockMvcBuilders.standaloneSetup(controller)

@@ -9,10 +9,15 @@ import java.util.List;
 import java.util.Optional;
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.DocumentReference;
 
+@Document(collection = "activities")
 public class Activity {
 
-  @Getter @Setter private String id;
+  @Id @Getter @Setter private String id;
   @Getter @Setter private String title;
   @Getter @Setter private String description;
   @Getter @Setter private ActivityType type;
@@ -20,7 +25,11 @@ public class Activity {
   @Getter @Setter private LocalDateTime dateTime;
   @Getter @Setter private Integer minParticipants;
   @Getter @Setter private Integer maxParticipants;
+
+  @DocumentReference(lazy = true)
+  @Indexed
   private List<User> participants = new ArrayList<>();
+
   private List<WeatherCondition> weatherConditions = List.of();
   private List<String> imageKeys = List.of();
 
@@ -29,10 +38,13 @@ public class Activity {
       anticipationWindow; // hecho en horas, cantidad de tiempo antes de la actividad para chequear
 
   @Setter @Getter private ReprogramationRange reprogramationRange;
-  @Getter private ActivityStatus status = ActivityStatus.CONFIRMED;
+  @Indexed @Getter private ActivityStatus status = ActivityStatus.CONFIRMED;
   private List<ActivityStatus> statusHistory = new ArrayList<>(List.of(ActivityStatus.CONFIRMED));
   @Setter @Getter private Boolean weatherChecked = false;
   @Getter private LocalDateTime startingSoonNotificationDateTime;
+
+  @DocumentReference(lazy = true)
+  @Indexed
   private User organizer;
 
   // las condiciones del clima y avisar a los usuarios
@@ -94,7 +106,6 @@ public class Activity {
    * @param newStatus status to apply
    */
   public void setStatus(ActivityStatus newStatus) {
-    // TODO: Validar transiciones permitidas entre estados.
     status = newStatus;
     statusHistory.add(newStatus);
   }
@@ -102,17 +113,17 @@ public class Activity {
   /**
    * Adds a participant if they are not already registered and capacity remains.
    *
-   * @param userId identifier of the participant
+   * @param user participant to add
    * @throws IllegalStateActivityException if the activity no longer accepts changes or is full
    */
-  public synchronized void addParticipant(String userId) {
+  public synchronized void addParticipant(User user) {
     if (cannotChangeParticipants()) {
       throw new IllegalStateActivityException(
           "Participants cannot be added to an activity in that status.");
     }
 
     boolean alreadyParticipating =
-        participants.stream().anyMatch(participant -> participant.getId().equals(userId));
+        participants.stream().anyMatch(participant -> participant.getId().equals(user.getId()));
 
     if (alreadyParticipating) {
       return;
@@ -124,7 +135,17 @@ public class Activity {
       throw new IllegalStateActivityException("Activity has no available spots.");
     }
 
-    participants.add(User.withId(userId));
+    participants.add(user);
+  }
+
+  /**
+   * Adds an identifier-only participant. Persistence flows should use {@link #addParticipant(User)}
+   * with an already persisted user reference.
+   *
+   * @param userId identifier of the participant
+   */
+  public synchronized void addParticipant(String userId) {
+    addParticipant(User.withId(userId));
   }
 
   /**

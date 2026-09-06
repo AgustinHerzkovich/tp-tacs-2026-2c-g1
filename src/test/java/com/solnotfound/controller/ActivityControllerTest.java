@@ -22,8 +22,8 @@ import com.solnotfound.dto.ReprogramationRangeDTO;
 import com.solnotfound.dto.WeatherConditionsDTO;
 import com.solnotfound.entity.activity.ActivityType;
 import com.solnotfound.entity.weather.WeatherForecast;
-import com.solnotfound.repository.ActivityRepository;
-import com.solnotfound.repository.CityRepository;
+import com.solnotfound.repository.InMemoryActivityRepository;
+import com.solnotfound.repository.InMemoryUserRepository;
 import com.solnotfound.service.ActivityService;
 import com.solnotfound.service.StatisticsEventRecorder;
 import java.net.URI;
@@ -47,9 +47,9 @@ class ActivityControllerTest {
     ActivityController controller =
         new ActivityController(
             new ActivityService(
-                new ActivityRepository(),
+                new InMemoryActivityRepository(),
                 weatherAdapter,
-                new CityRepository(),
+                new InMemoryUserRepository(),
                 mock(StatisticsEventRecorder.class)));
     LocationDTO location = new LocationDTO("Buenos Aires", null, null);
     CreateActivityRequest request =
@@ -115,9 +115,9 @@ class ActivityControllerTest {
     ActivityController controller =
         new ActivityController(
             new ActivityService(
-                new ActivityRepository(),
+                new InMemoryActivityRepository(),
                 weatherAdapter,
-                new CityRepository(),
+                new InMemoryUserRepository(),
                 mock(StatisticsEventRecorder.class)));
 
     CreateActivityRequest request =
@@ -156,9 +156,9 @@ class ActivityControllerTest {
     ActivityController controller =
         new ActivityController(
             new ActivityService(
-                new ActivityRepository(),
+                new InMemoryActivityRepository(),
                 weatherAdapter,
-                new CityRepository(),
+                new InMemoryUserRepository(),
                 mock(StatisticsEventRecorder.class)));
 
     CreateActivityRequest request =
@@ -198,9 +198,9 @@ class ActivityControllerTest {
     ActivityController controller =
         new ActivityController(
             new ActivityService(
-                new ActivityRepository(),
+                new InMemoryActivityRepository(),
                 weatherAdapter,
-                new CityRepository(),
+                new InMemoryUserRepository(),
                 mock(StatisticsEventRecorder.class)));
 
     CreateActivityRequest request =

@@ -43,9 +43,8 @@ class ActivityMapperTest {
     assertThat(dto.anticipationWindow()).isEqualTo(15);
     assertThat(dto.reprogramationRange())
         .isEqualTo(new ReprogramationRangeDTO(3, LocalTime.of(10, 0), LocalTime.of(20, 0)));
-    assertThat(dto.organizer()).isEqualTo(new UserDTO("1", "Organizer", "organizer@example.com"));
-    assertThat(dto.participants())
-        .containsExactly(new UserDTO("2", "Participant", "user@example.com"));
+    assertThat(dto.organizer()).isEqualTo(new UserDTO("1", "Organizer"));
+    assertThat(dto.participants()).containsExactly(new UserDTO("2", "Participant"));
   }
 
   @Test
@@ -65,8 +64,8 @@ class ActivityMapperTest {
             new WeatherConditionsDTO(30, 10, 28, 25.0),
             15,
             new ReprogramationRangeDTO(3, LocalTime.of(10, 0), LocalTime.of(20, 0)),
-            new UserDTO("1", "Organizer", "organizer@example.com"),
-            List.of(new UserDTO("2", "Participant", "user@example.com")));
+            new UserDTO("1", "Organizer"),
+            List.of(new UserDTO("2", "Participant")));
 
     Activity activity = ActivityMapper.toEntity(dto);
 
@@ -124,7 +123,6 @@ class ActivityMapperTest {
     User user = new User();
     user.setId(id);
     user.setName(name);
-    user.setEmail(email);
     return user;
   }
 }
