@@ -1,12 +1,14 @@
 package com.solnotfound.entity.user;
 
 import lombok.Data;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 @Data
+@Document(collection = "users")
 public class User {
-  private String id;
+  @Id private String id;
   private String name;
-  private String email;
 
   public static User withId(String id) {
     User user = new User();

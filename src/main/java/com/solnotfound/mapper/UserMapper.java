@@ -12,7 +12,7 @@ public final class UserMapper {
       return null;
     }
 
-    return new UserDTO(user.getId(), user.getName(), user.getEmail());
+    return new UserDTO(user.getId(), user.getName());
   }
 
   public static User toEntity(UserDTO userDTO) {
@@ -23,7 +23,6 @@ public final class UserMapper {
     User user = new User();
     user.setId(userDTO.id());
     user.setName(userDTO.name());
-    user.setEmail(userDTO.email());
 
     return user;
   }

@@ -10,6 +10,7 @@ import com.solnotfound.entity.user.User;
 import com.solnotfound.exception.AccessDeniedException;
 import com.solnotfound.exception.ResourceNotFoundException;
 import com.solnotfound.repository.INotificationRepository;
+import com.solnotfound.repository.IUserRepository;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.StreamSupport;
@@ -24,6 +25,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class NotificationServiceTest {
 
   @Mock private INotificationRepository notificationRepository;
+  @Mock private IUserRepository userRepository;
 
   @InjectMocks private NotificationService notificationService;
 
@@ -76,6 +78,7 @@ class NotificationServiceTest {
 
   @Test
   void generatesNotificationsForCreatorAndParticipantsWithoutDuplicates() {
+    when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
     activity.setOrganizer(User.withId("creator-1"));
     activity.setMaxParticipants(3);
     activity.setMinParticipants(1);

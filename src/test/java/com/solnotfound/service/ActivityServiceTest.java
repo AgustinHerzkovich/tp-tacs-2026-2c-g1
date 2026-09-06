@@ -28,9 +28,10 @@ import com.solnotfound.exception.ActivityNotFoundException;
 import com.solnotfound.exception.IllegalStateActivityException;
 import com.solnotfound.exception.ImageStorageException;
 import com.solnotfound.exception.InvalidActivityException;
-import com.solnotfound.repository.ActivityRepository;
-import com.solnotfound.repository.CityRepository;
-import com.solnotfound.repository.ICityRepository;
+import com.solnotfound.repository.IActivityRepository;
+import com.solnotfound.repository.IUserRepository;
+import com.solnotfound.repository.InMemoryActivityRepository;
+import com.solnotfound.repository.InMemoryUserRepository;
 import com.solnotfound.storage.ImageFile;
 import com.solnotfound.storage.ImageStorage;
 import java.io.ByteArrayInputStream;
@@ -45,20 +46,20 @@ import org.junit.jupiter.api.Test;
 class ActivityServiceTest {
 
   private ActivityService activityService;
-  private ActivityRepository activityRepository;
+  private IActivityRepository activityRepository;
   private IWeatherAdapter weatherAdapter;
-  private ICityRepository cityRepository;
+  private IUserRepository userRepository;
   private StatisticsEventRecorder statisticsRecorder;
 
   @BeforeEach
   void setUp() {
-    activityRepository = new ActivityRepository();
+    activityRepository = new InMemoryActivityRepository();
     weatherAdapter = org.mockito.Mockito.mock(IWeatherAdapter.class);
-    cityRepository = new CityRepository();
+    userRepository = new InMemoryUserRepository();
     statisticsRecorder = org.mockito.Mockito.mock(StatisticsEventRecorder.class);
 
     activityService =
-        new ActivityService(activityRepository, weatherAdapter, cityRepository, statisticsRecorder);
+        new ActivityService(activityRepository, weatherAdapter, userRepository, statisticsRecorder);
   }
 
   @Test
@@ -121,7 +122,7 @@ class ActivityServiceTest {
 
   private ActivityService serviceWith(ImageStorage imageStorage) {
     return new ActivityService(
-        activityRepository, weatherAdapter, cityRepository, statisticsRecorder, imageStorage);
+        activityRepository, weatherAdapter, userRepository, statisticsRecorder, imageStorage);
   }
 
   private ImageFile image(String contentType) {
@@ -583,10 +584,10 @@ class ActivityServiceTest {
 
   @Test
   void organizerQueryRejectsInvalidRepositoryResult() {
-    ActivityRepository repository = mock(ActivityRepository.class);
+    IActivityRepository repository = mock(IActivityRepository.class);
     when(repository.findActivitiesByOrganizerId("1")).thenReturn(null);
     ActivityService service =
-        new ActivityService(repository, weatherAdapter, cityRepository, statisticsRecorder);
+        new ActivityService(repository, weatherAdapter, userRepository, statisticsRecorder);
 
     assertThatThrownBy(() -> service.getByOrganizerId("1"))
         .isInstanceOf(NullPointerException.class);
@@ -641,10 +642,10 @@ class ActivityServiceTest {
 
   @Test
   void participantQueryRejectsInvalidRepositoryResult() {
-    ActivityRepository repository = mock(ActivityRepository.class);
+    IActivityRepository repository = mock(IActivityRepository.class);
     when(repository.findActivitiesByParticipantId("1")).thenReturn(null);
     ActivityService service =
-        new ActivityService(repository, weatherAdapter, cityRepository, statisticsRecorder);
+        new ActivityService(repository, weatherAdapter, userRepository, statisticsRecorder);
 
     assertThatThrownBy(() -> service.getByParticipantId("1"))
         .isInstanceOf(NullPointerException.class);

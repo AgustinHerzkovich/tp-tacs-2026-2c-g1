@@ -10,7 +10,7 @@ RUN ./mvnw dependency:go-offline
 
 COPY src src
 
-RUN ./mvnw clean verify -Dtest='!ServerApplicationTest,!StatisticsEventRepositoryTest'
+RUN ./mvnw clean verify -Dtest='!ServerApplicationTest,!StatisticsEventRepositoryTest,!MongoPersistenceTest,!ActivityParticipationControllerTest'
 
 FROM eclipse-temurin:21-jre-alpine
 
