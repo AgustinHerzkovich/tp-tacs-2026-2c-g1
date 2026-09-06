@@ -18,6 +18,7 @@ import com.solnotfound.exception.ResourceNotFoundException;
 import com.solnotfound.exception.WeatherUnavailableException;
 import com.solnotfound.mapper.VotationMapper;
 import com.solnotfound.repository.IActivityRepository;
+import com.solnotfound.repository.IUserRepository;
 import com.solnotfound.repository.IVotationRepository;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -38,16 +39,19 @@ public class VotationService {
   private final IActivityRepository activityRepository;
   private final IWeatherAdapter weatherAdapter;
   private final IBadWeatherChecker badWeatherChecker;
+  private final IUserRepository userRepository;
 
   public VotationService(
       IVotationRepository votationRepository,
       IActivityRepository activityRepository,
       IWeatherAdapter weatherAdapter,
-      IBadWeatherChecker badWeatherChecker) {
+      IBadWeatherChecker badWeatherChecker,
+      IUserRepository userRepository) {
     this.votationRepository = votationRepository;
     this.activityRepository = activityRepository;
     this.weatherAdapter = weatherAdapter;
     this.badWeatherChecker = badWeatherChecker;
+    this.userRepository = userRepository;
   }
 
   public List<VotationDTO> getByOrganizerOrParticipantId(String userId) {
@@ -212,12 +216,13 @@ public class VotationService {
       throw new ResourceNotFoundException("Activity not found for votation: " + votation.getId());
     }
     final User user =
-        activity
-            .findOrganizerOrParticipant(userId)
-            .orElseThrow(
-                () ->
-                    new ResourceNotFoundException(
-                        "User doesn't belong to this activity: " + userId));
+        userRepository.save(
+            activity
+                .findOrganizerOrParticipant(userId)
+                .orElseThrow(
+                    () ->
+                        new ResourceNotFoundException(
+                            "User doesn't belong to this activity: " + userId)));
     if (votation.getStatus() != VotationStatus.ACTIVE) {
       throw new AccessDeniedException("Votation already closed: " + votationId);
     }

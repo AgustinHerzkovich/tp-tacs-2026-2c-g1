@@ -11,11 +11,20 @@ import java.util.Optional;
 import java.util.Set;
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.DocumentReference;
 
+@Document(collection = "votations")
+@CompoundIndex(name = "active_closing_date", def = "{'status': 1, 'closingDate': 1}")
 public class Votation {
 
-  @Getter @Setter private String id;
+  @Id @Getter @Setter private String id;
+
+  @DocumentReference(lazy = true)
   private Activity activity;
+
   @Getter @Setter private LocalDateTime creationDate;
   private LocalDateTime closingDate;
   private Double minQuorum = 0.50; // 50%

@@ -1,7 +1,6 @@
 package com.solnotfound.controller;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -19,7 +18,7 @@ import com.solnotfound.entity.activity.ActivityStatus;
 import com.solnotfound.entity.activity.ActivityType;
 import com.solnotfound.entity.activity.Location;
 import com.solnotfound.entity.weather.WeatherForecast;
-import com.solnotfound.repository.ActivityRepository;
+import com.solnotfound.repository.IActivityRepository;
 import com.solnotfound.repository.IStatisticsEventRepository;
 import com.solnotfound.service.ActivityService;
 import java.time.LocalDateTime;
@@ -28,15 +27,23 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.mongodb.MongoDBContainer;
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@Testcontainers
 class ActivityParticipationControllerTest {
 
-  @Autowired private ActivityRepository repository;
+  @Container @ServiceConnection
+  static final MongoDBContainer MONGODB = new MongoDBContainer("mongo:8.0.14");
+
+  @Autowired private IActivityRepository repository;
   @Autowired private ActivityService service;
   @Autowired private MockMvc mockMvc;
   @MockitoBean private IWeatherAdapter weatherAdapter;
@@ -93,7 +100,9 @@ class ActivityParticipationControllerTest {
   @Test
   void returnsConflictWhenActivityCannotAcceptParticipants() throws Exception {
     String activityId = service.create(request(1, 2)).id();
-    repository.findById(activityId).setStatus(ActivityStatus.CANCELLED);
+    var activity = repository.findById(activityId);
+    activity.setStatus(ActivityStatus.CANCELLED);
+    repository.save(activity);
 
     mockMvc
         .perform(put("/activities/{id}/participants/me", activityId))
@@ -108,7 +117,7 @@ class ActivityParticipationControllerTest {
     WeatherForecast current = new WeatherForecast(LocalDateTime.now(), 22.0f, 10.0f, 15.0f);
     WeatherForecast forecast = new WeatherForecast(activity.dateTime(), 18.0f, 60.0f, 30.0f);
     when(weatherAdapter.getWeather(any(Location.class))).thenReturn(current);
-    when(weatherAdapter.getFutureClimate(any(Location.class), eq(activity.dateTime())))
+    when(weatherAdapter.getFutureClimate(any(Location.class), any(LocalDateTime.class)))
         .thenReturn(forecast);
 
     mockMvc
