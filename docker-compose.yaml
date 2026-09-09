@@ -75,7 +75,7 @@ services:
       retries: 10
     networks:
       - tacs-network
-  keycloak:
+    keycloak:
     image: quay.io/keycloak/keycloak:26.7.3
     container_name: keycloak
     ports:
@@ -84,10 +84,13 @@ services:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
     command: start-dev
+    volumes:
+      - keycloak-data:/opt/keycloak/data
 
 volumes:
   mongodb-data:
   minio-data:
+  keycloak-data:
 
 networks:
   tacs-network:
