@@ -1,0 +1,244 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+  --font-heading: var(--font-display);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Planazo palette: pastel semantics used for activity types, status badges
+     and notification kinds across the app. */
+  --color-mint: var(--mint);
+  --color-mint-ink: var(--mint-ink);
+  --color-lav: var(--lav);
+  --color-lav-ink: var(--lav-ink);
+  --color-violet: var(--violet);
+  --color-violet-ink: var(--violet-ink);
+  --color-sky: var(--sky);
+  --color-sky-ink: var(--sky-ink);
+  --color-sun: var(--sun);
+  --color-sun-ink: var(--sun-ink);
+  --color-rose: var(--rose);
+  --color-rose-ink: var(--rose-ink);
+}
+
+:root {
+  --radius: 1rem;
+
+  --background: #fff8f2;
+  --foreground: #3a3352;
+  --card: #ffffff;
+  --card-foreground: #3a3352;
+  --popover: #ffffff;
+  --popover-foreground: #3a3352;
+
+  --primary: #ff6b47;
+  --primary-foreground: #ffffff;
+  --secondary: #ffe3d6;
+  --secondary-foreground: #b8380f;
+  --muted: #f1e7dc;
+  --muted-foreground: #8b849c;
+  --accent: #ffe3d6;
+  --accent-foreground: #b8380f;
+  --destructive: #be123c;
+
+  --border: #f1e7dc;
+  --input: #f1e7dc;
+  --ring: #ff6b47;
+
+  --sidebar: #fff8f2;
+  --sidebar-foreground: #3a3352;
+  --sidebar-primary: #ff6b47;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #ffe3d6;
+  --sidebar-accent-foreground: #b8380f;
+  --sidebar-border: #f1e7dc;
+  --sidebar-ring: #ff6b47;
+
+  --mint: #a7f3d0;
+  --mint-ink: #0e7c5e;
+  --lav: #ddd6fe;
+  --lav-ink: #6d28d9;
+  --violet: #ead9ff;
+  --violet-ink: #7e22ce;
+  --sky: #bae6fd;
+  --sky-ink: #0369a1;
+  --sun: #fef08a;
+  --sun-ink: #92620a;
+  --rose: #fecdd3;
+  --rose-ink: #be123c;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+  h1,
+  h2,
+  h3,
+  .font-display {
+    font-family: var(--font-display);
+  }
+}
+
+/* ---------------------------------- Planazo motion & effects ---------------------------------- */
+
+.emoji-3d {
+  filter: drop-shadow(0 3px 5px rgba(58, 51, 82, 0.28));
+  display: inline-block;
+  line-height: 1;
+}
+
+.tap {
+  transition:
+    transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.12s ease;
+}
+.tap:active {
+  transform: scale(0.94);
+}
+
+/* No `opacity` in these entrance keyframes — on purpose. Chrome pauses CSS
+   animations on an unfocused document (visible or not), and a fill-mode
+   "both" animation that starts at opacity:0 gets stuck fully invisible if it
+   never gets to run (very easy to hit on desktop: alt-tab, a second monitor,
+   devtools stealing focus, anything that loads the page without focus).
+   These are applied to page/screen roots, so getting stuck must never mean
+   "blank page" — a few stray pixels of offset is an acceptable worst case. */
+
+.fade-in {
+  animation: fadeIn 0.3s ease both;
+}
+@keyframes fadeIn {
+  from {
+    transform: translateY(8px);
+  }
+  to {
+    transform: none;
+  }
+}
+
+.anim-slide-right {
+  animation: slideRight 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.anim-slide-left {
+  animation: slideLeft 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes slideRight {
+  from {
+    transform: translateX(28px);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes slideLeft {
+  from {
+    transform: translateX(-28px);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes floaty {
+  0%,
+  100% {
+    transform: translateY(0) rotate(var(--rot, 0deg));
+  }
+  50% {
+    transform: translateY(-7px) rotate(var(--rot, 0deg));
+  }
+}
+.floaty {
+  animation: floaty 2.6s ease-in-out infinite;
+}
+
+@keyframes pulseGlow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 0 rgba(255, 107, 71, 0.45),
+      0 10px 26px -12px rgba(58, 51, 82, 0.25);
+  }
+  50% {
+    box-shadow:
+      0 0 0 10px rgba(255, 107, 71, 0),
+      0 10px 26px -12px rgba(58, 51, 82, 0.25);
+  }
+}
+.pulse-card {
+  animation: pulseGlow 2.1s ease-out infinite;
+}
+
+@keyframes bounceIn {
+  0% {
+    transform: scale(0.85) translateY(10px);
+  }
+  60% {
+    transform: scale(1.03) translateY(0);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.modal-pop {
+  animation: bounceIn 0.38s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* Lets <Slider style={{"--range-from":..., "--range-to":...}}> paint a
+   gradient fill. Custom properties inherit from the Slider root down to its
+   Radix-rendered Range child, which a dynamically-built Tailwind arbitrary
+   class could never do (the JIT scanner only sees literal source strings). */
+[data-slot="slider-range"] {
+  background-image: linear-gradient(90deg, var(--range-from, transparent), var(--range-to, transparent));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

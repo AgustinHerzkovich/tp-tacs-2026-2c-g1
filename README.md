@@ -203,6 +203,7 @@ como herramientas de apoyo. Su uso se concentró en las siguientes tareas:
 - Apoyo en la aplicación y verificación del formato y de las herramientas de calidad del proyecto,
   como Spotless, Checkstyle y SpotBugs.
 - Análisis de errores de compilación, tests y conflictos de integración.
+- Modelado de Interfaz de Usuario.
 
 Las respuestas de estas herramientas se tomaron como sugerencias y no como resultados definitivos.
 El equipo revisó las propuestas, las adaptó al diseño y las convenciones del proyecto, y validó los
