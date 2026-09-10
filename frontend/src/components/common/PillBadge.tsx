@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
-import { STATUS_META, TYPE_META } from "@/data/mockData";
+import { STATUS_META, TYPE_META } from "@/lib/activityVisuals";
 import type { MockActivityType, MockStatusKey } from "@/types/domain";
 
 interface PillBadgeProps {

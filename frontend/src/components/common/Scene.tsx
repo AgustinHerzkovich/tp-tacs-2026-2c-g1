@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { SCENES } from "@/data/mockData";
+import { SCENES } from "@/lib/activityVisuals";
 import type { SceneKey } from "@/types/domain";
 import { cn } from "cn";
 

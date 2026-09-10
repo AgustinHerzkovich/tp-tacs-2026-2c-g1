@@ -355,8 +355,9 @@ public class ActivityService {
   }
 
   private void verifyParticipant(Activity activity, String userId) {
+    boolean isOrganizer = activity.getOrganizer().getId().equals(userId);
     boolean isParticipant =
-        activity.getParticipants().stream().anyMatch(p -> p.getId().equals(userId));
+        isOrganizer || activity.getParticipants().stream().anyMatch(p -> p.getId().equals(userId));
 
     if (!isParticipant) {
       throw new ActivityAccessDeniedException("User is not participating in this activity");

@@ -1,5 +1,5 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { AV_COLORS } from "@/data/mockData";
+import { AV_COLORS } from "@/lib/activityVisuals";
 import { getInitials } from "@/lib/initials";
 
 interface AvatarStackProps {
@@ -13,7 +13,7 @@ export function AvatarStack({ names, extra = 0, size = "default" }: AvatarStackP
   return (
     <div className="flex -space-x-2.5">
       {names.map((name, i) => (
-        <Avatar key={name} size={size} className="ring-2 ring-white">
+        <Avatar key={i} size={size} className="ring-2 ring-white">
           <AvatarFallback
             className="font-display font-bold text-[var(--foreground)]"
             style={{ background: AV_COLORS[i % AV_COLORS.length] }}

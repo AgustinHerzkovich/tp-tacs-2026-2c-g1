@@ -4,12 +4,12 @@ import { useState } from "react";
 import { Search } from "lucide-react";
 import { useActivities } from "@/hooks/useActivities";
 import { ExploreCard } from "@/components/activities/ExploreCard";
-import { TYPE_META } from "@/data/mockData";
+import { TYPE_META } from "@/lib/activityVisuals";
 
 const FILTERS = ["Todo", "Outdoor", "Indoor", "Mixto", "Hoy"] as const;
 
 export function ExplorarPage() {
-  const { exploreFeed } = useActivities();
+  const { exploreFeed, loading, error } = useActivities();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("Todo");
 
@@ -50,10 +50,20 @@ export function ExplorarPage() {
           );
         })}
       </div>
-      {results.map((a) => (
-        <ExploreCard key={a.id} activity={a} />
-      ))}
-      {results.length === 0 && (
+      {loading && (
+        <p className="text-center text-[13px] font-bold py-10" style={{ color: "var(--muted-foreground)" }}>
+          Cargando…
+        </p>
+      )}
+      {error && (
+        <p className="text-center text-[13px] font-bold py-10" style={{ color: "var(--destructive)" }}>
+          {error}
+        </p>
+      )}
+      {!loading &&
+        !error &&
+        results.map((a) => <ExploreCard key={a.id} activity={a} />)}
+      {!loading && !error && results.length === 0 && (
         <p className="text-center text-[13px] font-bold py-10" style={{ color: "var(--muted-foreground)" }}>
           No encontramos actividades con esos filtros.
         </p>

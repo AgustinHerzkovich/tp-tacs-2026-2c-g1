@@ -2,7 +2,7 @@
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useNotifications } from "@/hooks/useNotifications";
-import { NOTIF_META } from "@/data/mockData";
+import { NOTIF_META } from "@/lib/activityVisuals";
 
 interface NotifDrawerProps {
   open: boolean;
@@ -10,7 +10,7 @@ interface NotifDrawerProps {
 }
 
 export function NotifDrawer({ open, onOpenChange }: NotifDrawerProps) {
-  const { notifications } = useNotifications();
+  const { notifications, loading, error, markRead } = useNotifications();
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -21,10 +21,31 @@ export function NotifDrawer({ open, onOpenChange }: NotifDrawerProps) {
           </SheetTitle>
         </SheetHeader>
         <div className="px-4 py-4 space-y-3 overflow-y-auto">
+          {loading && (
+            <p className="text-center text-[13px] font-bold py-6" style={{ color: "var(--muted-foreground)" }}>
+              Cargando…
+            </p>
+          )}
+          {error && (
+            <p className="text-center text-[13px] font-bold py-6" style={{ color: "var(--destructive)" }}>
+              {error}
+            </p>
+          )}
+          {!loading && !error && notifications.length === 0 && (
+            <p className="text-center text-[13px] font-bold py-6" style={{ color: "var(--muted-foreground)" }}>
+              No tenés alertas nuevas.
+            </p>
+          )}
           {notifications.map((n) => {
             const m = NOTIF_META[n.kind];
             return (
-              <div key={n.id} className="rounded-2xl p-3.5 border-2" style={{ background: m.bg, borderColor: m.border }}>
+              <button
+                key={n.id}
+                type="button"
+                onClick={() => void markRead(n.id)}
+                className="tap block w-full text-left rounded-2xl p-3.5 border-2"
+                style={{ background: m.bg, borderColor: m.border }}
+              >
                 <div className="flex gap-3">
                   <span className="emoji-3d text-2xl shrink-0">{n.icon}</span>
                   <div className="min-w-0 flex-1">
@@ -39,7 +60,7 @@ export function NotifDrawer({ open, onOpenChange }: NotifDrawerProps) {
                     </p>
                   </div>
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>

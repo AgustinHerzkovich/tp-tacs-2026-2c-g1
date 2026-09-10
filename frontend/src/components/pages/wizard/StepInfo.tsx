@@ -1,7 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { TYPE_META } from "@/data/mockData";
+import { TYPE_META } from "@/lib/activityVisuals";
 import type { WizardFormState } from "@/types/domain";
 import type { FieldSetter } from "@/hooks/useWizardForm";
 

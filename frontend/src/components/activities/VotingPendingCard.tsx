@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { PillBadge } from "@/components/common/PillBadge";
-import type { ExploreActivity } from "@/types/domain";
+import type { Activity } from "@/types/domain";
 
-export function VotingPendingCard({ activity }: { activity: ExploreActivity }) {
+export function VotingPendingCard({ activity }: { activity: Activity }) {
   return (
     <Link href={`/actividades/${activity.id}`}>
       <Card

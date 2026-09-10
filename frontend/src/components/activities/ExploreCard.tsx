@@ -1,12 +1,17 @@
+"use client";
+
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Scene } from "@/components/common/Scene";
 import { TypeBadge } from "@/components/common/PillBadge";
 import { AvatarStack } from "@/components/common/AvatarStack";
-import { PEOPLE } from "@/data/mockData";
+import { useAuth } from "@/hooks/useAuth";
+import { participantDisplayName } from "@/lib/initials";
 import type { ExploreActivity } from "@/types/domain";
 
 export function ExploreCard({ activity }: { activity: ExploreActivity }) {
+  const { user } = useAuth();
+  const names = activity.participantIds.slice(0, 3).map((id) => participantDisplayName(id, user));
   return (
     <Link href={`/actividades/${activity.id}`}>
       <Card className="tap mb-5 overflow-hidden gap-0 py-0 rounded-2xl">
@@ -23,7 +28,7 @@ export function ExploreCard({ activity }: { activity: ExploreActivity }) {
             📍 {activity.where}
           </p>
           <div className="flex items-center justify-between mt-3">
-            <AvatarStack names={PEOPLE.slice(0, 3)} extra={Math.max(0, activity.people - 3)} size="sm" />
+            <AvatarStack names={names} extra={Math.max(0, activity.people - names.length)} size="sm" />
             <span className="font-display font-semibold text-[13px]" style={{ color: "var(--primary)" }}>
               Ver actividad →
             </span>

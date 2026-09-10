@@ -1,0 +1,119 @@
+/* Planazo theme for Keycloak's login pages.
+ *
+ * This file is loaded INSTEAD OF (not in addition to) keycloak.v2's own
+ * login/resources/css/styles.css — Keycloak resolves theme resources
+ * leaf-first, so having a file at this same relative path in our theme
+ * shadows the parent's. See theme.properties: `parent=keycloak.v2`.
+ *
+ * Colors/fonts mirror frontend/src/app/globals.css (Planazo's Tailwind
+ * palette) so the Keycloak-hosted login matches the rest of the app.
+ */
+
+@import url("https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700&display=swap");
+
+:root {
+  /* Repoint PatternFly's own primary-color scale (used by every primary
+     button, form-control focus underline, etc.) at Planazo's coral instead
+     of overriding each component selector individually. */
+  --pf-v5-global--primary-color--100: #ff6b47;
+  --pf-v5-global--primary-color--200: #e05e3e;
+  --pf-v5-global--BackgroundColor--100: #ffffff;
+  --pf-v5-global--FontFamily--heading: "Fredoka", helvetica, arial, sans-serif;
+  --pf-v5-global--FontFamily--text: "Nunito", helvetica, arial, sans-serif;
+
+  --planazo-background: #fff8f2;
+  --planazo-foreground: #3a3352;
+  --planazo-muted-foreground: #8b849c;
+  --planazo-border: #f1e7dc;
+  --planazo-primary: #ff6b47;
+  --planazo-primary-hover: #e05e3e;
+}
+
+/* Layout kept from keycloak.v2's own styles.css — not colors, just structure. */
+.pf-v5-c-login__container {
+  grid-template-columns: 34rem;
+  grid-template-areas: "header" "main";
+}
+.pf-v5-c-login__main-footer-band:first-child {
+  margin-block-start: var(--pf-v5-global--spacer--lg);
+}
+.pf-v5-c-login__main-footer-band:last-child {
+  padding-bottom: 0;
+}
+
+html.login-pf body,
+.login-pf body {
+  background: var(--planazo-background);
+  height: 100%;
+}
+
+body {
+  font-family: "Nunito", helvetica, arial, sans-serif;
+  color: var(--planazo-foreground);
+}
+
+/* Realm display name banner above the card ("Planazo" — see realm-export.json's
+   displayName/displayNameHtml). Was hidden white-on-dark-photo in the base
+   theme; the card sits on a flat cream background now, so it needs its own
+   color instead of the parent's `!important` white. */
+#kc-header-wrapper {
+  font-family: "Fredoka", helvetica, arial, sans-serif;
+  font-size: 32px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
+  line-height: 1.2em;
+  white-space: normal;
+  text-align: center;
+  color: var(--planazo-primary) !important;
+}
+
+#kc-page-title {
+  color: var(--planazo-foreground);
+}
+
+.pf-v5-c-login__main-header {
+  border-top: 4px solid var(--planazo-primary);
+}
+
+.pf-v5-c-login__main {
+  background: #ffffff;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 20px 45px -20px rgba(58, 51, 82, 0.35);
+}
+
+.pf-v5-c-form-control {
+  /* PatternFly's own .pf-v5-c-form-control rule re-pins
+     --pf-v5-global--primary-color--100 to a fixed blue (via
+     --pf-v5-global--primary-color--dark-100) instead of inheriting our
+     :root override, since a value set directly on the element always beats
+     one only inherited from an ancestor — so it has to be repeated here. */
+  --pf-v5-global--primary-color--100: var(--planazo-primary);
+  border-radius: 12px;
+}
+
+.pf-v5-c-button {
+  border-radius: 14px;
+  font-family: "Nunito", helvetica, arial, sans-serif;
+  font-weight: 700;
+}
+
+/* Bare <a> tags (forgot password, register) reset to `color: unset` by
+   PatternFly, so they don't pick up --pf-v5-global--primary-color on their
+   own — style them directly instead. */
+#kc-form-login a,
+#kc-registration a {
+  color: var(--planazo-primary);
+  font-weight: 700;
+  text-decoration: none;
+}
+#kc-form-login a:hover,
+#kc-registration a:hover {
+  color: var(--planazo-primary-hover);
+  text-decoration: underline;
+}
+
+#kc-registration-container {
+  color: var(--planazo-muted-foreground);
+}

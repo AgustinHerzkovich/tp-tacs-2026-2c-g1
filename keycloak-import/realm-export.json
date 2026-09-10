@@ -1,8 +1,9 @@
 {
   "id": "4f52a0ee-e763-45b4-ae9f-c4035085704b",
   "realm": "solnotfound",
-  "displayName": "",
-  "displayNameHtml": "",
+  "displayName": "Planazo",
+  "displayNameHtml": "Planazo",
+  "loginTheme": "planazo",
   "notBefore": 0,
   "defaultSignatureAlgorithm": "RS256",
   "revokeRefreshToken": true,
