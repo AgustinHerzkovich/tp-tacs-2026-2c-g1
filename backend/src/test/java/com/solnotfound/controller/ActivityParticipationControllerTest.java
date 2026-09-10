@@ -55,8 +55,9 @@ class ActivityParticipationControllerTest {
   }
 
   @Test
-  void publicEndpointsRemainAccessibleWithoutAuthentication() throws Exception {
-    mockMvc.perform(get("/activities")).andExpect(status().isOk());
+  void onlyHealthcheckRemainsAccessibleWithoutAuthentication() throws Exception {
+    mockMvc.perform(get("/healthcheck")).andExpect(status().isOk());
+    mockMvc.perform(get("/activities")).andExpect(status().isUnauthorized());
   }
 
   @Test
@@ -82,17 +83,27 @@ class ActivityParticipationControllerTest {
   void repeatedJoinAndLeaveAreIdempotent() throws Exception {
     String activityId = service.create(request(1, 2)).id();
 
-    mockMvc.perform(put("/activities/{id}/participants/me", activityId)).andExpect(status().isOk());
     mockMvc
-        .perform(put("/activities/{id}/participants/me", activityId))
+        .perform(
+            put("/activities/{id}/participants/me", activityId)
+                .with(jwt().jwt(jwt -> jwt.subject("user-1"))))
+        .andExpect(status().isOk());
+    mockMvc
+        .perform(
+            put("/activities/{id}/participants/me", activityId)
+                .with(jwt().jwt(jwt -> jwt.subject("user-1"))))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.participantCount").value(1));
 
     mockMvc
-        .perform(delete("/activities/{id}/participants/me", activityId))
+        .perform(
+            delete("/activities/{id}/participants/me", activityId)
+                .with(jwt().jwt(jwt -> jwt.subject("user-1"))))
         .andExpect(status().isOk());
     mockMvc
-        .perform(delete("/activities/{id}/participants/me", activityId))
+        .perform(
+            delete("/activities/{id}/participants/me", activityId)
+                .with(jwt().jwt(jwt -> jwt.subject("user-1"))))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.participantCount").value(0));
   }
@@ -105,7 +116,9 @@ class ActivityParticipationControllerTest {
     repository.save(activity);
 
     mockMvc
-        .perform(put("/activities/{id}/participants/me", activityId))
+        .perform(
+            put("/activities/{id}/participants/me", activityId)
+                .with(jwt().jwt(jwt -> jwt.subject("user-1"))))
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.title").value("Activity state conflict"));
   }

@@ -1,27 +1,30 @@
 "use client";
 
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { login as loginAction, logout as logoutAction } from "@/store/session/sessionSlice";
+import { getKeycloak } from "@/lib/keycloak";
+import { useAppSelector } from "@/store/hooks";
 import type { CurrentUser } from "@/types/domain";
 
 export interface UseAuth {
   user: CurrentUser | null;
+  initialized: boolean;
   isAuthenticated: boolean;
-  login: (user: CurrentUser) => void;
-  logout: () => void;
+  hasRole: (role: string) => boolean;
+  login: () => Promise<void>;
+  logout: () => Promise<void>;
 }
 
-/** Mock auth, backed by the Redux session slice — there's no real backend
- * login yet (see TODO.md), so `login` just sets the current user directly
- * instead of exchanging credentials for a JWT. */
+/** Exposes the OIDC session while keeping all token operations in keycloak-js. */
 export function useAuth(): UseAuth {
   const user = useAppSelector((state) => state.session.user);
-  const dispatch = useAppDispatch();
+  const initialized = useAppSelector((state) => state.session.initialized);
 
   return {
     user,
-    isAuthenticated: user !== null,
-    login: (nextUser: CurrentUser) => dispatch(loginAction(nextUser)),
-    logout: () => dispatch(logoutAction()),
+    initialized,
+    isAuthenticated: initialized && user !== null,
+    hasRole: (role: string) => user?.roles.includes(role) ?? false,
+    login: () =>
+      getKeycloak().login({ redirectUri: `${window.location.origin}/mis-actividades` }),
+    logout: () => getKeycloak().logout({ redirectUri: `${window.location.origin}/login` }),
   };
 }

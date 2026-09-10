@@ -1,7 +1,7 @@
 services:
   app:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile
     ports:
       - "8080:8080"
@@ -17,10 +17,15 @@ services:
       MONGO_INITDB_ROOT_USER: ${MONGO_INITDB_ROOT_USER:-admin}
       MONGO_INITDB_ROOT_PASS: ${MONGO_INITDB_ROOT_PASS:-password123}
       MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE:-mi_base_de_datos}
+      SECURITY_JWT_ISSUER_URI: ${SECURITY_JWT_ISSUER_URI:-http://localhost:8090/realms/solnotfound}
+      SECURITY_JWT_JWK_SET_URI: ${SECURITY_JWT_JWK_SET_URI:-http://keycloak:8080/realms/solnotfound/protocol/openid-connect/certs}
+      SECURITY_JWT_AUDIENCE: ${SECURITY_JWT_AUDIENCE:-solnotfoundBackend}
     depends_on:
       minio:
         condition: service_healthy
       mongodb:
+        condition: service_healthy
+      keycloak:
         condition: service_healthy
     networks:
       - tacs-network
@@ -83,9 +88,19 @@ services:
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
-    command: start-dev
+    command: start-dev --import-realm
     volumes:
       - keycloak-data:/opt/keycloak/data
+      - ./keycloak-import:/opt/keycloak/data/import:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "exec 3<>/dev/tcp/127.0.0.1/8080 && printf 'GET /realms/solnotfound HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 && grep -q '200 OK' <&3",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     networks:
       - tacs-network
 

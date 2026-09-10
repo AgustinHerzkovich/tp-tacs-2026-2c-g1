@@ -1,13 +1,11 @@
 import { configureStore } from "@reduxjs/toolkit";
 import sessionReducer from "@/store/session/sessionSlice";
-import { sessionPersistenceMiddleware } from "@/store/session/sessionPersistence";
 
 export function makeStore() {
   return configureStore({
     reducer: {
       session: sessionReducer,
     },
-    middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(sessionPersistenceMiddleware),
   });
 }
 

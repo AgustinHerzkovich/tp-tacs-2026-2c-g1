@@ -14,8 +14,7 @@ import { useRequireAuth } from "@/hooks/useRequireAuth";
  * Actividad" CTA is scoped to Mis Actividades only — it doesn't make sense
  * while browsing Explorar or looking at one activity's detail.
  *
- * Also gates the whole group behind login — Explorar, Mis Actividades and
- * the activity detail page all require a mock session. */
+ * Also gates the whole group behind Keycloak authentication. */
 export default function BottomChromeLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const showCreateButton = pathname === "/mis-actividades";

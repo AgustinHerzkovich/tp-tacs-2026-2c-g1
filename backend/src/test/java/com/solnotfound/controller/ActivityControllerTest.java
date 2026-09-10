@@ -35,7 +35,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -280,9 +281,11 @@ class ActivityControllerTest {
     verify(service).getByParticipantId("user-1");
   }
 
-  private TestingAuthenticationToken authentication(String userId) {
-    TestingAuthenticationToken authentication = new TestingAuthenticationToken(userId, null);
-    authentication.setAuthenticated(true);
-    return authentication;
+  private Jwt jwt(String userId) {
+    return Jwt.withTokenValue("token").header("alg", "none").subject(userId).build();
+  }
+
+  private JwtAuthenticationToken authentication(String userId) {
+    return new JwtAuthenticationToken(jwt(userId));
   }
 }
