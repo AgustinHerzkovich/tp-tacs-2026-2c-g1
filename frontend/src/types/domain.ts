@@ -65,9 +65,8 @@ export interface WizardFormState {
   reschedule: string;
 }
 
-/** The logged-in client, kept in the Redux session slice. Same shape as the
- * backend's `User`/`UserDTO` (just `id` + `name` — see
- * backend/src/main/java/com/solnotfound/entity/user/User.java): the backend
- * creates a user record lazily from the JWT subject the first time it's
- * seen, and never stores more than a display name. */
-export type CurrentUser = UserDTO;
+/** Non-sensitive identity claims used by the UI. Access and refresh tokens
+ * remain in keycloak-js memory and are never persisted in Redux or storage. */
+export interface CurrentUser extends UserDTO {
+  roles: string[];
+}

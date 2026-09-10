@@ -1,16 +1,17 @@
 package com.solnotfound.config;
 
-import java.nio.charset.StandardCharsets;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
-import org.springframework.beans.factory.annotation.Value;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.Customizer;
+import org.springframework.core.convert.converter.Converter;
+import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
@@ -23,13 +24,16 @@ public class SecurityConfig {
           .authorizeHttpRequests(
               requests ->
                   requests
-                      .requestMatchers("/swagger-ui/**", "/v3/api-docs/**")
+                      .requestMatchers("/healthcheck", "/swagger-ui/**", "/v3/api-docs/**")
                       .permitAll()
                       .requestMatchers("/statistics/**")
                       .hasRole("ADMIN")
                       .anyRequest()
-                      .permitAll())
-          .oauth2ResourceServer(resourceServer -> resourceServer.jwt(Customizer.withDefaults()))
+                      .authenticated())
+          .oauth2ResourceServer(
+              resourceServer ->
+                  resourceServer.jwt(
+                      jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())))
           .build();
     } catch (Exception exception) {
       throw new IllegalStateException("Could not configure web security", exception);
@@ -37,9 +41,29 @@ public class SecurityConfig {
   }
 
   @Bean
-  JwtDecoder jwtDecoder(
-      @Value("${security.jwt.secret:development-secret-must-be-at-least-32-bytes}") String secret) {
-    SecretKey key = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
-    return NimbusJwtDecoder.withSecretKey(key).macAlgorithm(MacAlgorithm.HS256).build();
+  Converter<Jwt, ? extends AbstractAuthenticationToken> jwtAuthenticationConverter() {
+    JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
+
+    converter.setJwtGrantedAuthoritiesConverter(
+        jwt -> {
+          Map<String, Object> realmAccess = jwt.getClaim("realm_access");
+
+          if (realmAccess == null) {
+            return List.of();
+          }
+
+          Object rolesObject = realmAccess.get("roles");
+
+          if (!(rolesObject instanceof Collection<?> roles)) {
+            return List.of();
+          }
+
+          return roles.stream()
+              .map(Object::toString)
+              .map(role -> (GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role))
+              .toList();
+        });
+
+    return converter;
   }
 }

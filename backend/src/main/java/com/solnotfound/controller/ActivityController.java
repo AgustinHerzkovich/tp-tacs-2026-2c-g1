@@ -49,7 +49,7 @@ public class ActivityController {
    *
    * @param request JSON activity data from the multipart {@code activity} part
    * @param images optional image parts
-   * @param authentication current authenticated user
+   * @param jwt verified access token of the authenticated user
    * @return the created activity with temporary image URLs
    */
   @Operation(
@@ -74,7 +74,7 @@ public class ActivityController {
             .map(MultipartImageFile::new)
             .toList();
     ActivityResponse createdActivity =
-        activityService.create(request, currentUserId(authentication), imageFiles);
+        activityService.create(request, jwt(authentication).getSubject(), imageFiles);
     return ResponseEntity.created(URI.create("/activities/" + createdActivity.id()))
         .body(createdActivity);
   }
@@ -108,38 +108,33 @@ public class ActivityController {
   @PutMapping("/{id}/participants/me")
   public ResponseEntity<ActivityResponse> join(
       @PathVariable String id, Authentication authentication) {
-    return ResponseEntity.ok(activityService.join(id, currentUserId(authentication)));
+    return ResponseEntity.ok(activityService.join(id, jwt(authentication).getSubject()));
   }
 
   @DeleteMapping("/{id}/participants/me")
   public ResponseEntity<ActivityResponse> leave(
       @PathVariable String id, Authentication authentication) {
-    return ResponseEntity.ok(activityService.leave(id, currentUserId(authentication)));
+    return ResponseEntity.ok(activityService.leave(id, jwt(authentication).getSubject()));
   }
 
   @GetMapping("/{id}/weather")
   public ResponseEntity<ActivityWeatherResponse> getWeather(
       @PathVariable String id, Authentication authentication) {
-    return ResponseEntity.ok(activityService.getWeather(id, currentUserId(authentication)));
+    return ResponseEntity.ok(activityService.getWeather(id, jwt(authentication).getSubject()));
   }
 
   @GetMapping("/organizers/me")
   public ResponseEntity<List<ActivityResponse>> getOrganized(Authentication authentication) {
-    return ResponseEntity.ok(activityService.getByOrganizerId(currentUserId(authentication)));
+    return ResponseEntity.ok(activityService.getByOrganizerId(jwt(authentication).getSubject()));
   }
 
   @GetMapping("/participants/me")
   public ResponseEntity<List<ActivityResponse>> getJoined(Authentication authentication) {
-    return ResponseEntity.ok(activityService.getByParticipantId(currentUserId(authentication)));
+    return ResponseEntity.ok(activityService.getByParticipantId(jwt(authentication).getSubject()));
   }
 
-  private String currentUserId(Authentication authentication) {
-    if (authentication != null && authentication.getPrincipal() instanceof Jwt jwt) {
-      return jwt.getSubject();
-    }
-    if (authentication != null && authentication.isAuthenticated()) {
-      return authentication.getName();
-    }
-    return "development-user";
+  private Jwt jwt(Authentication authentication) {
+    if (authentication != null && authentication.getPrincipal() instanceof Jwt jwt) return jwt;
+    throw new IllegalStateException("Authenticated principal must be a JWT");
   }
 }

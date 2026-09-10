@@ -1,5 +1,10 @@
 #!/bin/sh
 
+set -e
+
+repo_root=$(git rev-parse --show-toplevel) || exit 1
+backend_dir="$repo_root/backend"
+
 java_major() {
   "$1" -version 2>&1 | sed -n '1s/.*version "\([0-9][0-9]*\).*/\1/p'
 }
@@ -32,10 +37,10 @@ if [ -n "$java_home" ]; then
   export PATH="$JAVA_HOME/bin:$PATH"
 fi
 
-cd "$(dirname "$0")/../backend" || exit 1
-
-if [ -f ./mvnw.cmd ]; then
+if [ -f "$backend_dir/mvnw.cmd" ]; then
+  cd "$backend_dir"
   ./mvnw.cmd clean verify
 else
+  cd "$backend_dir"
   ./mvnw clean verify
 fi

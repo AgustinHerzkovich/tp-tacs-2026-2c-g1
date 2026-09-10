@@ -3,35 +3,29 @@ import type { CurrentUser } from "@/types/domain";
 
 export interface SessionState {
   user: CurrentUser | null;
-  /** True once the client has checked localStorage for a persisted session.
-   * Starts false on both server and client so the very first render always
-   * matches (no hydration mismatch) — `useRequireAuth` waits for this before
-   * deciding to redirect to /login, so a persisted session isn't wrongly
-   * treated as "logged out" for the one tick before it's read. */
-  hydrated: boolean;
+  /** True once Keycloak has checked the browser's SSO session. */
+  initialized: boolean;
 }
 
 const initialState: SessionState = {
   user: null,
-  hydrated: false,
+  initialized: false,
 };
 
 const sessionSlice = createSlice({
   name: "session",
   initialState,
   reducers: {
-    login(state, action: PayloadAction<CurrentUser>) {
+    authenticated(state, action: PayloadAction<CurrentUser>) {
       state.user = action.payload;
+      state.initialized = true;
     },
-    logout(state) {
+    anonymous(state) {
       state.user = null;
-    },
-    hydrate(state, action: PayloadAction<CurrentUser | null>) {
-      state.user = action.payload;
-      state.hydrated = true;
+      state.initialized = true;
     },
   },
 });
 
-export const { login, logout, hydrate } = sessionSlice.actions;
+export const { authenticated, anonymous } = sessionSlice.actions;
 export default sessionSlice.reducer;

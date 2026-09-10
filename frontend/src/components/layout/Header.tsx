@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { Bell } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
@@ -12,12 +11,10 @@ interface HeaderProps {
 }
 
 export function Header({ onBellClick, unread = 0 }: HeaderProps) {
-  const router = useRouter();
   const { user, logout } = useAuth();
 
   const handleAvatarClick = () => {
-    logout();
-    router.push("/login");
+    void logout();
   };
 
   return (

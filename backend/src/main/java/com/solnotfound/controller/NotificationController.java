@@ -26,22 +26,17 @@ public class NotificationController {
   public ResponseEntity<List<NotificationResponse>> getNotifications(
       Authentication authentication) {
     return ResponseEntity.ok(
-        notificationService.getNotificationsByUser(currentUserId(authentication)));
+        notificationService.getNotificationsByUser(jwt(authentication).getSubject()));
   }
 
   @PatchMapping("/{id}/read")
   public ResponseEntity<Void> markAsRead(@PathVariable String id, Authentication authentication) {
-    notificationService.markAsRead(id, currentUserId(authentication));
+    notificationService.markAsRead(id, jwt(authentication).getSubject());
     return ResponseEntity.ok().build();
   }
 
-  private String currentUserId(Authentication authentication) {
-    if (authentication != null && authentication.getPrincipal() instanceof Jwt jwt) {
-      return jwt.getSubject();
-    }
-    if (authentication != null && authentication.isAuthenticated()) {
-      return authentication.getName();
-    }
-    return "development-user";
+  private Jwt jwt(Authentication authentication) {
+    if (authentication != null && authentication.getPrincipal() instanceof Jwt jwt) return jwt;
+    throw new IllegalStateException("Authenticated principal must be a JWT");
   }
 }

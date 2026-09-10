@@ -33,7 +33,8 @@ public class VotationController {
       @Valid @RequestBody UpdateVotationOptionsRequest request,
       Authentication authentication) {
     return ResponseEntity.ok(
-        votationService.updateVotationOptions(votationId, request, currentUserId(authentication)));
+        votationService.updateVotationOptions(
+            votationId, request, jwt(authentication).getSubject()));
   }
 
   @PutMapping("/{votationId}/settings")
@@ -42,23 +43,14 @@ public class VotationController {
       @Valid @RequestBody UpdateVotationSettingsRequest request,
       Authentication authentication) {
     return ResponseEntity.ok(
-        votationService.updateVotationSettings(votationId, request, currentUserId(authentication)));
+        votationService.updateVotationSettings(
+            votationId, request, jwt(authentication).getSubject()));
   }
 
   @GetMapping
   public ResponseEntity<List<VotationDTO>> getMine(Authentication authentication) {
     return ResponseEntity.ok(
-        votationService.getByOrganizerOrParticipantId(currentUserId(authentication)));
-  }
-
-  private String currentUserId(Authentication authentication) {
-    if (authentication != null && authentication.getPrincipal() instanceof Jwt jwt) {
-      return jwt.getSubject();
-    }
-    if (authentication != null && authentication.isAuthenticated()) {
-      return authentication.getName();
-    }
-    return "development-user";
+        votationService.getByOrganizerOrParticipantId(jwt(authentication).getSubject()));
   }
 
   @PutMapping("/{votationId}/votes/me")
@@ -66,6 +58,12 @@ public class VotationController {
       @PathVariable String votationId,
       @Valid @RequestBody LocalDateTime vote,
       Authentication authentication) {
-    return ResponseEntity.ok(votationService.vote(votationId, currentUserId(authentication), vote));
+    return ResponseEntity.ok(
+        votationService.vote(votationId, jwt(authentication).getSubject(), vote));
+  }
+
+  private Jwt jwt(Authentication authentication) {
+    if (authentication != null && authentication.getPrincipal() instanceof Jwt jwt) return jwt;
+    throw new IllegalStateException("Authenticated principal must be a JWT");
   }
 }

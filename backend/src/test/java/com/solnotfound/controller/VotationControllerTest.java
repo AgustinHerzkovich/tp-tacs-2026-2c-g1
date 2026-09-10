@@ -21,7 +21,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -231,9 +232,8 @@ class VotationControllerTest {
         .andExpect(jsonPath("$.errors.minQuorum").exists());
   }
 
-  private TestingAuthenticationToken authentication(String userId) {
-    TestingAuthenticationToken authentication = new TestingAuthenticationToken(userId, null);
-    authentication.setAuthenticated(true);
-    return authentication;
+  private JwtAuthenticationToken authentication(String userId) {
+    Jwt jwt = Jwt.withTokenValue("token").header("alg", "none").subject(userId).build();
+    return new JwtAuthenticationToken(jwt);
   }
 }
