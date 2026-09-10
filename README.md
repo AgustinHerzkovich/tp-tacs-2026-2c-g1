@@ -74,13 +74,16 @@ Swagger están en [`docs/SWAGGER_TEST_CASES.md`](docs/SWAGGER_TEST_CASES.md).
 
 ## API y autenticación
 
-Swagger UI permite explorar y ejecutar las rutas REST. Las rutas generales permanecen públicas en
-esta etapa y, cuando no se presenta identidad, utilizan `development-user`. El endpoint
-`/statistics` exige un JWT con autoridad `ROLE_ADMIN`.
+Swagger UI, OpenAPI y `/healthcheck` son públicos. El resto de las rutas exige un access token de
+Keycloak; `/statistics` además requiere el rol de realm `ADMIN`.
 
-El backend valida JWT HMAC-SHA256 mediante Spring Security. La clave local predeterminada sirve
-solo para desarrollo y puede reemplazarse con `SECURITY_JWT_SECRET`. Firebase Auth no está
-integrado actualmente.
+El backend valida firma RS256, vigencia, issuer y audience mediante Spring Security y el JWKS de
+Keycloak. Se configuran con `SECURITY_JWT_ISSUER_URI`, `SECURITY_JWT_JWK_SET_URI` y
+`SECURITY_JWT_AUDIENCE`. La identidad de dominio se obtiene exclusivamente del claim verificado
+`sub`.
+
+El realm de desarrollo no exige verificación de email porque Compose no incluye un servidor SMTP.
+En producción debe configurarse SMTP en Keycloak y volver a habilitar `verifyEmail`.
 
 ## Decisiones de diseño
 
@@ -89,9 +92,8 @@ Estas decisiones cubren aspectos no definidos de forma exhaustiva por el enuncia
 - **Repositorios intercambiables y almacenamiento en memoria:** los servicios dependen de
   interfaces de repositorio. La Entrega 1 usa implementaciones con `ConcurrentHashMap`; en la
   Entrega 2 podrán reemplazarse por MongoDB sin cambiar los casos de uso.
-- **Backend sin sesión HTTP:** la identidad se obtiene del `subject` de un JWT y no se mantiene
-  estado de sesión en el backend. En desarrollo se admite `development-user` para facilitar las
-  pruebas de esta entrega.
+- **Backend sin sesión HTTP:** la identidad se obtiene del `subject` de un JWT verificado y no se
+  mantiene estado de sesión en el backend.
 - **Monitoreo periódico configurable:** Spring Scheduler evalúa clima, cierre de votaciones,
   finalización y avisos de inicio con periodicidades configurables.
 - **Organizador como participante:** el organizador puede sumarse y bajarse como participante. Para
@@ -114,9 +116,8 @@ Estas decisiones cubren aspectos no definidos de forma exhaustiva por el enuncia
   alternativas favorables.
 
 No se adoptaron las decisiones antiguas de CDC/Stream ETL ni de filtros ejecutados por una base de
-datos porque no existe persistencia en la Entrega 1. Tampoco se documenta Firebase Auth como una
-decisión vigente: la implementación actual usa JWT HMAC local. Esas alternativas deberán evaluarse
-nuevamente cuando exista una necesidad concreta de volumen, persistencia o proveedor de identidad.
+datos porque no existe persistencia en la Entrega 1. Keycloak es el proveedor de identidad y el
+backend funciona como OAuth2 Resource Server sin administrar contraseñas.
 
 ## Servicio meteorológico
 
@@ -203,6 +204,7 @@ como herramientas de apoyo. Su uso se concentró en las siguientes tareas:
 - Apoyo en la aplicación y verificación del formato y de las herramientas de calidad del proyecto,
   como Spotless, Checkstyle y SpotBugs.
 - Análisis de errores de compilación, tests y conflictos de integración.
+- Modelado de Interfaz de Usuario.
 
 Las respuestas de estas herramientas se tomaron como sugerencias y no como resultados definitivos.
 El equipo revisó las propuestas, las adaptó al diseño y las convenciones del proyecto, y validó los
