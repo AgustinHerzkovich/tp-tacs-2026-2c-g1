@@ -1,6 +1,6 @@
 "use client";
 
-import type { ComponentType } from "react";
+import { useState, type ComponentType } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,8 +12,11 @@ import { StepClima } from "@/components/pages/wizard/StepClima";
 import { StepAlertas } from "@/components/pages/wizard/StepAlertas";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { api, ApiError } from "@/lib/api";
+import { toBackendActivityType } from "@/lib/activityMapping";
 import type { WizardFormState } from "@/types/domain";
 import type { FieldSetter } from "@/hooks/useWizardForm";
+import type { CreateActivityRequest } from "@/types/backend";
 
 interface StepProps {
   form: WizardFormState;
@@ -22,13 +25,75 @@ interface StepProps {
 
 const STEP_COMPONENTS: ComponentType<StepProps>[] = [StepInfo, StepLugarFecha, StepClima, StepAlertas];
 
+// The wizard doesn't expose a daily time-window picker for reprogramming —
+// only how many days out (`form.reschedule`). Every activity created here
+// gets this fixed window until that's designed.
+const DEFAULT_REPROGRAMATION_HOURS: [string, string] = ["09:00:00", "21:00:00"];
+
+function buildCreateRequest(form: WizardFormState): CreateActivityRequest {
+  return {
+    title: form.title.trim(),
+    description: form.desc.trim() || undefined,
+    type: toBackendActivityType(form.type),
+    location: { city: form.place.trim() || null, latitude: null, longitude: null },
+    dateTime: `${form.date}T${form.time}:00`,
+    minParticipants: form.min,
+    maxParticipants: form.max,
+    weatherConditions: {
+      maxRainProbability: form.rain,
+      minTemperature: form.tMin,
+      maxTemperature: form.tMax,
+      maxWindSpeed: form.wind,
+    },
+    anticipationWindow: Number(form.anticipation),
+    reprogramationRange: {
+      maxDays: Number(form.reschedule),
+      initialHour: DEFAULT_REPROGRAMATION_HOURS[0],
+      finalHour: DEFAULT_REPROGRAMATION_HOURS[1],
+    },
+  };
+}
+
+function validate(form: WizardFormState): string | null {
+  if (!form.title.trim()) return "Poné un título para la actividad.";
+  if (!form.date || !form.time) return "Elegí una fecha y hora.";
+  if (new Date(`${form.date}T${form.time}:00`).getTime() <= Date.now()) {
+    return "La fecha y hora tienen que estar en el futuro.";
+  }
+  return null;
+}
+
 export function CrearActividadPage() {
   const router = useRouter();
   const wizard = useWizardForm();
   const user = useRequireAuth();
   const StepComponent = STEP_COMPONENTS[wizard.step];
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   if (!user) return null;
+
+  const handlePublish = async () => {
+    const validationError = validate(wizard.form);
+    if (validationError) {
+      setSubmitError(validationError);
+      return;
+    }
+
+    setSubmitError(null);
+    setSubmitting(true);
+    try {
+      const activity = buildCreateRequest(wizard.form);
+      const formData = new FormData();
+      formData.append("activity", new Blob([JSON.stringify(activity)], { type: "application/json" }));
+      await api.activities.create(formData);
+      wizard.publish();
+    } catch (err) {
+      setSubmitError(err instanceof ApiError ? err.message : "No pudimos publicar la actividad. Probá de nuevo.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (wizard.done) {
     return (
@@ -63,17 +128,22 @@ export function CrearActividadPage() {
 
       <div key={wizard.step} className={`flex-1 px-5 pb-4 ${wizard.direction > 0 ? "anim-slide-right" : "anim-slide-left"}`}>
         {StepComponent && <StepComponent form={wizard.form} set={wizard.set} />}
+        {wizard.isLastStep && submitError && (
+          <p className="mt-4 text-[12.5px] font-extrabold rounded-2xl p-3" style={{ background: "var(--rose)", color: "var(--rose-ink)" }}>
+            {submitError}
+          </p>
+        )}
       </div>
 
       <div className="px-5 py-4 border-t-2 flex gap-3" style={{ borderColor: "var(--border)", background: "var(--background)" }}>
         {!wizard.isFirstStep && (
-          <Button variant="outline" className="flex-1 h-auto py-3.5 rounded-2xl font-display font-semibold" onClick={wizard.back}>
+          <Button variant="outline" className="flex-1 h-auto py-3.5 rounded-2xl font-display font-semibold" onClick={wizard.back} disabled={submitting}>
             Atrás
           </Button>
         )}
         {wizard.isLastStep ? (
-          <Button className="flex-1 h-auto py-3.5 rounded-2xl font-display font-semibold" onClick={wizard.publish}>
-            Publicar Actividad
+          <Button className="flex-1 h-auto py-3.5 rounded-2xl font-display font-semibold" onClick={handlePublish} disabled={submitting}>
+            {submitting ? "Publicando…" : "Publicar Actividad"}
           </Button>
         ) : (
           <Button className="flex-1 h-auto py-3.5 rounded-2xl font-display font-semibold" onClick={wizard.next}>

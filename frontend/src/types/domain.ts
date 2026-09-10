@@ -1,8 +1,9 @@
-// UI-facing types for the mock-data-driven screens. These are deliberately
-// separate from src/types/backend.ts: the mock model uses playful, lowercase
-// keys (scenes, Spanish status labels) that don't match the backend's real
-// enums. Once useActivities/useNotifications fetch real data, this is where
-// the backend -> UI mapping layer's output type should live.
+// UI-facing types. Deliberately separate from src/types/backend.ts: these
+// use playful, lowercase keys (scenes, Spanish status labels) that don't
+// match the backend's real enums. src/lib/activityMapping.ts maps real
+// ActivityResponse data into ExploreActivity/MisActivity for list cards; the
+// activity detail page works with the raw backend type directly instead
+// (see useActivity) since it needs fields this shape doesn't carry.
 
 import type { UserDTO } from "@/types/backend";
 
@@ -10,7 +11,13 @@ export type SceneKey = "trekking" | "voley" | "cine" | "juegos" | "asado" | "cum
 
 export type MockActivityType = "outdoor" | "indoor" | "mixed";
 
-export type MockStatusKey = "confirmada" | "propuesta" | "reprogramada" | "cancelada" | "votacion";
+export type MockStatusKey =
+  | "confirmada"
+  | "propuesta"
+  | "reprogramada"
+  | "cancelada"
+  | "votacion"
+  | "finalizada";
 
 interface ActivityBase {
   id: string;
@@ -19,6 +26,10 @@ interface ActivityBase {
   type: MockActivityType;
   when: string;
   where: string;
+  /** Real participant user ids (see src/lib/initials.ts's userIdToDisplayName),
+   * for the card's avatar stack — not necessarily every participant, see
+   * src/lib/activityMapping.ts. */
+  participantIds: string[];
 }
 
 /** Explorar feed card and the "votación pendiente" card share this shape. */
@@ -35,26 +46,7 @@ export interface MisActivity extends ActivityBase {
 
 export type Activity = ExploreActivity | MisActivity;
 
-export function isMisActivity(activity: Activity): activity is MisActivity {
-  return "status" in activity;
-}
-
-export interface VoteOption {
-  id: string;
-  label: string;
-  votes: number;
-}
-
 export type NotificationKind = "warn" | "info" | "reprog" | "cancel";
-
-export interface NotificationItem {
-  id: number;
-  kind: NotificationKind;
-  icon: string;
-  title: string;
-  body: string;
-  time: string;
-}
 
 export interface WizardFormState {
   title: string;

@@ -5,7 +5,12 @@ import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
 import type { UseVoting } from "@/hooks/useVoting";
 
-export function VotingRoom({ voting }: { voting: UseVoting }) {
+interface VotingRoomProps {
+  voting: UseVoting;
+  warningText?: string;
+}
+
+export function VotingRoom({ voting, warningText }: VotingRoomProps) {
   const { options, total, selectedId, votedId, select, requestVote } = voting;
 
   return (
@@ -13,7 +18,7 @@ export function VotingRoom({ voting }: { voting: UseVoting }) {
       <div className="flex gap-2.5 rounded-xl p-3 mb-4 mx-4" style={{ background: "var(--sun)" }}>
         <AlertTriangle className="size-[18px] shrink-0 mt-0.5" style={{ color: "var(--sun-ink)" }} />
         <p className="text-[11.5px] font-extrabold leading-snug" style={{ color: "var(--sun-ink)" }}>
-          Se superó el máximo de lluvia permitido (40%). Elegí una fecha alternativa para reprogramar.
+          {warningText ?? "El pronóstico no cumple las condiciones configuradas. Elegí una fecha alternativa para reprogramar."}
         </p>
       </div>
 
