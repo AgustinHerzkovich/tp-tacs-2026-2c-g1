@@ -32,6 +32,8 @@ if [ -n "$java_home" ]; then
   export PATH="$JAVA_HOME/bin:$PATH"
 fi
 
+cd "$(dirname "$0")/../backend" || exit 1
+
 if [ -f ./mvnw.cmd ]; then
   ./mvnw.cmd clean verify
 else

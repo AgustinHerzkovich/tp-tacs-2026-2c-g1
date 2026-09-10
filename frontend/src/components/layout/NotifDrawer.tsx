@@ -3,6 +3,8 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useNotifications } from "@/hooks/useNotifications";
 import { NOTIF_META } from "@/data/mockData";
+import { mapNotificationKind, iconForNotificationKind } from "@/lib/notificationMapping";
+import { formatRelativeTime } from "@/lib/formatDate";
 
 interface NotifDrawerProps {
   open: boolean;
@@ -10,7 +12,7 @@ interface NotifDrawerProps {
 }
 
 export function NotifDrawer({ open, onOpenChange }: NotifDrawerProps) {
-  const { notifications } = useNotifications();
+  const { notifications, loading, error } = useNotifications();
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -21,21 +23,37 @@ export function NotifDrawer({ open, onOpenChange }: NotifDrawerProps) {
           </SheetTitle>
         </SheetHeader>
         <div className="px-4 py-4 space-y-3 overflow-y-auto">
+          {loading && (
+            <p className="text-center text-[13px] font-bold py-6" style={{ color: "var(--muted-foreground)" }}>
+              Cargando...
+            </p>
+          )}
+          {error && (
+            <p className="text-center text-[13px] font-bold py-6" style={{ color: "var(--rose-ink)" }}>
+              {error}
+            </p>
+          )}
+          {!loading && !error && notifications.length === 0 && (
+            <p className="text-center text-[13px] font-bold py-6" style={{ color: "var(--muted-foreground)" }}>
+              No tenés notificaciones todavía.
+            </p>
+          )}
           {notifications.map((n) => {
-            const m = NOTIF_META[n.kind];
+            const kind = mapNotificationKind(n.type);
+            const m = NOTIF_META[kind];
             return (
               <div key={n.id} className="rounded-2xl p-3.5 border-2" style={{ background: m.bg, borderColor: m.border }}>
                 <div className="flex gap-3">
-                  <span className="emoji-3d text-2xl shrink-0">{n.icon}</span>
+                  <span className="emoji-3d text-2xl shrink-0">{iconForNotificationKind(kind)}</span>
                   <div className="min-w-0 flex-1">
                     <p className="font-display font-semibold text-[13.5px]" style={{ color: m.ink }}>
                       {n.title}
                     </p>
                     <p className="text-[12px] font-bold mt-0.5 leading-snug" style={{ color: m.ink, opacity: 0.85 }}>
-                      {n.body}
+                      {n.message}
                     </p>
                     <p className="text-[10.5px] font-extrabold mt-1.5" style={{ color: m.ink, opacity: 0.6 }}>
-                      {n.time}
+                      {formatRelativeTime(n.createdAt)}
                     </p>
                   </div>
                 </div>

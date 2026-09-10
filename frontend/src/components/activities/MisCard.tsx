@@ -3,10 +3,12 @@ import { Card } from "@/components/ui/card";
 import { Scene } from "@/components/common/Scene";
 import { StatusBadge } from "@/components/common/PillBadge";
 import { AvatarStack } from "@/components/common/AvatarStack";
-import { TYPE_META, PEOPLE } from "@/data/mockData";
+import { TYPE_META } from "@/data/mockData";
+import { userIdToDisplayName } from "@/lib/initials";
 import type { MisActivity } from "@/types/domain";
 
 export function MisCard({ activity }: { activity: MisActivity }) {
+  const names = activity.participantIds.slice(0, 2).map(userIdToDisplayName);
   return (
     <Link href={`/actividades/${activity.id}`}>
       <Card className="tap mb-4 overflow-hidden gap-0 py-0 rounded-2xl">
@@ -19,7 +21,7 @@ export function MisCard({ activity }: { activity: MisActivity }) {
               {TYPE_META[activity.type].icon} {activity.when}
             </p>
             <div className="flex items-center justify-between mt-1.5">
-              <AvatarStack names={PEOPLE.slice(0, 2)} size="sm" />
+              <AvatarStack names={names} size="sm" />
               <span className="font-display font-semibold text-[12px]" style={{ color: "var(--muted-foreground)" }}>
                 {activity.joined}/{activity.cap}
               </span>

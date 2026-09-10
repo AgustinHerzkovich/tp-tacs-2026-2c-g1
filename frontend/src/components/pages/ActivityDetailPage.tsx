@@ -10,20 +10,35 @@ import { AvatarStack } from "@/components/common/AvatarStack";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { WeatherWidget } from "@/components/activities/WeatherWidget";
 import { VotingRoom } from "@/components/activities/VotingRoom";
-import { useActivities } from "@/hooks/useActivities";
+import { useActivity } from "@/hooks/useActivity";
+import { useActivityWeather } from "@/hooks/useActivityWeather";
 import { useVoting } from "@/hooks/useVoting";
 import { useJoinActivity } from "@/hooks/useJoinActivity";
-import { PEOPLE } from "@/data/mockData";
-import { isMisActivity } from "@/types/domain";
+import { STATUS_META } from "@/data/mockData";
+import { mapActivityType, mapActivityStatus, pickScene } from "@/lib/activityMapping";
+import { formatActivityWhen } from "@/lib/formatDate";
+import { userIdToDisplayName } from "@/lib/initials";
+import { BACKEND_FALLBACK_USER_ID } from "@/lib/constants";
 
 export function ActivityDetailPage({ id }: { id: string }) {
   const router = useRouter();
-  const { getActivity } = useActivities();
-  const activity = getActivity(id);
-  const voting = useVoting();
-  const join = useJoinActivity();
+  const { activity, loading, notFound, error } = useActivity(id);
+  const weather = useActivityWeather(id);
+  const voting = useVoting(id);
 
-  if (!activity) {
+  const initialJoined =
+    activity?.participants.some((p) => p.userId === BACKEND_FALLBACK_USER_ID) ?? false;
+  const join = useJoinActivity(id, initialJoined);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 py-20">
+        <p className="font-display font-semibold text-lg">Cargando actividad…</p>
+      </div>
+    );
+  }
+
+  if (notFound || !activity) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 py-20">
         <p className="font-display font-semibold text-lg">No encontramos esa actividad.</p>
@@ -34,14 +49,26 @@ export function ActivityDetailPage({ id }: { id: string }) {
     );
   }
 
-  const hasVoting = activity.id === "trekking";
-  const totalPeople = isMisActivity(activity) ? activity.joined : activity.people;
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 py-20">
+        <p className="font-display font-semibold text-lg" style={{ color: "var(--rose-ink)" }}>
+          {error}
+        </p>
+      </div>
+    );
+  }
+
+  const hasVoting = activity.status === "PROPOSED";
+  const statusMeta = STATUS_META[mapActivityStatus(activity.status)];
+  const forecast = weather.weather?.activityForecast ?? weather.weather?.currentWeather ?? null;
+  const participantNames = activity.participants.map((p) => userIdToDisplayName(p.userId));
 
   return (
     <div className="fade-in">
       <div>
         <div className="relative">
-          <Scene scene={activity.scene} height={220} />
+          <Scene scene={pickScene(activity.id)} height={220} />
           <div className="absolute inset-x-0 bottom-0 h-28" style={{ background: "linear-gradient(to top, rgba(58,51,82,.75), transparent)" }} />
           <button
             onClick={() => router.back()}
@@ -52,54 +79,63 @@ export function ActivityDetailPage({ id }: { id: string }) {
           </button>
           <div className="absolute left-5 right-5 bottom-4">
             <div className="flex gap-2 mb-2">
-              <TypeBadge type={activity.type} />
-              <PillBadge bg={hasVoting ? "var(--sun)" : "var(--mint)"} ink={hasVoting ? "var(--sun-ink)" : "var(--mint-ink)"}>
-                {hasVoting ? "Votación abierta" : "Confirmada"}
+              <TypeBadge type={mapActivityType(activity.type)} />
+              <PillBadge bg={statusMeta.bg} ink={statusMeta.ink}>
+                {statusMeta.label}
               </PillBadge>
             </div>
             <h1 className="font-display font-semibold text-[22px] text-white leading-tight drop-shadow">{activity.title}</h1>
             <p className="text-[12.5px] font-extrabold text-white/90 mt-1 flex items-center gap-1">
-              <MapPin className="size-[13px]" /> {activity.where}
+              <MapPin className="size-[13px]" /> {activity.location.city ?? "Ubicación a confirmar"}
             </p>
           </div>
         </div>
 
         <div className="px-5 pt-5">
-          <WeatherWidget badWeather={hasVoting} />
+          <WeatherWidget loading={weather.loading} unavailable={weather.unavailable} forecast={forecast} />
 
-          {hasVoting && <VotingRoom voting={voting} />}
+          {hasVoting && (
+            <VotingRoom
+              voting={voting}
+              warningText={`El pronóstico no cumple las condiciones configuradas (máx. ${activity.weatherConditions.maxRainProbability}% de lluvia). Elegí una fecha alternativa.`}
+            />
+          )}
 
-          <div className="mb-4">
-            <h3 className="font-display font-semibold text-[15px] mb-2">Sobre la actividad</h3>
-            <p className="text-[13px] font-semibold leading-relaxed mb-3" style={{ color: "var(--muted-foreground)" }}>
-              Subida moderada con vistas al lago, ida y vuelta en el día. Llevar calzado de trekking, agua y protector
-              solar. Nos encontramos en el punto de partida 15 minutos antes.
-            </p>
-            <div className="grid grid-cols-2 gap-3">
-              <Card className="p-3.5 rounded-2xl">
-                <p className="text-[10px] font-extrabold uppercase mb-1 px-4" style={{ color: "var(--muted-foreground)" }}>
-                  Fecha y hora
-                </p>
-                <p className="font-display font-semibold text-[13px] px-4 flex items-center gap-1">
-                  <Clock className="size-[13px]" /> {activity.when}
-                </p>
-              </Card>
-              <Card className="p-3.5 rounded-2xl">
-                <p className="text-[10px] font-extrabold uppercase mb-1 px-4" style={{ color: "var(--muted-foreground)" }}>
-                  Participantes
-                </p>
-                <p className="font-display font-semibold text-[13px] px-4">👥 {totalPeople} personas</p>
-              </Card>
+          {activity.description && (
+            <div className="mb-4">
+              <h3 className="font-display font-semibold text-[15px] mb-2">Sobre la actividad</h3>
+              <p className="text-[13px] font-semibold leading-relaxed mb-3" style={{ color: "var(--muted-foreground)" }}>
+                {activity.description}
+              </p>
             </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <Card className="p-3.5 rounded-2xl">
+              <p className="text-[10px] font-extrabold uppercase mb-1 px-4" style={{ color: "var(--muted-foreground)" }}>
+                Fecha y hora
+              </p>
+              <p className="font-display font-semibold text-[13px] px-4 flex items-center gap-1">
+                <Clock className="size-[13px]" /> {formatActivityWhen(activity.dateTime)}
+              </p>
+            </Card>
+            <Card className="p-3.5 rounded-2xl">
+              <p className="text-[10px] font-extrabold uppercase mb-1 px-4" style={{ color: "var(--muted-foreground)" }}>
+                Participantes
+              </p>
+              <p className="font-display font-semibold text-[13px] px-4">
+                👥 {activity.participantCount}/{activity.maxParticipants}
+              </p>
+            </Card>
           </div>
         </div>
       </div>
 
       <div className="px-5 py-4 border-t-2 flex items-center gap-4" style={{ borderColor: "var(--border)" }}>
         <div>
-          <AvatarStack names={PEOPLE.slice(0, 3)} extra={Math.max(0, totalPeople - 3)} />
+          <AvatarStack names={participantNames.slice(0, 3)} extra={Math.max(0, participantNames.length - 3)} />
           <p className="text-[10px] font-extrabold mt-1" style={{ color: "var(--muted-foreground)" }}>
-            quedan cupos disponibles
+            {activity.availability ? "quedan cupos disponibles" : "sin cupos disponibles"}
           </p>
         </div>
         {hasVoting ? (
@@ -109,10 +145,11 @@ export function ActivityDetailPage({ id }: { id: string }) {
         ) : (
           <Button
             className="flex-1 h-auto py-3.5 rounded-2xl font-display font-semibold"
+            disabled={join.pending || (!join.joined && !activity.availability)}
             style={join.joined ? { background: "var(--mint)", color: "var(--mint-ink)" } : undefined}
             onClick={() => (join.joined ? join.leave() : join.requestJoin())}
           >
-            {join.joined ? "¡Estás sumado! ✓" : "Sumarme a la actividad"}
+            {join.joined ? "¡Estás sumado! ✓" : activity.availability ? "Sumarme a la actividad" : "Sin cupos disponibles"}
           </Button>
         )}
       </div>
