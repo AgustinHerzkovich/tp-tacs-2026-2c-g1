@@ -2,15 +2,26 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { TYPE_META } from "@/lib/activityVisuals";
+import type { WizardErrors } from "@/lib/validation";
 import type { WizardFormState } from "@/types/domain";
 import type { FieldSetter } from "@/hooks/useWizardForm";
 
 interface StepProps {
   form: WizardFormState;
   set: FieldSetter;
+  errors?: WizardErrors;
 }
 
-export function StepInfo({ form, set }: StepProps) {
+function FieldError({ message }: { message?: string }) {
+  if (!message) return null;
+  return (
+    <p className="mt-1.5 text-[12px] font-extrabold" style={{ color: "var(--destructive)" }}>
+      {message}
+    </p>
+  );
+}
+
+export function StepInfo({ form, set, errors }: StepProps) {
   return (
     <div>
       <div className="mb-5">
@@ -21,8 +32,10 @@ export function StepInfo({ form, set }: StepProps) {
           placeholder="Ej: Trekking Cerro Otto"
           value={form.title}
           onChange={(e) => set("title")(e.target.value)}
+          aria-invalid={!!errors?.title}
           className="h-auto py-3.5 rounded-2xl border-2 text-[15px]"
         />
+        <FieldError message={errors?.title} />
       </div>
       <div className="mb-5">
         <Label className="mb-2 font-extrabold text-[11.5px] uppercase tracking-wide" style={{ color: "var(--muted-foreground)" }}>
@@ -33,8 +46,10 @@ export function StepInfo({ form, set }: StepProps) {
           placeholder="Contales de qué se trata, qué llevar, nivel de dificultad…"
           value={form.desc}
           onChange={(e) => set("desc")(e.target.value)}
+          aria-invalid={!!errors?.desc}
           className="rounded-2xl border-2 text-[15px] resize-none"
         />
+        <FieldError message={errors?.desc} />
       </div>
       <div className="mb-5">
         <Label className="mb-2 font-extrabold text-[11.5px] uppercase tracking-wide" style={{ color: "var(--muted-foreground)" }}>

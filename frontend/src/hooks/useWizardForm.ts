@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { WizardFormState } from "@/types/domain";
+import { validateStep, type WizardErrors } from "@/lib/validation";
 
 export const WIZARD_STEPS = ["Info básica", "Lugar y fecha", "Clima", "Alertas"] as const;
 
@@ -29,10 +30,12 @@ export interface UseWizardForm {
   direction: 1 | -1;
   done: boolean;
   form: WizardFormState;
+  errors: WizardErrors;
   set: FieldSetter;
   next: () => void;
   back: () => void;
   goTo: (nextStep: number) => void;
+  showErrors: (allErrors: WizardErrors, targetStep?: number) => void;
   publish: () => void;
   reset: () => void;
   discardOpen: boolean;
@@ -44,23 +47,54 @@ export interface UseWizardForm {
 }
 
 /** Drives the 4-step "Crear actividad" wizard: step navigation with slide
- * direction, form field state, the discard-draft confirm dialog, and the
- * publish/done transition. */
+ * direction, form field state, per-step validation, the discard-draft confirm
+ * dialog, and the publish/done transition. */
 export function useWizardForm(): UseWizardForm {
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState<1 | -1>(1);
   const [done, setDone] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
   const [form, setForm] = useState<WizardFormState>(INITIAL_FORM);
+  const [errors, setErrors] = useState<WizardErrors>({});
+  // Steps the user already tried to advance from; once attempted, their
+  // errors stay visible and revalidate live as the user types.
+  const attempted = useRef(new Set<number>());
 
-  const set: FieldSetter = (key) => (value) => setForm((f) => ({ ...f, [key]: value }));
+  const validate = (targetStep: number, nextForm: WizardFormState): WizardErrors =>
+    validateStep(targetStep, nextForm);
+
+  const set: FieldSetter = (key) => (value) => {
+    const nextForm = { ...form, [key]: value };
+    setForm(nextForm);
+    if (attempted.current.has(step)) setErrors(validate(step, nextForm));
+  };
 
   const goTo = (nextStep: number) => {
     setDirection(nextStep > step ? 1 : -1);
     setStep(nextStep);
   };
-  const next = () => goTo(Math.min(step + 1, WIZARD_STEPS.length - 1));
+
+  const next = () => {
+    attempted.current.add(step);
+    const stepErrors = validate(step, form);
+    if (Object.keys(stepErrors).length > 0) {
+      setErrors(stepErrors);
+      return;
+    }
+    setErrors({});
+    goTo(Math.min(step + 1, WIZARD_STEPS.length - 1));
+  };
+
   const back = () => goTo(Math.max(step - 1, 0));
+
+  const showErrors = (allErrors: WizardErrors, targetStep?: number) => {
+    setErrors(allErrors);
+    if (targetStep !== undefined && targetStep !== step) {
+      attempted.current.add(targetStep);
+      setDirection(targetStep > step ? 1 : -1);
+      setStep(targetStep);
+    }
+  };
 
   const publish = () => setDone(true);
 
@@ -68,6 +102,8 @@ export function useWizardForm(): UseWizardForm {
     setStep(0);
     setDone(false);
     setForm(INITIAL_FORM);
+    setErrors({});
+    attempted.current.clear();
   };
 
   const requestDiscard = () => setDiscardOpen(true);
@@ -83,10 +119,12 @@ export function useWizardForm(): UseWizardForm {
     direction,
     done,
     form,
+    errors,
     set,
     next,
     back,
     goTo,
+    showErrors,
     publish,
     reset,
     discardOpen,
