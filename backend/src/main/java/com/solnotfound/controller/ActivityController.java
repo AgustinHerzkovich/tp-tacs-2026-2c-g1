@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -52,6 +53,9 @@ public class ActivityController {
    *
    * @param request JSON activity data from the multipart {@code activity} part
    * @param images optional image parts
+   * @param timeZoneId caller's IANA time zone (e.g. "America/Argentina/Buenos_Aires"), used to
+   *     judge whether {@code request.dateTime()} is in the future; falls back to the server's own
+   *     zone when absent
    * @param jwt verified access token of the authenticated user
    * @return the created activity with temporary image URLs
    */
@@ -71,13 +75,14 @@ public class ActivityController {
   public ResponseEntity<ActivityResponse> create(
       @Valid @RequestPart("activity") CreateActivityRequest request,
       @RequestPart(value = "images", required = false) List<MultipartFile> images,
+      @RequestHeader(value = "X-Time-Zone", required = false) String timeZoneId,
       Authentication authentication) {
     List<MultipartImageFile> imageFiles =
         Objects.requireNonNullElse(images, List.<MultipartFile>of()).stream()
             .map(MultipartImageFile::new)
             .toList();
     ActivityResponse createdActivity =
-        activityService.create(request, jwt(authentication).getSubject(), imageFiles);
+        activityService.create(request, jwt(authentication).getSubject(), imageFiles, timeZoneId);
     return ResponseEntity.created(URI.create("/activities/" + createdActivity.id()))
         .body(createdActivity);
   }
