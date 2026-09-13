@@ -1,13 +1,15 @@
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import type { ReactNode } from "react";
 import type { WizardFormState } from "@/types/domain";
-import type { FieldSetter } from "@/hooks/useWizardForm";
+import type { FieldSetter, FormPatchSetter } from "@/hooks/useWizardForm";
 
 interface StepProps {
   form: WizardFormState;
   set: FieldSetter;
+  patch?: FormPatchSetter;
 }
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
@@ -36,6 +38,16 @@ export function StepAlertas({ form, set }: StepProps) {
           </SelectContent>
         </Select>
       </Field>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Reprogramar desde">
+          <Input type="time" value={form.reprogramStart} onChange={(event) => set("reprogramStart")(event.target.value)} className="rounded-2xl border-2" />
+        </Field>
+        <Field label="Reprogramar hasta">
+          <Input type="time" value={form.reprogramEnd} onChange={(event) => set("reprogramEnd")(event.target.value)} aria-invalid={form.reprogramEnd <= form.reprogramStart} className="rounded-2xl border-2" />
+        </Field>
+      </div>
+      {form.reprogramEnd <= form.reprogramStart && <p className="-mt-3 mb-4 text-xs font-extrabold" style={{ color: "var(--destructive)" }}>La hora final debe ser posterior a la inicial.</p>}
 
       <Field label="Rango de reprogramación">
         <Select value={form.reschedule} onValueChange={set("reschedule")}>

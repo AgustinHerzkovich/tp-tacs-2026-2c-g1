@@ -1,20 +1,23 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 
 export function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedRoute = searchParams?.get("returnTo");
+  const returnTo = requestedRoute?.startsWith("/") ? requestedRoute : "/mis-actividades";
   const { initialized, isAuthenticated, login } = useAuth();
 
   useEffect(() => {
-    if (isAuthenticated) router.replace("/mis-actividades");
-  }, [isAuthenticated, router]);
+    if (isAuthenticated) router.replace(returnTo);
+  }, [isAuthenticated, returnTo, router]);
 
   return (
-    <div className="fade-in min-h-screen flex flex-col justify-center px-6 py-10">
+    <div className="fade-in min-h-screen flex flex-col justify-center px-6 py-10 lg:max-w-xl lg:mx-auto lg:w-full">
       <div className="text-center mb-8">
         <h1 className="font-display font-semibold text-4xl" style={{ color: "var(--primary)" }}>
           Planazo

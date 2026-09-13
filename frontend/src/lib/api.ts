@@ -6,9 +6,14 @@
 import { authFetch } from "@/lib/authFetch";
 import { beginRequest, endRequest } from "@/lib/loading";
 import type {
+  ActivityFilterParams,
   ActivityResponse,
   ActivityWeatherResponse,
   NotificationResponse,
+  PageResponse,
+  StatisticsResponse,
+  UpdateVotationOptionsRequest,
+  UpdateVotationSettingsRequest,
   VotationDTO,
 } from "@/types/backend";
 
@@ -45,14 +50,24 @@ function json(method: string, body: unknown): RequestInit {
   return { method, headers: { "content-type": "application/json" }, body: JSON.stringify(body) };
 }
 
+function queryString(params?: Record<string, string | number | boolean | undefined>): string {
+  if (!params) return "";
+  const entries = Object.entries(params).filter(([, value]) => value !== undefined && value !== "");
+  if (entries.length === 0) return "";
+  return `?${new URLSearchParams(entries.map(([key, value]) => [key, String(value)])).toString()}`;
+}
+
 export const api = {
   activities: {
-    list: () => request<ActivityResponse[]>("/activities"),
+    list: (filters?: ActivityFilterParams) =>
+      request<PageResponse<ActivityResponse>>(`/activities${queryString({ ...filters })}`),
     get: (id: string) => request<ActivityResponse>(`/activities/${id}`),
     /** Activities the current user organizes. */
-    organized: () => request<ActivityResponse[]>("/activities/organizers/me"),
+    organized: (page = 0, size = 12) =>
+      request<PageResponse<ActivityResponse>>(`/activities/organizers/me${queryString({ page, size })}`),
     /** Activities the current user joined as a participant. */
-    mine: () => request<ActivityResponse[]>("/activities/participants/me"),
+    mine: (page = 0, size = 12) =>
+      request<PageResponse<ActivityResponse>>(`/activities/participants/me${queryString({ page, size })}`),
     join: (id: string) => request<ActivityResponse>(`/activities/${id}/participants/me`, { method: "PUT" }),
     leave: (id: string) => request<ActivityResponse>(`/activities/${id}/participants/me`, { method: "DELETE" }),
     weather: (id: string) => request<ActivityWeatherResponse>(`/activities/${id}/weather`),
@@ -65,9 +80,18 @@ export const api = {
     /** `dateTime` is the chosen option's raw ISO LocalDateTime string. */
     vote: (votationId: string, dateTime: string) =>
       request<VotationDTO>(`/votations/${votationId}/votes/me`, json("PUT", dateTime)),
+    updateOptions: (votationId: string, body: UpdateVotationOptionsRequest) =>
+      request<VotationDTO>(`/votations/${votationId}/options`, json("PUT", body)),
+    updateSettings: (votationId: string, body: UpdateVotationSettingsRequest) =>
+      request<VotationDTO>(`/votations/${votationId}/settings`, json("PUT", body)),
   },
   notifications: {
-    list: () => request<NotificationResponse[]>("/notifications"),
+    list: (page = 0, size = 10) =>
+      request<PageResponse<NotificationResponse>>(`/notifications${queryString({ page, size })}`),
     markRead: (id: string) => request<NotificationResponse>(`/notifications/${id}/read`, { method: "PATCH" }),
+  },
+  statistics: {
+    get: (params?: { from?: string; to?: string }) =>
+      request<StatisticsResponse>(`/statistics${queryString(params)}`),
   },
 };

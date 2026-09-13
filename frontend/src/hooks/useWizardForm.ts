@@ -4,13 +4,16 @@ import { useRef, useState } from "react";
 import type { WizardFormState } from "@/types/domain";
 import { validateStep, type WizardErrors } from "@/lib/validation";
 
-export const WIZARD_STEPS = ["Info básica", "Lugar y fecha", "Clima", "Alertas"] as const;
+export const WIZARD_STEPS = ["Info básica", "Lugar y fecha", "Clima", "Imágenes", "Alertas"] as const;
 
 const INITIAL_FORM: WizardFormState = {
   title: "",
   desc: "",
   type: "outdoor",
   place: "",
+  latitude: null,
+  longitude: null,
+  images: [],
   date: "",
   time: "",
   min: 4,
@@ -21,9 +24,12 @@ const INITIAL_FORM: WizardFormState = {
   tMax: 28,
   anticipation: "24",
   reschedule: "3",
+  reprogramStart: "09:00",
+  reprogramEnd: "21:00",
 };
 
 export type FieldSetter = <K extends keyof WizardFormState>(key: K) => (value: WizardFormState[K]) => void;
+export type FormPatchSetter = (patch: Partial<WizardFormState>) => void;
 
 export interface UseWizardForm {
   step: number;
@@ -32,6 +38,7 @@ export interface UseWizardForm {
   form: WizardFormState;
   errors: WizardErrors;
   set: FieldSetter;
+  patch: FormPatchSetter;
   next: () => void;
   back: () => void;
   goTo: (nextStep: number) => void;
@@ -46,7 +53,7 @@ export interface UseWizardForm {
   isFirstStep: boolean;
 }
 
-/** Drives the 4-step "Crear actividad" wizard: step navigation with slide
+/** Drives the 5-step "Crear actividad" wizard: step navigation with slide
  * direction, form field state, per-step validation, the discard-draft confirm
  * dialog, and the publish/done transition. */
 export function useWizardForm(): UseWizardForm {
@@ -64,9 +71,19 @@ export function useWizardForm(): UseWizardForm {
     validateStep(targetStep, nextForm);
 
   const set: FieldSetter = (key) => (value) => {
-    const nextForm = { ...form, [key]: value };
-    setForm(nextForm);
-    if (attempted.current.has(step)) setErrors(validate(step, nextForm));
+    setForm((current) => {
+      const nextForm = { ...current, [key]: value };
+      if (attempted.current.has(step)) setErrors(validate(step, nextForm));
+      return nextForm;
+    });
+  };
+
+  const patch: FormPatchSetter = (values) => {
+    setForm((current) => {
+      const nextForm = { ...current, ...values };
+      if (attempted.current.has(step)) setErrors(validate(step, nextForm));
+      return nextForm;
+    });
   };
 
   const goTo = (nextStep: number) => {
@@ -121,6 +138,7 @@ export function useWizardForm(): UseWizardForm {
     form,
     errors,
     set,
+    patch,
     next,
     back,
     goTo,

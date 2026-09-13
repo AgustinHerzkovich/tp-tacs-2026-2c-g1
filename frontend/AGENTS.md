@@ -35,7 +35,7 @@
 
 - Design tokens (palette, fonts, radii) live in `src/app/globals.css` as CSS custom properties feeding a Tailwind v4 `@theme` block — change colors/fonts there, not per-component.
 - Fonts are loaded via `next/font/google` in `src/app/layout.tsx` (Fredoka for display/headings, Nunito for body), exposed as `--font-display`/`--font-body`.
-- The whole app renders inside a fixed `max-w-[430px]` centered column (set in `src/app/layout.tsx`) so it looks like a phone screen regardless of viewport — deliberate, not a bug; don't add a `container`/`max-w-*` override elsewhere that fights it.
+- The shell is full-width on mobile and expands to `max-w-[1440px]` on desktop. Main feeds use responsive grids, desktop navigation lives in the header, and the bottom navigation is mobile-only.
 - A dynamically-interpolated Tailwind class (e.g. `` `bg-[${someVar}]` ``) will never be generated — Tailwind's JIT only scans literal strings in source. For per-instance colors (like the wizard's gradient sliders), set a CSS custom property via inline `style` and consume it from a real rule in `globals.css` instead (see `[data-slot="slider-range"]`).
 
 ## Pending work

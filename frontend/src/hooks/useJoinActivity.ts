@@ -15,7 +15,7 @@ export interface UseJoinActivity {
 
 /** Join/leave for one activity's sticky action button, backed by
  * PUT/DELETE /api/activities/:id/participants/me. */
-export function useJoinActivity(activityId: string, initialJoined: boolean): UseJoinActivity {
+export function useJoinActivity(activityId: string, initialJoined: boolean, onChanged?: () => void): UseJoinActivity {
   const [joined, setJoined] = useState(initialJoined);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pending, setPending] = useState(false);
@@ -28,6 +28,7 @@ export function useJoinActivity(activityId: string, initialJoined: boolean): Use
     try {
       await api.activities.join(activityId);
       setJoined(true);
+      onChanged?.();
     } finally {
       setPending(false);
       setConfirmOpen(false);
@@ -39,6 +40,7 @@ export function useJoinActivity(activityId: string, initialJoined: boolean): Use
     try {
       await api.activities.leave(activityId);
       setJoined(false);
+      onChanged?.();
     } finally {
       setPending(false);
     }

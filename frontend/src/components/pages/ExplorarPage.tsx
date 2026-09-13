@@ -4,24 +4,69 @@ import { useState } from "react";
 import { Search } from "lucide-react";
 import { useActivities } from "@/hooks/useActivities";
 import { ExploreCard } from "@/components/activities/ExploreCard";
-import { TYPE_META } from "@/lib/activityVisuals";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import type { ActivityFilterParams, ActivityType } from "@/types/backend";
+import { ErrorState, LoadingState } from "@/components/common/AsyncState";
+import { PageControls } from "@/components/common/PageControls";
 
 const FILTERS = ["Todo", "Outdoor", "Indoor", "Mixto", "Hoy"] as const;
+const TYPES: Record<(typeof FILTERS)[number], ActivityType | undefined> = {
+  Todo: undefined,
+  Outdoor: "OUTDOOR",
+  Indoor: "INDOOR",
+  Mixto: "MIXED",
+  Hoy: undefined,
+};
 
 export function ExplorarPage() {
-  const { exploreFeed, loading, error } = useActivities();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("Todo");
+  const [city, setCity] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [onlyAvailable, setOnlyAvailable] = useState(false);
+  const [applied, setApplied] = useState<ActivityFilterParams>({});
+  const { exploreFeed, loading, error, refresh, explorePage, exploreTotalPages, setExplorePage } = useActivities(applied);
 
   const results = exploreFeed.filter((a) => {
     const matchesQuery = a.title.toLowerCase().includes(query.toLowerCase());
-    const matchesFilter = filter === "Todo" || filter === "Hoy" || TYPE_META[a.type].label === filter;
-    return matchesQuery && matchesFilter;
+    return matchesQuery;
   });
 
+  const applyFilters = () => {
+    const today = new Date();
+    const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    const from = filter === "Hoy" ? todayKey : dateFrom;
+    const to = filter === "Hoy" ? todayKey : dateTo;
+    setExplorePage(0);
+    setApplied({
+      type: TYPES[filter],
+      city: city.trim() || undefined,
+      dateFrom: from ? `${from}T00:00:00` : undefined,
+      dateTo: to ? `${to}T23:59:59` : undefined,
+      availability: onlyAvailable || undefined,
+    });
+  };
+
+  const clearFilters = () => {
+    setFilter("Todo");
+    setCity("");
+    setDateFrom("");
+    setDateTo("");
+    setOnlyAvailable(false);
+    setApplied({});
+    setExplorePage(0);
+  };
+
   return (
-    <div className="fade-in px-5 pt-2 pb-6">
-      <div className="relative mb-3">
+    <div className="fade-in px-5 pt-2 pb-6 lg:px-10 lg:pt-8">
+      <div className="lg:flex lg:items-end lg:justify-between lg:gap-8 lg:mb-8">
+        <div className="hidden lg:block">
+          <p className="text-xs font-extrabold uppercase" style={{ color: "var(--primary)" }}>Planes disponibles</p>
+          <h2 className="font-display font-semibold text-4xl">Encontrá tu próximo plan</h2>
+        </div>
+      <div className="relative mb-3 lg:mb-0 lg:w-[420px]">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4" style={{ color: "var(--muted-foreground)" }} />
         <input
           value={query}
@@ -31,7 +76,8 @@ export function ExplorarPage() {
           style={{ borderColor: "var(--border)" }}
         />
       </div>
-      <div className="flex gap-2 overflow-x-auto pb-1 -mx-5 px-5 mb-5">
+      </div>
+      <div className="flex gap-2 overflow-x-auto pb-1 -mx-5 px-5 mb-5 lg:mx-0 lg:px-0">
         {FILTERS.map((f) => {
           const active = filter === f;
           return (
@@ -50,19 +96,30 @@ export function ExplorarPage() {
           );
         })}
       </div>
-      {loading && (
-        <p className="text-center text-[13px] font-bold py-10" style={{ color: "var(--muted-foreground)" }}>
-          Cargando…
-        </p>
-      )}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+        <Input value={city} onChange={(event) => setCity(event.target.value)} placeholder="Ciudad" className="col-span-2 lg:col-span-1 rounded-xl bg-white" />
+        <Input type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} disabled={filter === "Hoy"} aria-label="Fecha desde" className="rounded-xl bg-white" />
+        <Input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} disabled={filter === "Hoy"} aria-label="Fecha hasta" className="rounded-xl bg-white" />
+        <label className="flex items-center gap-2 text-xs font-extrabold px-3">
+          <input type="checkbox" checked={onlyAvailable} onChange={(event) => setOnlyAvailable(event.target.checked)} className="size-4 accent-[var(--primary)]" /> Con cupo
+        </label>
+      </div>
+      <div className="flex gap-2 mb-6">
+        <Button type="button" className="flex-1 rounded-xl" onClick={applyFilters}>Aplicar filtros</Button>
+        <Button type="button" variant="outline" className="rounded-xl" onClick={clearFilters}>Limpiar</Button>
+      </div>
+      {loading && <LoadingState label="Cargando actividades..." />}
       {error && (
-        <p className="text-center text-[13px] font-bold py-10" style={{ color: "var(--destructive)" }}>
-          {error}
-        </p>
+        <ErrorState message={error} retry={refresh} />
       )}
-      {!loading &&
-        !error &&
-        results.map((a) => <ExploreCard key={a.id} activity={a} />)}
+      {!loading && !error && (
+        <>
+          <div className="lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-5">
+            {results.map((a) => <ExploreCard key={a.id} activity={a} />)}
+          </div>
+          <PageControls page={explorePage} totalPages={exploreTotalPages} onPageChange={setExplorePage} />
+        </>
+      )}
       {!loading && !error && results.length === 0 && (
         <p className="text-center text-[13px] font-bold py-10" style={{ color: "var(--muted-foreground)" }}>
           No encontramos actividades con esos filtros.

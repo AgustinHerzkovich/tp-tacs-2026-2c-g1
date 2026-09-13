@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -64,5 +66,11 @@ public class NotificationRepository implements INotificationRepository {
   @Override
   public List<Notification> findByReadAndReceiverUserId(Boolean read, String receiverUserId) {
     return repository.findByReadAndReceiverUserId(read, receiverUserId);
+  }
+
+  @Override
+  public Page<Notification> findByReadAndReceiverUserId(
+      Boolean read, String receiverUserId, Pageable pageable) {
+    return repository.findByReadAndReceiverUserId(read, receiverUserId, pageable);
   }
 }

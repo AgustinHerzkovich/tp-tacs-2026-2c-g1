@@ -5,9 +5,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.solnotfound.dto.PageResponse;
 import com.solnotfound.service.NotificationService;
-import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
@@ -17,13 +18,19 @@ class NotificationControllerTest {
   @Test
   void usesJwtSubjectToGetNotifications() {
     NotificationService service = mock(NotificationService.class);
-    when(service.getNotificationsByUser("user-auth-123")).thenReturn(List.of());
+    when(service.getNotificationsByUser(
+            org.mockito.ArgumentMatchers.eq("user-auth-123"),
+            org.mockito.ArgumentMatchers.any(Pageable.class)))
+        .thenReturn(new PageResponse<>(java.util.List.of(), 0, 10, 0, 0, true, true));
     NotificationController controller = new NotificationController(service);
 
-    var response = controller.getNotifications(authentication("user-auth-123"));
+    var response = controller.getNotifications(authentication("user-auth-123"), 0, 10);
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-    verify(service).getNotificationsByUser("user-auth-123");
+    verify(service)
+        .getNotificationsByUser(
+            org.mockito.ArgumentMatchers.eq("user-auth-123"),
+            org.mockito.ArgumentMatchers.any(Pageable.class));
   }
 
   @Test

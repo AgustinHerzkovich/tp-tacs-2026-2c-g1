@@ -2,6 +2,7 @@ package com.solnotfound.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.solnotfound.dto.ActivityFilterDTO;
 import com.solnotfound.entity.activity.Activity;
 import com.solnotfound.entity.activity.ActivityType;
 import com.solnotfound.entity.activity.City;
@@ -24,6 +25,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.mongodb.test.autoconfigure.DataMongoTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -50,7 +52,7 @@ class MongoPersistenceTest {
   @BeforeEach
   void setUp() {
     mongoTemplate.getDb().drop();
-    activityRepository = new ActivityRepository(mongoActivityRepository);
+    activityRepository = new ActivityRepository(mongoActivityRepository, mongoTemplate);
     votationRepository = new VotationRepository(mongoVotationRepository);
     notificationRepository = new NotificationRepository(mongoNotificationRepository);
     userRepository = new UserRepository(mongoUserRepository);
@@ -114,6 +116,26 @@ class MongoPersistenceTest {
     assertThat(notificationRepository.findByReadAndReceiverUserId(true, "participant"))
         .extracting(Notification::getId)
         .containsExactly(notification.getId());
+  }
+
+  @Test
+  void filtersAvailableActivitiesUsingCapacityCalculatedFromPersistedFields() {
+    User organizer = userRepository.findOrCreate("organizer");
+    User participant = userRepository.findOrCreate("participant");
+    Activity available = activity(organizer, participant);
+    activityRepository.save(available);
+
+    Activity full = activity(organizer, participant);
+    full.setId("activity-full");
+    full.setMaxParticipants(1);
+    activityRepository.save(full);
+
+    assertThat(
+            activityRepository
+                .search(new ActivityFilterDTO(null, null, null, null, true), PageRequest.of(0, 10))
+                .getContent())
+        .extracting(Activity::getId)
+        .containsExactly("activity-1");
   }
 
   private Activity activity(User organizer, User participant) {

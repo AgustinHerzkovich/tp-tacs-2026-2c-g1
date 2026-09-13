@@ -32,11 +32,13 @@ cp .env.example .env.local
 - `NEXT_PUBLIC_KEYCLOAK_CLIENT_ID`: cliente público SPA (`solnotfoundFrontend`); no lleva secreto.
 
 El frontend usa Authorization Code con PKCE. Keycloak solo se contacta cuando el usuario presiona
-el botón de ingreso; los tokens permanecen en memoria dentro de `keycloak-js` y Redux solo conserva
-`sub`, nombre y roles. Las llamadas autenticadas deben usar `authFetch`, que renueva el access token
-y lo envía al proxy como Bearer.
+el botón de ingreso o cuando se comprueba una sesión SSO existente después de recargar. Los tokens
+permanecen en memoria dentro de `keycloak-js` y Redux solo conserva `sub`, nombre y roles. Las
+llamadas autenticadas deben usar `authFetch`, que renueva el access token y lo envía al proxy como
+Bearer.
 
-Para probar contra el backend real, levantalo por separado (ver [backend/README.md](../backend/README.md)).
+Para levantar el sistema completo, ejecutá `docker compose up --build` desde la raíz. En ese modo el
+proxy del frontend usa `http://backend:8080` dentro de la red de Compose.
 
 ## Calidad de código
 
@@ -47,6 +49,7 @@ npm run build
 
 ## Estado actual
 
-Las pantallas todavía usan datos mock de `src/data/mockData.ts`, pero la autenticación ya está
-delegada a Keycloak y la capa proxy de `src/pages/api` reenvía sus JWT al backend. Conectar los datos
-reales requiere mapear `ActivityResponse` al modelo de UI y usar `authFetch` en los hooks.
+Explorar, Mis Actividades, detalle, clima, votaciones, participantes, notificaciones, creación y
+estadísticas consumen la API real mediante los proxies de `src/pages/api`. La ruta
+`/estadisticas` y su acceso en el header sólo se muestran a usuarios con rol de realm `ADMIN`; el
+backend vuelve a validar el mismo rol.

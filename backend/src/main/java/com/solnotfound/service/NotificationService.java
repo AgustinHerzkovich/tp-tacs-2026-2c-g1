@@ -1,6 +1,7 @@
 package com.solnotfound.service;
 
 import com.solnotfound.dto.NotificationResponse;
+import com.solnotfound.dto.PageResponse;
 import com.solnotfound.entity.activity.Activity;
 import com.solnotfound.entity.notification.Notification;
 import com.solnotfound.entity.notification.NotificationType;
@@ -11,6 +12,7 @@ import com.solnotfound.repository.INotificationRepository;
 import com.solnotfound.repository.IUserRepository;
 import java.util.ArrayList;
 import java.util.List;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -34,6 +36,15 @@ public class NotificationService {
     return notificationRepository.findByReadAndReceiverUserId(false, currentUserId).stream()
         .map(this::toDto)
         .toList();
+  }
+
+  /** Returns one page of unread notifications for the authenticated receiver, newest first. */
+  public PageResponse<NotificationResponse> getNotificationsByUser(
+      String currentUserId, Pageable pageable) {
+    return PageResponse.from(
+        notificationRepository
+            .findByReadAndReceiverUserId(false, currentUserId, pageable)
+            .map(this::toDto));
   }
 
   /**

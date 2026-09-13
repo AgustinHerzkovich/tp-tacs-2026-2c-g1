@@ -12,13 +12,13 @@ import { useNotifications } from "@/hooks/useNotifications";
  * instead of the app bar. */
 export default function HeaderLayout({ children }: { children: ReactNode }) {
   const drawer = useDisclosure();
-  const { unreadCount } = useNotifications();
+  const notifications = useNotifications();
 
   return (
     <div className="flex flex-col min-h-full">
-      <Header onBellClick={drawer.open} unread={unreadCount} />
+      <Header onBellClick={drawer.open} unread={notifications.unreadCount} />
       <div className="flex-1">{children}</div>
-      <NotifDrawer open={drawer.isOpen} onOpenChange={(v) => (v ? drawer.open() : drawer.close())} />
+      <NotifDrawer open={drawer.isOpen} onOpenChange={(v) => (v ? drawer.open() : drawer.close())} {...notifications} />
     </div>
   );
 }

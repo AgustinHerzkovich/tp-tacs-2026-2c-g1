@@ -254,7 +254,8 @@ class ActivityControllerTest {
   @Test
   void listsActivitiesOrganizedByCurrentUser() throws Exception {
     ActivityService service = mock(ActivityService.class);
-    when(service.getByOrganizerId("user-1")).thenReturn(List.of());
+    when(service.getByOrganizerId(eq("user-1"), any()))
+        .thenReturn(new com.solnotfound.dto.PageResponse<>(List.of(), 0, 12, 0, 0, true, true));
     ActivityController controller = new ActivityController(service);
 
     MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
@@ -262,14 +263,15 @@ class ActivityControllerTest {
     mockMvc
         .perform(get("/activities/organizers/me").principal(authentication("user-1")))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$").isEmpty());
-    verify(service).getByOrganizerId("user-1");
+        .andExpect(jsonPath("$.content").isEmpty());
+    verify(service).getByOrganizerId(eq("user-1"), any());
   }
 
   @Test
   void listsActivitiesJoinedByCurrentUser() throws Exception {
     ActivityService service = mock(ActivityService.class);
-    when(service.getByParticipantId("user-1")).thenReturn(List.of());
+    when(service.getByParticipantId(eq("user-1"), any()))
+        .thenReturn(new com.solnotfound.dto.PageResponse<>(List.of(), 0, 12, 0, 0, true, true));
     ActivityController controller = new ActivityController(service);
 
     MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
@@ -277,8 +279,8 @@ class ActivityControllerTest {
     mockMvc
         .perform(get("/activities/participants/me").principal(authentication("user-1")))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$").isEmpty());
-    verify(service).getByParticipantId("user-1");
+        .andExpect(jsonPath("$.content").isEmpty());
+    verify(service).getByParticipantId(eq("user-1"), any());
   }
 
   private Jwt jwt(String userId) {

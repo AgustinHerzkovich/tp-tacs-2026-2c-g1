@@ -1,15 +1,16 @@
-import type { ReactNode } from "react";
-import { MapPin } from "lucide-react";
+import { type ReactNode } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MiniStepper } from "@/components/common/MiniStepper";
+import { LocationMap } from "@/components/pages/wizard/LocationMap";
 import type { WizardErrors } from "@/lib/validation";
 import type { WizardFormState } from "@/types/domain";
-import type { FieldSetter } from "@/hooks/useWizardForm";
+import type { FieldSetter, FormPatchSetter } from "@/hooks/useWizardForm";
 
 interface StepProps {
   form: WizardFormState;
   set: FieldSetter;
+  patch?: FormPatchSetter;
   errors?: WizardErrors;
 }
 
@@ -33,34 +34,21 @@ function FieldError({ message }: { message?: string }) {
   );
 }
 
-export function StepLugarFecha({ form, set, errors }: StepProps) {
+export function StepLugarFecha({ form, set, patch, errors }: StepProps) {
+  if (!patch) return null;
   return (
     <div>
       <Field label="Ubicación">
-        <Input
-          placeholder="Buscar dirección o lugar…"
-          value={form.place}
-          onChange={(e) => set("place")(e.target.value)}
-          aria-invalid={!!errors?.place}
-          className="h-auto py-3.5 rounded-2xl border-2 text-[15px]"
+        <LocationMap
+          place={form.place}
+          latitude={form.latitude}
+          longitude={form.longitude}
+          invalid={!!errors?.place}
+          onQueryChange={(query) => patch({ place: query, latitude: null, longitude: null })}
+          onChange={(location) => patch({ place: location.label, latitude: location.latitude, longitude: location.longitude })}
         />
         <FieldError message={errors?.place} />
       </Field>
-
-      <div className="relative rounded-2xl overflow-hidden h-40 mb-5" style={{ background: "linear-gradient(135deg, #BAE6FD, #A7F3D0)" }}>
-        <span className="emoji-3d floaty absolute text-4xl" style={{ left: "15%", top: "18%" }}>
-          🗺️
-        </span>
-        <span className="emoji-3d floaty absolute text-3xl" style={{ right: "18%", top: "50%", animationDelay: ".4s" }}>
-          🌳
-        </span>
-        <button
-          type="button"
-          className="tap absolute left-1/2 -translate-x-1/2 bottom-4 px-4 py-2.5 rounded-full bg-white shadow-[0_8px_18px_-8px_rgba(58,51,82,.5)] font-display font-semibold text-[12.5px] flex items-center gap-1.5"
-        >
-          <MapPin className="size-4" /> Tocá para colocar el pin
-        </button>
-      </div>
 
       <div className="grid grid-cols-2 gap-4">
         <Field label="Fecha">

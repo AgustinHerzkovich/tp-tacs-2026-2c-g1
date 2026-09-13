@@ -73,8 +73,10 @@ function toBase(dto: ActivityResponse) {
   return {
     id: dto.id,
     scene: pickScene(dto.id),
+    imageUrl: dto.imageUrls[0] ?? null,
     title: dto.title,
     type: mapActivityType(dto.type),
+    dateTime: dto.dateTime,
     when: formatActivityWhen(dto.dateTime),
     where: dto.location.city ?? "Ubicación a confirmar",
     participantIds: dto.participants.map((p) => p.userId),

@@ -2,9 +2,8 @@
 
 ## Cómo levantar la aplicación
 
-La aplicación queda disponible en `http://localhost:8080`, la documentación interactiva en
-`http://localhost:8080/swagger-ui.html` y la especificación OpenAPI en
-`http://localhost:8080/v3/api-docs`.
+El frontend queda disponible en `http://localhost:3000`, Keycloak en `http://localhost:8090`, la API
+en `http://localhost:8080` y Swagger UI en `http://localhost:8080/swagger-ui.html`.
 
 Ejemplo del JSON que debe enviarse en la parte `activity` de `POST /activities`:
 
@@ -44,7 +43,8 @@ Se requiere Docker con Docker Compose. Desde la raíz del proyecto, ejecutar:
 docker compose up --build
 ```
 
-Para detener la aplicación, ejecutar `docker compose down`.
+Este único comando construye y levanta frontend, backend, MongoDB, MinIO y Keycloak. Para detener
+la aplicación, ejecutar `docker compose down`.
 
 ### Con Maven
 
@@ -59,14 +59,14 @@ Maven. Desde la raíz del proyecto, ejecutar:
 ./mvnw spring-boot:run
 ```
 
-Actualmente los datos se almacenan en memoria y se pierden al reiniciar la aplicación.
+Las variables admitidas por Compose y los valores locales seguros se documentan en `.env.example`;
+las variables exclusivas del frontend están en `frontend/.env.example`.
 
-## Alcance de la Entrega 1
+## Alcance
 
-Esta entrega implementa el modelo de actividades, participantes, reglas climáticas, votaciones,
-notificaciones y estadísticas mediante repositorios en memoria. Las rutas REST están documentadas
-con OpenAPI. La persistencia NoSQL y la interfaz de usuario corresponden a la Entrega 2, mientras
-que el despliegue portable en cloud corresponde a la Entrega 3.
+La Entrega 2 incorpora la UI Next.js, autenticación con Keycloak y persistencia NoSQL en MongoDB.
+Los servicios siguen dependiendo de interfaces de repositorio para mantener desacoplados los casos
+de uso de la tecnología de persistencia.
 
 La matriz de trazabilidad entre user stories, implementación y pruebas está disponible en
 [`docs/DELIVERY_1_TRACEABILITY.md`](docs/DELIVERY_1_TRACEABILITY.md). Los casos manuales para
@@ -89,9 +89,9 @@ En producción debe configurarse SMTP en Keycloak y volver a habilitar `verifyEm
 
 Estas decisiones cubren aspectos no definidos de forma exhaustiva por el enunciado:
 
-- **Repositorios intercambiables y almacenamiento en memoria:** los servicios dependen de
-  interfaces de repositorio. La Entrega 1 usa implementaciones con `ConcurrentHashMap`; en la
-  Entrega 2 podrán reemplazarse por MongoDB sin cambiar los casos de uso.
+- **Repositorios intercambiables y MongoDB:** los servicios dependen de interfaces de repositorio.
+  La Entrega 2 reemplazó las implementaciones en memoria por Spring Data MongoDB sin cambiar los
+  casos de uso.
 - **Backend sin sesión HTTP:** la identidad se obtiene del `subject` de un JWT verificado y no se
   mantiene estado de sesión en el backend.
 - **Monitoreo periódico configurable:** Spring Scheduler evalúa clima, cierre de votaciones,
@@ -109,15 +109,14 @@ Estas decisiones cubren aspectos no definidos de forma exhaustiva por el enuncia
   cachés acotadas, timeout, retry y circuit breaker. La indisponibilidad no se interpreta como clima
   favorable.
 - **Estadísticas mediante eventos:** las métricas históricas se registran como eventos inmutables en
-  memoria. Se cuentan las llamadas HTTP reales a Open-Meteo, no los accesos resueltos por caché. El
-  diseño permite migrar la colección de eventos a MongoDB.
+  MongoDB. Se cuentan las llamadas HTTP reales a Open-Meteo, no los accesos resueltos por caché.
 - **Rangos estadísticos inclusivos:** `from` y `to` incluyen ambos extremos; sin parámetros se
   consultan los últimos siete días. Una cancelación climática incluye mal clima y ausencia de
   alternativas favorables.
 
-No se adoptaron las decisiones antiguas de CDC/Stream ETL ni de filtros ejecutados por una base de
-datos porque no existe persistencia en la Entrega 1. Keycloak es el proveedor de identidad y el
-backend funciona como OAuth2 Resource Server sin administrar contraseñas.
+Keycloak es el proveedor de identidad y el backend funciona como OAuth2 Resource Server sin
+administrar contraseñas. Los access y refresh tokens permanecen en memoria en `keycloak-js`; el
+frontend usa Authorization Code con PKCE y nunca persiste tokens en el navegador.
 
 ## Servicio meteorológico
 
@@ -187,7 +186,7 @@ pero se intentó ejecutar con Java 17. El hook evita esa mezcla configurando Jav
 
 ## Git flow
 
-![Diagrama de Git flow](src/main/resources/static/gitflow.png)
+![Diagrama de Git flow](docs/gitflow.png)
 
 ## Uso de inteligencia artificial
 
@@ -205,6 +204,8 @@ como herramientas de apoyo. Su uso se concentró en las siguientes tareas:
   como Spotless, Checkstyle y SpotBugs.
 - Análisis de errores de compilación, tests y conflictos de integración.
 - Modelado de Interfaz de Usuario.
+- Integración del frontend con la API, autenticación con Keycloak, resolución de conflictos de
+  merge y revisión de consistencia de la Entrega 2.
 
 Las respuestas de estas herramientas se tomaron como sugerencias y no como resultados definitivos.
 El equipo revisó las propuestas, las adaptó al diseño y las convenciones del proyecto, y validó los

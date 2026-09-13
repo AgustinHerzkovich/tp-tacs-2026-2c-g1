@@ -7,9 +7,10 @@ interface WeatherWidgetProps {
    * "good weather" guess in this case (see useActivityWeather). */
   unavailable: boolean;
   forecast: WeatherForecastDTO | null;
+  current?: WeatherForecastDTO | null;
 }
 
-export function WeatherWidget({ loading, unavailable, forecast }: WeatherWidgetProps) {
+export function WeatherWidget({ loading, unavailable, forecast, current }: WeatherWidgetProps) {
   return (
     <Card className="p-4 mb-4 rounded-2xl">
       <p className="font-display font-semibold text-[11.5px] tracking-wide px-4 mb-3" style={{ color: "var(--muted-foreground)" }}>
@@ -26,6 +27,8 @@ export function WeatherWidget({ loading, unavailable, forecast }: WeatherWidgetP
         </p>
       )}
       {!loading && !unavailable && forecast && (
+        <div>
+        {current && <p className="text-[11px] font-bold px-4 mb-3" style={{ color: "var(--muted-foreground)" }}>Ahora: {Math.round(current.temperature)}°C · lluvia {Math.round(current.chanceOfRain)}% · viento {Math.round(current.windSpeed)} km/h</p>}
         <div className="grid grid-cols-4 gap-1 text-center px-4">
           {[
             { icon: "⛅", label: "Clima", value: forecast.chanceOfRain > 50 ? "Lluvia" : "Templado" },
@@ -43,6 +46,7 @@ export function WeatherWidget({ loading, unavailable, forecast }: WeatherWidgetP
               </p>
             </div>
           ))}
+        </div>
         </div>
       )}
     </Card>

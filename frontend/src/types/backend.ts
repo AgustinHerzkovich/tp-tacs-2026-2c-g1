@@ -12,6 +12,16 @@ export type ActivityStatus = "CONFIRMED" | "PROPOSED" | "RESCHEDULED" | "CANCELL
 
 export type VotationStatus = "ACTIVE" | "CLOSED";
 
+export interface PageResponse<T> {
+  content: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  first: boolean;
+  last: boolean;
+}
+
 export interface LocationDTO {
   city: string | null;
   latitude: number | null;
@@ -65,6 +75,8 @@ export interface ActivityFilterParams {
   /** ISO LocalDateTime */
   dateTo?: string;
   availability?: boolean;
+  page?: number;
+  size?: number;
 }
 
 export interface CreateActivityRequest {

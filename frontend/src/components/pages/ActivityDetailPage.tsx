@@ -1,10 +1,11 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, MapPin, Clock } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Scene } from "@/components/common/Scene";
+import { ActivityGallery } from "@/components/activities/ActivityGallery";
 import { PillBadge, TypeBadge } from "@/components/common/PillBadge";
 import { AvatarStack } from "@/components/common/AvatarStack";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
@@ -19,24 +20,29 @@ import { STATUS_META } from "@/lib/activityVisuals";
 import { mapActivityStatus, mapActivityType, pickScene } from "@/lib/activityMapping";
 import { formatActivityWhen } from "@/lib/formatDate";
 import { participantDisplayName } from "@/lib/initials";
+import { api } from "@/lib/api";
+import { ErrorState, LoadingState } from "@/components/common/AsyncState";
 
 export function ActivityDetailPage({ id }: { id: string }) {
   const router = useRouter();
   const { user } = useAuth();
-  const { activity, loading, notFound, error } = useActivity(id);
+  const { activity, loading, notFound, error, refresh } = useActivity(id);
   const weather = useActivityWeather(id);
   const voting = useVoting(id);
+  const [isOrganizer, setIsOrganizer] = useState(false);
 
   const initialJoined = activity?.participants.some((p) => p.userId === user?.id) ?? false;
-  const join = useJoinActivity(id, initialJoined);
+  const join = useJoinActivity(id, initialJoined, refresh);
 
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center gap-3 py-20">
-        <p className="font-display font-semibold text-lg">Cargando…</p>
-      </div>
-    );
-  }
+  useEffect(() => {
+    let cancelled = false;
+    api.activities.organized().then((activities) => {
+      if (!cancelled) setIsOrganizer(activities.content.some((item) => item.id === id));
+    }).catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [id]);
+
+  if (loading) return <LoadingState label="Cargando actividad..." />;
 
   if (notFound || !activity) {
     return (
@@ -71,10 +77,10 @@ export function ActivityDetailPage({ id }: { id: string }) {
   const maxRain = activity.weatherConditions.maxRainProbability;
 
   return (
-    <div className="fade-in">
+    <div className="fade-in lg:max-w-5xl lg:mx-auto lg:py-8 lg:px-8 lg:pb-24">
       <div>
-        <div className="relative">
-          <Scene scene={scene} height={220} />
+        <div className="relative lg:rounded-3xl lg:overflow-hidden">
+          <ActivityGallery images={activity.imageUrls} scene={scene} title={activity.title} />
           <div className="absolute inset-x-0 bottom-0 h-28" style={{ background: "linear-gradient(to top, rgba(58,51,82,.75), transparent)" }} />
           <button
             onClick={() => router.back()}
@@ -97,8 +103,8 @@ export function ActivityDetailPage({ id }: { id: string }) {
           </div>
         </div>
 
-        <div className="px-5 pt-5">
-          <WeatherWidget loading={weather.loading} unavailable={weather.unavailable} forecast={weather.weather?.activityForecast ?? null} />
+        <div className="px-5 pt-5 lg:px-0 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.7fr)] lg:gap-5 lg:items-start">
+          <WeatherWidget loading={weather.loading} unavailable={weather.unavailable} forecast={weather.weather?.activityForecast ?? null} current={weather.weather?.currentWeather ?? null} />
 
           {hasVoting && (
             <VotingRoom
@@ -111,7 +117,7 @@ export function ActivityDetailPage({ id }: { id: string }) {
             />
           )}
 
-          <div className="mb-4">
+          <div className="mb-4 lg:col-start-1 lg:row-start-1 lg:mt-36">
             <h3 className="font-display font-semibold text-[15px] mb-2">Sobre la actividad</h3>
             <p className="text-[13px] font-semibold leading-relaxed mb-3" style={{ color: "var(--muted-foreground)" }}>
               {activity.description ?? "Sin descripción."}
@@ -134,11 +140,23 @@ export function ActivityDetailPage({ id }: { id: string }) {
                 </p>
               </Card>
             </div>
+            <Card className="p-4 rounded-2xl mt-3">
+              <p className="font-display font-semibold text-sm px-4 mb-2">Condiciones y planificación</p>
+              <div className="grid grid-cols-2 gap-2 px-4 text-xs font-bold" style={{ color: "var(--muted-foreground)" }}>
+                <span>Mínimo: {activity.minParticipants}</span>
+                <span>Aviso: {activity.anticipationWindow} h antes</span>
+                <span>Lluvia máx.: {activity.weatherConditions.maxRainProbability ?? "-"}%</span>
+                <span>Viento máx.: {activity.weatherConditions.maxWindSpeed ?? "-"} km/h</span>
+                <span>Temp.: {activity.weatherConditions.minTemperature ?? "-"}° a {activity.weatherConditions.maxTemperature ?? "-"}°</span>
+                <span>Reprogramación: {activity.reprogramationRange.maxDays} días</span>
+                <span className="col-span-2">Horario: {activity.reprogramationRange.initialHour.slice(0, 5)} a {activity.reprogramationRange.finalHour.slice(0, 5)}</span>
+              </div>
+            </Card>
           </div>
         </div>
       </div>
 
-      <div className="px-5 py-4 border-t-2 flex items-center gap-4" style={{ borderColor: "var(--border)" }}>
+      <div className="px-5 py-4 border-t-2 flex items-center gap-4 lg:px-0" style={{ borderColor: "var(--border)" }}>
         <div>
           <AvatarStack names={participantNames.slice(0, 3)} extra={Math.max(0, participantNames.length - 3)} />
           <p className="text-[10px] font-extrabold mt-1" style={{ color: "var(--muted-foreground)" }}>

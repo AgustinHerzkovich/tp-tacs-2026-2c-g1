@@ -140,6 +140,24 @@
   transform: scale(0.94);
 }
 
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+.planazo-map-marker span {
+  display: block;
+  width: 30px;
+  height: 30px;
+  background: var(--primary);
+  border: 4px solid white;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  box-shadow: 0 5px 14px rgba(58, 51, 82, 0.35);
+}
+
 /* No `opacity` in these entrance keyframes — on purpose. Chrome pauses CSS
    animations on an unfocused document (visible or not), and a fill-mode
    "both" animation that starts at opacity:0 gets stuck fully invisible if it

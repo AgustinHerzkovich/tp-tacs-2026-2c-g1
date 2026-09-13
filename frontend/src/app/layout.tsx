@@ -25,11 +25,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="es" className={`${fredoka.variable} ${nunito.variable} h-full antialiased`}>
-      <body className="min-h-screen flex flex-col items-center" style={{ background: "#f3ece3" }}>
+      <body className="min-h-screen" style={{ background: "#f3ece3" }}>
         <StoreProvider>
-          {/* Mobile-only shell: the app always renders as a fixed-width phone
-              column, centered, even on a desktop-wide browser window. */}
-          <div className="w-full max-w-[430px] min-h-screen flex flex-col" style={{ background: "var(--background)" }}>
+          <div className="w-full min-h-screen flex flex-col lg:max-w-[1440px] lg:mx-auto lg:shadow-2xl" style={{ background: "var(--background)" }}>
             <TopProgressBar />
             {children}
           </div>

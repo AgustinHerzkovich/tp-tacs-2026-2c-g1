@@ -2,16 +2,24 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle } from "lucide-react";
+import { useState } from "react";
+import { AlertTriangle, Plus, Settings2, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import type { UseVoting } from "@/hooks/useVoting";
 
 interface VotingRoomProps {
   voting: UseVoting;
   warningText?: string;
+  organizer?: boolean;
 }
 
-export function VotingRoom({ voting, warningText }: VotingRoomProps) {
+export function VotingRoom({ voting, warningText, organizer = false }: VotingRoomProps) {
   const { options, total, selectedId, votedId, select, requestVote } = voting;
+  const [editing, setEditing] = useState(false);
+  const [dates, setDates] = useState<string[]>([]);
+  const [quorum, setQuorum] = useState("50");
+  const [duration, setDuration] = useState("24");
+  const [adminError, setAdminError] = useState<string | null>(null);
 
   return (
     <Card className="p-4 mb-4 rounded-2xl border-2" style={{ borderColor: "#F7DE6B" }}>
@@ -38,8 +46,7 @@ export function VotingRoom({ voting, warningText }: VotingRoomProps) {
               key={option.id}
               type="button"
               onClick={() => select(option.id)}
-              disabled={!!votedId}
-              className="tap block w-full text-left rounded-xl border-2 p-3 disabled:cursor-default"
+              className="tap block w-full text-left rounded-xl border-2 p-3"
               style={{ borderColor: active ? "var(--primary)" : "var(--border)", background: active ? "var(--secondary)" : "#fff" }}
             >
               <div className="flex items-center justify-between mb-2">
@@ -60,10 +67,32 @@ export function VotingRoom({ voting, warningText }: VotingRoomProps) {
       </div>
 
       <div className="px-4">
-        <Button className="w-full h-auto py-3.5 rounded-2xl font-display font-semibold" disabled={!selectedId || !!votedId} onClick={requestVote}>
-          {votedId ? "¡Voto registrado! ✓" : "Votar fecha alternativa"}
+        <Button className="w-full h-auto py-3.5 rounded-2xl font-display font-semibold" disabled={!selectedId || selectedId === votedId} onClick={requestVote}>
+          {votedId ? "Cambiar voto" : "Votar fecha alternativa"}
         </Button>
       </div>
+
+      {organizer && (
+        <div className="mx-4 mt-4 pt-4 border-t-2" style={{ borderColor: "var(--border)" }}>
+          <Button type="button" variant="outline" className="w-full rounded-xl" onClick={() => setEditing((value) => !value)}><Settings2 className="size-4" /> Administrar votación</Button>
+          {editing && (
+            <div className="mt-4 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <label className="text-xs font-extrabold">Quórum (%)<Input type="number" min="0" max="100" value={quorum} onChange={(event) => setQuorum(event.target.value)} className="mt-1" /></label>
+                <label className="text-xs font-extrabold">Duración (horas)<Input type="number" min="1" value={duration} onChange={(event) => setDuration(event.target.value)} className="mt-1" /></label>
+              </div>
+              <Button type="button" className="w-full rounded-xl" onClick={() => void voting.updateSettings(Number(quorum) / 100, Number(duration)).catch((error: unknown) => setAdminError(error instanceof Error ? error.message : "No se pudo actualizar."))}>Guardar configuración</Button>
+              <div>
+                <p className="text-xs font-extrabold mb-2">Nuevas alternativas</p>
+                {dates.map((date, index) => <div key={index} className="flex gap-2 mb-2"><Input type="datetime-local" value={date} onChange={(event) => setDates((all) => all.map((item, itemIndex) => itemIndex === index ? event.target.value : item))} /><Button type="button" variant="outline" size="icon" onClick={() => setDates((all) => all.filter((_, itemIndex) => itemIndex !== index))}><X className="size-4" /></Button></div>)}
+                <Button type="button" variant="outline" className="w-full rounded-xl" onClick={() => setDates((all) => [...all, ""])}><Plus className="size-4" /> Agregar alternativa</Button>
+              </div>
+              <Button type="button" className="w-full rounded-xl" disabled={dates.length === 0 || dates.some((date) => !date)} onClick={() => void voting.updateOptions(dates.map((date) => `${date}:00`)).then(() => setDates([])).catch((error: unknown) => setAdminError(error instanceof Error ? error.message : "No se pudieron actualizar las opciones."))}>Reemplazar alternativas</Button>
+              {adminError && <p className="text-xs font-extrabold" style={{ color: "var(--destructive)" }}>{adminError}</p>}
+            </div>
+          )}
+        </div>
+      )}
     </Card>
   );
 }
