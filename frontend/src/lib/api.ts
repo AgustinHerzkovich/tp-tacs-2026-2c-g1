@@ -4,6 +4,7 @@
 // token — never call fetch("/api/...") directly from a hook/component.
 
 import { authFetch } from "@/lib/authFetch";
+import { beginRequest, endRequest } from "@/lib/loading";
 import type {
   ActivityResponse,
   ActivityWeatherResponse,
@@ -22,17 +23,22 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await authFetch(`/api${path}`, init);
-  if (!res.ok) {
-    const body: unknown = await res.json().catch(() => null);
-    const message =
-      body && typeof body === "object" && "message" in body && typeof body.message === "string"
-        ? body.message
-        : `Error ${res.status} llamando a ${path}`;
-    throw new ApiError(res.status, message);
+  beginRequest();
+  try {
+    const res = await authFetch(`/api${path}`, init);
+    if (!res.ok) {
+      const body: unknown = await res.json().catch(() => null);
+      const message =
+        body && typeof body === "object" && "message" in body && typeof body.message === "string"
+          ? body.message
+          : `Error ${res.status} llamando a ${path}`;
+      throw new ApiError(res.status, message);
+    }
+    if (res.status === 204) return undefined as T;
+    return (await res.json()) as T;
+  } finally {
+    endRequest();
   }
-  if (res.status === 204) return undefined as T;
-  return (await res.json()) as T;
 }
 
 function json(method: string, body: unknown): RequestInit {

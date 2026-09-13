@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Fredoka, Nunito } from "next/font/google";
 import { StoreProvider } from "@/store/StoreProvider";
+import { TopProgressBar } from "@/components/layout/TopProgressBar";
 import "./globals.css";
 
 const fredoka = Fredoka({
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           {/* Mobile-only shell: the app always renders as a fixed-width phone
               column, centered, even on a desktop-wide browser window. */}
           <div className="w-full max-w-[430px] min-h-screen flex flex-col" style={{ background: "var(--background)" }}>
+            <TopProgressBar />
             {children}
           </div>
         </StoreProvider>
