@@ -19,6 +19,7 @@ export function BottomNav() {
           <Link
             key={tab.href}
             href={tab.href}
+            aria-current={active ? "page" : undefined}
             className="tap flex-1 flex items-center justify-center gap-2 py-3 rounded-full font-display font-semibold text-[13px] transition-colors"
             style={active ? { background: "var(--secondary)", color: "var(--secondary-foreground)" } : { color: "var(--muted-foreground)" }}
           >

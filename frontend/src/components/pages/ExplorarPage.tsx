@@ -64,6 +64,7 @@ export function ExplorarPage() {
   });
 
   const clearFilters = () => {
+    setQuery("");
     setFilter("Todo");
     setCity("");
     setDateFrom("");
@@ -96,6 +97,7 @@ export function ExplorarPage() {
             <button
               key={f}
               onClick={() => setFilter(f)}
+              aria-pressed={active}
               className="tap shrink-0 px-4 py-2 rounded-full text-[12.5px] font-extrabold border-2 whitespace-nowrap"
               style={
                 active
@@ -137,9 +139,14 @@ export function ExplorarPage() {
         </>
       )}
       {!loading && !error && results.length === 0 && (
-        <p className="text-center text-[13px] font-bold py-10" style={{ color: "var(--muted-foreground)" }}>
-          No encontramos actividades con esos filtros.
-        </p>
+        <div className="text-center py-10">
+          <p className="text-[13px] font-bold" style={{ color: "var(--muted-foreground)" }}>
+            No encontramos actividades con esos filtros.
+          </p>
+          <Button type="button" variant="outline" className="mt-3 rounded-xl" onClick={clearFilters}>
+            Limpiar filtros
+          </Button>
+        </div>
       )}
     </div>
   );
