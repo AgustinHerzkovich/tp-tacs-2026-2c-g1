@@ -3,12 +3,14 @@ import { MapPin } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MiniStepper } from "@/components/common/MiniStepper";
+import type { WizardErrors } from "@/lib/validation";
 import type { WizardFormState } from "@/types/domain";
 import type { FieldSetter } from "@/hooks/useWizardForm";
 
 interface StepProps {
   form: WizardFormState;
   set: FieldSetter;
+  errors?: WizardErrors;
 }
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
@@ -22,7 +24,16 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-export function StepLugarFecha({ form, set }: StepProps) {
+function FieldError({ message }: { message?: string }) {
+  if (!message) return null;
+  return (
+    <p className="mt-1.5 text-[12px] font-extrabold" style={{ color: "var(--destructive)" }}>
+      {message}
+    </p>
+  );
+}
+
+export function StepLugarFecha({ form, set, errors }: StepProps) {
   return (
     <div>
       <Field label="Ubicación">
@@ -30,8 +41,10 @@ export function StepLugarFecha({ form, set }: StepProps) {
           placeholder="Buscar dirección o lugar…"
           value={form.place}
           onChange={(e) => set("place")(e.target.value)}
+          aria-invalid={!!errors?.place}
           className="h-auto py-3.5 rounded-2xl border-2 text-[15px]"
         />
+        <FieldError message={errors?.place} />
       </Field>
 
       <div className="relative rounded-2xl overflow-hidden h-40 mb-5" style={{ background: "linear-gradient(135deg, #BAE6FD, #A7F3D0)" }}>
@@ -51,16 +64,32 @@ export function StepLugarFecha({ form, set }: StepProps) {
 
       <div className="grid grid-cols-2 gap-4">
         <Field label="Fecha">
-          <Input type="date" value={form.date} onChange={(e) => set("date")(e.target.value)} className="h-auto py-3 rounded-2xl border-2" />
+          <Input
+            type="date"
+            value={form.date}
+            onChange={(e) => set("date")(e.target.value)}
+            aria-invalid={!!errors?.date}
+            className="h-auto py-3 rounded-2xl border-2"
+          />
+          <FieldError message={errors?.date} />
         </Field>
         <Field label="Hora">
-          <Input type="time" value={form.time} onChange={(e) => set("time")(e.target.value)} className="h-auto py-3 rounded-2xl border-2" />
+          <Input
+            type="time"
+            value={form.time}
+            onChange={(e) => set("time")(e.target.value)}
+            aria-invalid={!!errors?.time}
+            className="h-auto py-3 rounded-2xl border-2"
+          />
+          <FieldError message={errors?.time} />
         </Field>
         <Field label="Mín. participantes">
           <MiniStepper value={form.min} min={1} max={form.max} onChange={set("min")} />
+          <FieldError message={errors?.min} />
         </Field>
         <Field label="Máx. participantes">
           <MiniStepper value={form.max} min={form.min} max={99} onChange={set("max")} />
+          <FieldError message={errors?.max} />
         </Field>
       </div>
     </div>

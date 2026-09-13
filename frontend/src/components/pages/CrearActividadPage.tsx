@@ -14,6 +14,7 @@ import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { api, ApiError } from "@/lib/api";
 import { toBackendActivityType } from "@/lib/activityMapping";
+import { firstInvalidStep, validateAll, type WizardErrors } from "@/lib/validation";
 import type { WizardFormState } from "@/types/domain";
 import type { FieldSetter } from "@/hooks/useWizardForm";
 import type { CreateActivityRequest } from "@/types/backend";
@@ -21,6 +22,7 @@ import type { CreateActivityRequest } from "@/types/backend";
 interface StepProps {
   form: WizardFormState;
   set: FieldSetter;
+  errors?: WizardErrors;
 }
 
 const STEP_COMPONENTS: ComponentType<StepProps>[] = [StepInfo, StepLugarFecha, StepClima, StepAlertas];
@@ -53,15 +55,6 @@ function buildCreateRequest(form: WizardFormState): CreateActivityRequest {
   };
 }
 
-function validate(form: WizardFormState): string | null {
-  if (!form.title.trim()) return "Poné un título para la actividad.";
-  if (!form.date || !form.time) return "Elegí una fecha y hora.";
-  if (new Date(`${form.date}T${form.time}:00`).getTime() <= Date.now()) {
-    return "La fecha y hora tienen que estar en el futuro.";
-  }
-  return null;
-}
-
 export function CrearActividadPage() {
   const router = useRouter();
   const wizard = useWizardForm();
@@ -73,9 +66,11 @@ export function CrearActividadPage() {
   if (!user) return null;
 
   const handlePublish = async () => {
-    const validationError = validate(wizard.form);
-    if (validationError) {
-      setSubmitError(validationError);
+    const validationErrors = validateAll(wizard.form);
+    const invalidStep = firstInvalidStep(wizard.form);
+    if (invalidStep >= 0) {
+      wizard.showErrors(validationErrors, invalidStep);
+      setSubmitError("Revisá los campos marcados en rojo para poder publicar.");
       return;
     }
 
@@ -126,8 +121,8 @@ export function CrearActividadPage() {
       <WizardProgress step={wizard.step} />
 
       <div key={wizard.step} className={`flex-1 px-5 pb-4 ${wizard.direction > 0 ? "anim-slide-right" : "anim-slide-left"}`}>
-        {StepComponent && <StepComponent form={wizard.form} set={wizard.set} />}
-        {wizard.isLastStep && submitError && (
+        {StepComponent && <StepComponent form={wizard.form} set={wizard.set} errors={wizard.errors} />}
+        {submitError && Object.keys(wizard.errors).length > 0 && (
           <p className="mt-4 text-[12.5px] font-extrabold rounded-2xl p-3" style={{ background: "var(--rose)", color: "var(--rose-ink)" }}>
             {submitError}
           </p>
@@ -145,7 +140,7 @@ export function CrearActividadPage() {
             {submitting ? "Publicando…" : "Publicar Actividad"}
           </Button>
         ) : (
-          <Button className="flex-1 h-auto py-3.5 rounded-2xl font-display font-semibold" onClick={wizard.next}>
+          <Button className="flex-1 h-auto py-3.5 rounded-2xl font-display font-semibold" onClick={() => { setSubmitError(null); wizard.next(); }}>
             Continuar
           </Button>
         )}
