@@ -62,6 +62,30 @@ export function MisGridSkeleton({ count = 4 }: { count?: number }) {
   );
 }
 
+export function StatisticsSkeleton() {
+  return (
+    <div aria-busy="true" aria-label="Cargando estadísticas">
+      <Skeleton className="h-3.5 w-48 mb-3" />
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        {Array.from({ length: 4 }, (_, i) => (
+          <Card key={i} className="p-4 rounded-2xl">
+            <Skeleton className="h-8 w-12 mx-4" />
+            <Skeleton className="h-3 w-20 mx-4 mt-2" />
+          </Card>
+        ))}
+      </div>
+      <Card className="p-5 rounded-2xl">
+        <Skeleton className="h-5 w-32 mx-4 mb-3" />
+        <div className="grid grid-cols-2 gap-3 px-4">
+          {Array.from({ length: 4 }, (_, i) => (
+            <Skeleton key={i} className="h-8 w-full" />
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 export function ActivityDetailSkeleton() {
   return (
     <div className="fade-in lg:max-w-5xl lg:mx-auto lg:py-8 lg:px-8" aria-busy="true" aria-label="Cargando actividad">
