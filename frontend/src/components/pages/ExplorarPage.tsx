@@ -7,7 +7,8 @@ import { ExploreCard } from "@/components/activities/ExploreCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { ActivityFilterParams, ActivityType } from "@/types/backend";
-import { ErrorState, LoadingState } from "@/components/common/AsyncState";
+import { ErrorState } from "@/components/common/AsyncState";
+import { ExploreGridSkeleton } from "@/components/common/Skeletons";
 import { PageControls } from "@/components/common/PageControls";
 
 const FILTERS = ["Todo", "Outdoor", "Indoor", "Mixto", "Hoy"] as const;
@@ -123,7 +124,7 @@ export function ExplorarPage() {
       <div className="flex gap-2 mb-6">
         <Button type="button" variant="outline" className="flex-1 rounded-xl" onClick={clearFilters}>Limpiar</Button>
       </div>
-      {loading && <LoadingState label="Cargando actividades..." />}
+      {loading && <ExploreGridSkeleton />}
       {error && (
         <ErrorState message={error} retry={refresh} />
       )}

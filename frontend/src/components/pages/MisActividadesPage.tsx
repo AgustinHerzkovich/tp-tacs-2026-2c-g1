@@ -3,7 +3,8 @@
 import { useActivities } from "@/hooks/useActivities";
 import { VotingPendingCard } from "@/components/activities/VotingPendingCard";
 import { MisCard } from "@/components/activities/MisCard";
-import { ErrorState, LoadingState } from "@/components/common/AsyncState";
+import { ErrorState } from "@/components/common/AsyncState";
+import { MisGridSkeleton } from "@/components/common/Skeletons";
 import { PageControls } from "@/components/common/PageControls";
 
 export function MisActividadesPage() {
@@ -33,7 +34,7 @@ export function MisActividadesPage() {
       <p className="font-display font-semibold text-[13px] uppercase tracking-wide mt-6 mb-2" style={{ color: "var(--muted-foreground)" }}>
         Tus actividades
       </p>
-      {loading && <LoadingState label="Cargando tus actividades..." />}
+      {loading && <MisGridSkeleton />}
       {error && <ErrorState message={error} retry={refresh} />}
       {!loading && !error && misFeed.length === 0 && (
         <p className="text-center text-[13px] font-bold py-10" style={{ color: "var(--muted-foreground)" }}>

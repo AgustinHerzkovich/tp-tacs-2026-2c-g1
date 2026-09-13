@@ -21,7 +21,8 @@ import { mapActivityStatus, mapActivityType, pickScene } from "@/lib/activityMap
 import { formatActivityWhen } from "@/lib/formatDate";
 import { participantDisplayName } from "@/lib/initials";
 import { api } from "@/lib/api";
-import { ErrorState, LoadingState } from "@/components/common/AsyncState";
+import { ErrorState } from "@/components/common/AsyncState";
+import { ActivityDetailSkeleton } from "@/components/common/Skeletons";
 import { useToast } from "@/components/common/ToastProvider";
 
 export function ActivityDetailPage({ id }: { id: string }) {
@@ -48,7 +49,7 @@ export function ActivityDetailPage({ id }: { id: string }) {
     return () => { cancelled = true; };
   }, [id]);
 
-  if (loading) return <LoadingState label="Cargando actividad..." />;
+  if (loading) return <ActivityDetailSkeleton />;
 
   if (notFound || !activity) {
     return (

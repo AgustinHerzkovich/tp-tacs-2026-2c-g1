@@ -1,4 +1,5 @@
 import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { WeatherForecastDTO } from "@/types/backend";
 
 interface WeatherWidgetProps {
@@ -17,9 +18,15 @@ export function WeatherWidget({ loading, unavailable, forecast, current }: Weath
         PRONÓSTICO PARA LA ACTIVIDAD
       </p>
       {loading && (
-        <p className="text-center text-[12.5px] font-bold px-4 py-2" style={{ color: "var(--muted-foreground)" }}>
-          Cargando…
-        </p>
+        <div className="grid grid-cols-4 gap-1 px-4" aria-busy="true" aria-label="Cargando pronóstico">
+          {Array.from({ length: 4 }, (_, i) => (
+            <div key={i} className="flex flex-col items-center gap-1.5">
+              <Skeleton className="size-8 rounded-full" />
+              <Skeleton className="h-3 w-10" />
+              <Skeleton className="h-2.5 w-8" />
+            </div>
+          ))}
+        </div>
       )}
       {!loading && (unavailable || !forecast) && (
         <p className="text-center text-[12.5px] font-bold px-4 py-2" style={{ color: "var(--muted-foreground)" }}>

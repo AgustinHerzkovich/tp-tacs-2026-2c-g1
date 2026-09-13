@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Skeleton } from "@/components/ui/skeleton";
 import { NOTIF_META } from "@/lib/activityVisuals";
 import type { NotificationView } from "@/hooks/useNotifications";
 import { PageControls } from "@/components/common/PageControls";
@@ -35,9 +36,18 @@ export function NotifDrawer({ open, onOpenChange, notifications, loading, error,
         </SheetHeader>
         <div className="px-4 py-4 space-y-3 overflow-y-auto">
           {loading && (
-            <p className="text-center text-[13px] font-bold py-6" style={{ color: "var(--muted-foreground)" }}>
-              Cargando…
-            </p>
+            <div className="space-y-3" aria-busy="true" aria-label="Cargando alertas">
+              {Array.from({ length: 3 }, (_, i) => (
+                <div key={i} className="flex gap-3 rounded-2xl border-2 p-3.5" style={{ borderColor: "var(--border)" }}>
+                  <Skeleton className="size-8 rounded-full shrink-0" />
+                  <div className="flex-1 space-y-1.5">
+                    <Skeleton className="h-3.5 w-2/3" />
+                    <Skeleton className="h-3 w-full" />
+                    <Skeleton className="h-2.5 w-1/4" />
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
           {error && (
             <p className="text-center text-[13px] font-bold py-6" style={{ color: "var(--destructive)" }}>
