@@ -1,9 +1,13 @@
-# tp-tacs-2026-2c-g1
+# Backend
+
+API de `tp-tacs-2026-2c-g1`. Ver el [README de la raíz](../README.md) para la estructura general del
+repositorio.
 
 ## Cómo levantar la aplicación
 
-El frontend queda disponible en `http://localhost:3000`, Keycloak en `http://localhost:8090`, la API
-en `http://localhost:8080` y Swagger UI en `http://localhost:8080/swagger-ui.html`.
+La aplicación queda disponible en `http://localhost:8080`, la documentación interactiva en
+`http://localhost:8080/swagger-ui.html` y la especificación OpenAPI en
+`http://localhost:8080/v3/api-docs`.
 
 Ejemplo del JSON que debe enviarse en la parte `activity` de `POST /activities`:
 
@@ -37,19 +41,18 @@ Ejemplo del JSON que debe enviarse en la parte `activity` de `POST /activities`:
 
 ### Con Docker
 
-Se requiere Docker con Docker Compose. Desde la raíz del proyecto, ejecutar:
+Se requiere Docker con Docker Compose. Desde la raíz del repositorio, ejecutar:
 
 ```bash
 docker compose up --build
 ```
 
-Este único comando construye y levanta frontend, backend, MongoDB, MinIO y Keycloak. Para detener
-la aplicación, ejecutar `docker compose down`.
+Para detener la aplicación, ejecutar `docker compose down`.
 
 ### Con Maven
 
 Se requiere Java 21. El proyecto incluye Maven Wrapper, por lo que no es necesario instalar
-Maven. Desde la raíz del proyecto, ejecutar:
+Maven. Desde la carpeta `backend/`, ejecutar:
 
 ```bash
 # Windows
@@ -59,41 +62,61 @@ Maven. Desde la raíz del proyecto, ejecutar:
 ./mvnw spring-boot:run
 ```
 
-Las variables admitidas por Compose y los valores locales seguros se documentan en `.env.example`;
-las variables exclusivas del frontend están en `frontend/.env.example`.
+Los datos de dominio se persisten en MongoDB. Docker Compose crea un volumen nombrado para
+conservarlos entre reinicios.
+
+## Datos de prueba (seed)
+
+`com.solnotfound.seed.ActivitySeeder` carga 6 actividades (una con votación activa), y sus 6
+usuarios organizadores/participantes, contra MongoDB. Está desactivado por defecto; para
+habilitarlo en un arranque puntual:
+
+```bash
+# Con Docker Compose ya levantado (mongodb en la red de compose)
+MONGO_HOST=localhost APP_SEED_ENABLED=true JAVA_TOOL_OPTIONS="-Duser.timezone=UTC" ./mvnw spring-boot:run
+
+# Windows PowerShell
+$env:MONGO_HOST="localhost"; $env:APP_SEED_ENABLED="true"; $env:JAVA_TOOL_OPTIONS="-Duser.timezone=UTC"; .\mvnw.cmd spring-boot:run
+```
+
+**`-Duser.timezone=UTC` importa.** Spring Data MongoDB convierte cada `LocalDateTime` a un instante
+usando la zona horaria por *default* de la JVM que escribe, y de vuelta a `LocalDateTime` con la de
+la JVM que lee — si sembrás desde tu máquina (con otra zona horaria) y el contenedor `backend` corre en
+UTC (el `eclipse-temurin` base image no fija ninguna zona), las horas seed van a aparecer corridas.
+Corré el seed en la misma zona que el contenedor, o seedeálo desde dentro de Docker.
+
+Cada documento tiene un id fijo (`asado`, `trekking`, `cumple`, `picnic`, `voley`, `juegos`), así
+que volver a correrlo pisa los mismos registros en vez de duplicarlos. Para que los feeds personales
+coincidan con una sesión real, los ids de usuarios seed deben ser subjects de usuarios de Keycloak;
+el seed actual se usa principalmente para poblar el feed público de desarrollo.
 
 ## Alcance
 
-La Entrega 2 incorpora la UI Next.js, autenticación con Keycloak y persistencia NoSQL en MongoDB.
-Los servicios siguen dependiendo de interfaces de repositorio para mantener desacoplados los casos
-de uso de la tecnología de persistencia.
+La Entrega 2 persiste actividades, usuarios, votaciones, notificaciones y eventos estadísticos en
+MongoDB. Las rutas REST están documentadas con OpenAPI y son consumidas por el frontend Next.js.
 
 La matriz de trazabilidad entre user stories, implementación y pruebas está disponible en
-[`docs/DELIVERY_1_TRACEABILITY.md`](docs/DELIVERY_1_TRACEABILITY.md). Los casos manuales para
-Swagger están en [`docs/SWAGGER_TEST_CASES.md`](docs/SWAGGER_TEST_CASES.md).
+[`docs/DELIVERY_1_TRACEABILITY.md`](../docs/DELIVERY_1_TRACEABILITY.md). Los casos manuales para
+Swagger están en [`docs/SWAGGER_TEST_CASES.md`](../docs/SWAGGER_TEST_CASES.md).
 
 ## API y autenticación
 
 Swagger UI, OpenAPI y `/healthcheck` son públicos. El resto de las rutas exige un access token de
-Keycloak; `/statistics` además requiere el rol de realm `ADMIN`.
+Keycloak y `/statistics` exige además la autoridad `ROLE_ADMIN`.
 
 El backend valida firma RS256, vigencia, issuer y audience mediante Spring Security y el JWKS de
-Keycloak. Se configuran con `SECURITY_JWT_ISSUER_URI`, `SECURITY_JWT_JWK_SET_URI` y
-`SECURITY_JWT_AUDIENCE`. La identidad de dominio se obtiene exclusivamente del claim verificado
-`sub`.
-
-El realm de desarrollo no exige verificación de email porque Compose no incluye un servidor SMTP.
-En producción debe configurarse SMTP en Keycloak y volver a habilitar `verifyEmail`.
+Keycloak. La identidad de dominio se obtiene del claim verificado `sub`.
 
 ## Decisiones de diseño
 
 Estas decisiones cubren aspectos no definidos de forma exhaustiva por el enunciado:
 
-- **Repositorios intercambiables y MongoDB:** los servicios dependen de interfaces de repositorio.
-  La Entrega 2 reemplazó las implementaciones en memoria por Spring Data MongoDB sin cambiar los
-  casos de uso.
-- **Backend sin sesión HTTP:** la identidad se obtiene del `subject` de un JWT verificado y no se
-  mantiene estado de sesión en el backend.
+- **Repositorios intercambiables y almacenamiento en memoria:** los servicios dependen de
+  interfaces de repositorio. La Entrega 1 usa implementaciones con `ConcurrentHashMap`; en la
+  Entrega 2 podrán reemplazarse por MongoDB sin cambiar los casos de uso.
+- **Backend sin sesión HTTP:** la identidad se obtiene del `subject` de un JWT y no se mantiene
+  estado de sesión en el backend. En desarrollo se admite `development-user` para facilitar las
+  pruebas de esta entrega.
 - **Monitoreo periódico configurable:** Spring Scheduler evalúa clima, cierre de votaciones,
   finalización y avisos de inicio con periodicidades configurables.
 - **Organizador como participante:** el organizador puede sumarse y bajarse como participante. Para
@@ -109,14 +132,16 @@ Estas decisiones cubren aspectos no definidos de forma exhaustiva por el enuncia
   cachés acotadas, timeout, retry y circuit breaker. La indisponibilidad no se interpreta como clima
   favorable.
 - **Estadísticas mediante eventos:** las métricas históricas se registran como eventos inmutables en
-  MongoDB. Se cuentan las llamadas HTTP reales a Open-Meteo, no los accesos resueltos por caché.
+  memoria. Se cuentan las llamadas HTTP reales a Open-Meteo, no los accesos resueltos por caché. El
+  diseño permite migrar la colección de eventos a MongoDB.
 - **Rangos estadísticos inclusivos:** `from` y `to` incluyen ambos extremos; sin parámetros se
   consultan los últimos siete días. Una cancelación climática incluye mal clima y ausencia de
   alternativas favorables.
 
-Keycloak es el proveedor de identidad y el backend funciona como OAuth2 Resource Server sin
-administrar contraseñas. Los access y refresh tokens permanecen en memoria en `keycloak-js`; el
-frontend usa Authorization Code con PKCE y nunca persiste tokens en el navegador.
+No se adoptaron las decisiones antiguas de CDC/Stream ETL ni de filtros ejecutados por una base de
+datos porque no existe persistencia en la Entrega 1. Tampoco se documenta Firebase Auth como una
+decisión vigente: la implementación actual usa JWT HMAC local. Esas alternativas deberán evaluarse
+nuevamente cuando exista una necesidad concreta de volumen, persistencia o proveedor de identidad.
 
 ## Servicio meteorológico
 
@@ -155,8 +180,8 @@ como única fuente para decisiones de seguridad.
 
 ## Calidad de código
 
-El proyecto incluye Maven Wrapper. Para aplicar el formato, comprobarlo y ejecutar la verificación
-completa:
+El proyecto incluye Maven Wrapper. Desde la carpeta `backend/`, para aplicar el formato,
+comprobarlo y ejecutar la verificación completa:
 
 ```bash
 # Windows
@@ -170,46 +195,10 @@ completa:
 ./mvnw verify
 ```
 
-`verify` ejecuta los tests y las validaciones de Spotless, Checkstyle y SpotBugs.
+`verify` ejecuta los tests y las validaciones de Spotless, Checkstyle y SpotBugs. El pre-commit del
+repositorio (ver [README de la raíz](../README.md#pre-commit)) ejecuta este mismo `verify`
+automáticamente.
 
-### Pre-commit
-
-El repositorio incluye un hook que localiza un JDK 21 instalado y ejecuta `clean verify` antes de
-cada commit. Para activarlo una sola vez por clonación:
-
-```bash
-git config core.hooksPath .githooks
-```
-
-El error `class file version 65.0 ... up to 61.0` indica que el código fue compilado con Java 21,
-pero se intentó ejecutar con Java 17. El hook evita esa mezcla configurando Java 21 antes de Maven.
-
-## Git flow
-
-![Diagrama de Git flow](docs/gitflow.png)
-
-## Uso de inteligencia artificial
-
-Durante el desarrollo utilizamos asistentes de IA generativa, principalmente ChatGPT y Claude,
-como herramientas de apoyo. Su uso se concentró en las siguientes tareas:
-
-- Generación y adaptación de código repetitivo o *boilerplate*.
-- Propuesta de casos de prueba y revisión de la cobertura de tests.
-- Revisión de las user stories para detectar requisitos, casos límite o validaciones que pudieran
-  haberse omitido.
-- Consulta de alternativas y opiniones para decisiones de diseño e implementación.
-- Apoyo en la redacción y revisión de documentación técnica, incluyendo la creación y
-  homogeneización de la documentación Javadoc del código.
-- Apoyo en la aplicación y verificación del formato y de las herramientas de calidad del proyecto,
-  como Spotless, Checkstyle y SpotBugs.
-- Análisis de errores de compilación, tests y conflictos de integración.
-- Modelado de Interfaz de Usuario.
-- Integración del frontend con la API, autenticación con Keycloak, resolución de conflictos de
-  merge y revisión de consistencia de la Entrega 2.
-
-Las respuestas de estas herramientas se tomaron como sugerencias y no como resultados definitivos.
-El equipo revisó las propuestas, las adaptó al diseño y las convenciones del proyecto, y validó los
-cambios mediante revisión del código, ejecución de tests y el proceso de verificación de Maven.
 ## Activity images
 
 Local development uses the private MinIO bucket started by `docker compose up --build`.

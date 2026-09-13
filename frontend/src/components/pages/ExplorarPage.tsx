@@ -12,16 +12,25 @@ export function ExplorarPage() {
   const { exploreFeed, loading, error } = useActivities();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("Todo");
+  const today = new Date();
+  const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
   const results = exploreFeed.filter((a) => {
     const matchesQuery = a.title.toLowerCase().includes(query.toLowerCase());
-    const matchesFilter = filter === "Todo" || filter === "Hoy" || TYPE_META[a.type].label === filter;
+    const matchesFilter =
+      filter === "Todo" ||
+      (filter === "Hoy" ? a.dateTime.slice(0, 10) === todayKey : TYPE_META[a.type].label === filter);
     return matchesQuery && matchesFilter;
   });
 
   return (
-    <div className="fade-in px-5 pt-2 pb-6">
-      <div className="relative mb-3">
+    <div className="fade-in px-5 pt-2 pb-6 lg:px-10 lg:pt-8">
+      <div className="lg:flex lg:items-end lg:justify-between lg:gap-8 lg:mb-8">
+        <div className="hidden lg:block">
+          <p className="text-xs font-extrabold uppercase" style={{ color: "var(--primary)" }}>Planes disponibles</p>
+          <h2 className="font-display font-semibold text-4xl">Encontrá tu próximo plan</h2>
+        </div>
+      <div className="relative mb-3 lg:mb-0 lg:w-[420px]">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4" style={{ color: "var(--muted-foreground)" }} />
         <input
           value={query}
@@ -31,7 +40,8 @@ export function ExplorarPage() {
           style={{ borderColor: "var(--border)" }}
         />
       </div>
-      <div className="flex gap-2 overflow-x-auto pb-1 -mx-5 px-5 mb-5">
+      </div>
+      <div className="flex gap-2 overflow-x-auto pb-1 -mx-5 px-5 mb-5 lg:mx-0 lg:px-0">
         {FILTERS.map((f) => {
           const active = filter === f;
           return (
@@ -60,9 +70,11 @@ export function ExplorarPage() {
           {error}
         </p>
       )}
-      {!loading &&
-        !error &&
-        results.map((a) => <ExploreCard key={a.id} activity={a} />)}
+      {!loading && !error && (
+        <div className="lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-5">
+          {results.map((a) => <ExploreCard key={a.id} activity={a} />)}
+        </div>
+      )}
       {!loading && !error && results.length === 0 && (
         <p className="text-center text-[13px] font-bold py-10" style={{ color: "var(--muted-foreground)" }}>
           No encontramos actividades con esos filtros.

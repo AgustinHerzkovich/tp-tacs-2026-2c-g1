@@ -7,7 +7,7 @@ export function VotingPendingCard({ activity }: { activity: Activity }) {
   return (
     <Link href={`/actividades/${activity.id}`}>
       <Card
-        className="tap mb-3 overflow-hidden gap-0 py-0 rounded-2xl pulse-card border-2"
+        className="tap mb-3 lg:mb-0 lg:h-full overflow-hidden gap-0 py-0 rounded-2xl pulse-card border-2"
         style={{ borderColor: "#FFC9A8" }}
       >
         <div className="p-4" style={{ background: "linear-gradient(160deg, #FFF6D6, #FEF08A)" }}>

@@ -13,7 +13,7 @@ export function WizardProgress({ step }: { step: number }) {
         ))}
       </div>
       <p className="font-display font-semibold text-[12.5px] mt-2.5" style={{ color: "var(--muted-foreground)" }}>
-        Paso {step + 1} de 4 · <span style={{ color: "var(--accent-foreground)" }}>{WIZARD_STEPS[step]}</span>
+        Paso {step + 1} de {WIZARD_STEPS.length} · <span style={{ color: "var(--accent-foreground)" }}>{WIZARD_STEPS[step]}</span>
       </p>
     </div>
   );

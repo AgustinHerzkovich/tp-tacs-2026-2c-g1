@@ -9,6 +9,7 @@ import { WizardProgress } from "@/components/pages/wizard/WizardProgress";
 import { StepInfo } from "@/components/pages/wizard/StepInfo";
 import { StepLugarFecha } from "@/components/pages/wizard/StepLugarFecha";
 import { StepClima } from "@/components/pages/wizard/StepClima";
+import { StepImagenes } from "@/components/pages/wizard/StepImagenes";
 import { StepAlertas } from "@/components/pages/wizard/StepAlertas";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
@@ -16,16 +17,17 @@ import { api, ApiError } from "@/lib/api";
 import { toBackendActivityType } from "@/lib/activityMapping";
 import { firstInvalidStep, validateAll, type WizardErrors } from "@/lib/validation";
 import type { WizardFormState } from "@/types/domain";
-import type { FieldSetter } from "@/hooks/useWizardForm";
+import type { FieldSetter, FormPatchSetter } from "@/hooks/useWizardForm";
 import type { CreateActivityRequest } from "@/types/backend";
 
 interface StepProps {
   form: WizardFormState;
   set: FieldSetter;
+  patch?: FormPatchSetter;
   errors?: WizardErrors;
 }
 
-const STEP_COMPONENTS: ComponentType<StepProps>[] = [StepInfo, StepLugarFecha, StepClima, StepAlertas];
+const STEP_COMPONENTS: ComponentType<StepProps>[] = [StepInfo, StepLugarFecha, StepClima, StepImagenes, StepAlertas];
 
 // No UI control exists yet for the reprogramming window's daily hour bounds
 // (only its day count, via form.reschedule) — see frontend/TODO.md.
@@ -36,7 +38,7 @@ function buildCreateRequest(form: WizardFormState): CreateActivityRequest {
     title: form.title.trim(),
     description: form.desc.trim() || undefined,
     type: toBackendActivityType(form.type),
-    location: { city: form.place.trim() || null, latitude: null, longitude: null },
+    location: { city: form.place.trim() || null, latitude: form.latitude, longitude: form.longitude },
     dateTime: `${form.date}T${form.time}:00`,
     minParticipants: form.min,
     maxParticipants: form.max,
@@ -80,6 +82,7 @@ export function CrearActividadPage() {
       const activity = buildCreateRequest(wizard.form);
       const formData = new FormData();
       formData.append("activity", new Blob([JSON.stringify(activity)], { type: "application/json" }));
+      wizard.form.images.forEach(({ file }) => formData.append("images", file));
       await api.activities.create(formData);
       wizard.publish();
     } catch (err) {
@@ -105,7 +108,7 @@ export function CrearActividadPage() {
   }
 
   return (
-    <div className="fade-in flex flex-col min-h-screen">
+    <div className="fade-in flex flex-col min-h-screen lg:min-h-0 lg:max-w-3xl lg:w-full lg:mx-auto lg:my-10 lg:bg-white lg:rounded-3xl lg:shadow-xl lg:overflow-hidden">
       <div className="flex items-center justify-between px-5 pt-6 pb-1">
         <h2 className="font-display font-semibold text-lg">Nueva actividad</h2>
         <button
@@ -121,7 +124,7 @@ export function CrearActividadPage() {
       <WizardProgress step={wizard.step} />
 
       <div key={wizard.step} className={`flex-1 px-5 pb-4 ${wizard.direction > 0 ? "anim-slide-right" : "anim-slide-left"}`}>
-        {StepComponent && <StepComponent form={wizard.form} set={wizard.set} errors={wizard.errors} />}
+        {StepComponent && <StepComponent form={wizard.form} set={wizard.set} patch={wizard.patch} errors={wizard.errors} />}
         {submitError && Object.keys(wizard.errors).length > 0 && (
           <p className="mt-4 text-[12.5px] font-extrabold rounded-2xl p-3" style={{ background: "var(--rose)", color: "var(--rose-ink)" }}>
             {submitError}

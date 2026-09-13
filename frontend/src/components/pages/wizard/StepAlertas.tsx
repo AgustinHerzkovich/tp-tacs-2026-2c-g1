@@ -3,11 +3,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card } from "@/components/ui/card";
 import type { ReactNode } from "react";
 import type { WizardFormState } from "@/types/domain";
-import type { FieldSetter } from "@/hooks/useWizardForm";
+import type { FieldSetter, FormPatchSetter } from "@/hooks/useWizardForm";
 
 interface StepProps {
   form: WizardFormState;
   set: FieldSetter;
+  patch?: FormPatchSetter;
 }
 
 function Field({ label, children }: { label: string; children: ReactNode }) {

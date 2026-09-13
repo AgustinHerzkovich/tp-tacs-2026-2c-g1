@@ -1,5 +1,23 @@
 services:
-  app:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_KEYCLOAK_URL: ${NEXT_PUBLIC_KEYCLOAK_URL:-http://localhost:8090}
+        NEXT_PUBLIC_KEYCLOAK_REALM: ${NEXT_PUBLIC_KEYCLOAK_REALM:-solnotfound}
+        NEXT_PUBLIC_KEYCLOAK_CLIENT_ID: ${NEXT_PUBLIC_KEYCLOAK_CLIENT_ID:-solnotfoundFrontend}
+    ports:
+      - "3000:3000"
+    environment:
+      BACKEND_URL: http://backend:8080
+    depends_on:
+      backend:
+        condition: service_started
+    networks:
+      - tacs-network
+
+  backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -20,6 +38,7 @@ services:
       SECURITY_JWT_ISSUER_URI: ${SECURITY_JWT_ISSUER_URI:-http://localhost:8090/realms/solnotfound}
       SECURITY_JWT_JWK_SET_URI: ${SECURITY_JWT_JWK_SET_URI:-http://keycloak:8080/realms/solnotfound/protocol/openid-connect/certs}
       SECURITY_JWT_AUDIENCE: ${SECURITY_JWT_AUDIENCE:-solnotfoundBackend}
+      APP_SEED_ENABLED: ${APP_SEED_ENABLED:-false}
     depends_on:
       minio:
         condition: service_healthy
@@ -27,6 +46,8 @@ services:
         condition: service_healthy
       keycloak:
         condition: service_healthy
+      keycloak-config:
+        condition: service_completed_successfully
     networks:
       - tacs-network
 
@@ -80,6 +101,7 @@ services:
       retries: 10
     networks:
       - tacs-network
+
   keycloak:
     image: quay.io/keycloak/keycloak:26.7.3
     container_name: keycloak
@@ -102,6 +124,21 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
+    networks:
+      - tacs-network
+
+  keycloak-config:
+    image: quay.io/keycloak/keycloak:26.7.3
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        /opt/keycloak/bin/kcadm.sh config credentials
+        --server http://keycloak:8080 --realm master --user admin --password admin &&
+        /opt/keycloak/bin/kcadm.sh update realms/solnotfound
+        -s displayName=Planazo -s displayNameHtml=Planazo -s loginTheme=planazo
     networks:
       - tacs-network
 

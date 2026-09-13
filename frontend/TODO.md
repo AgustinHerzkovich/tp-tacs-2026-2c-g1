@@ -1,74 +1,132 @@
-# Frontend — pendientes
+# Frontend - pendientes
 
-Vamos tomando estos ítems de a uno. Decisiones ya tomadas quedan anotadas junto al ítem.
+Backlog relevado contra las user stories y el estado real de la Entrega 2. Los items de esta lista
+son trabajo pendiente; lo ya implementado se resume al final para evitar reabrir tareas obsoletas.
 
-## Hecho
+## Prioridad alta - funcionalidad faltante
 
-- [x] **Migrar todo el proyecto a TypeScript**, con tipado estricto (`strict: true` +
-      `noUncheckedIndexedAccess`) y tipos propios para los DTOs del backend en
-      `src/types/backend.ts` (`ActivityResponse`, `VotationDTO`, `NotificationResponse`, etc.) y
-      para el modelo de la UI mock en `src/types/domain.ts`. shadcn/ui regenerado en `.tsx` nativo.
-      `npx tsc --noEmit`, `npm run lint` y `npm run build` pasan limpios.
-- [x] **Layout "mobile-only" en cualquier viewport**: columna centrada de `max-w-[430px]` en
-      `src/app/layout.tsx`, sin marco de teléfono decorativo.
-- [x] **Redux Toolkit para el estado del cliente logueado**: store en `src/store/` (`session` slice
-      con el usuario actual), `StoreProvider` client-side por sesión (patrón recomendado para App
-      Router).
-- [x] **Login mockeado**: pantalla `/login` con un roster de usuarios mock (`src/data/mockUsers.ts`,
-      shape `{id, name}` idéntico al `User`/`UserDTO` real del backend — que no genera ningún seed
-      propio, así que el roster es inventado pero fiel a la forma). `useAuth` (login/logout) +
-      `useRequireAuth` protegen Explorar, Mis Actividades, Detalle y el wizard — sin sesión, redirigen
-      a `/login`. Tocar el avatar del header cierra sesión. Sin JWT real — eso sigue pendiente abajo.
-- [x] **Persistencia de la sesión entre refrescos**: `src/store/session/sessionPersistence.ts`
-      espeja login/logout en `localStorage` vía middleware de Redux; `StoreProvider` la restaura en un
-      `useEffect` (client-only) al montar, marcando `session.hydrated` — `useRequireAuth` espera ese
-      flag antes de decidir si redirige, para que alguien con sesión guardada no rebote a `/login`
-      durante el primer render (evita el mismatch de hidratación de Next: server y cliente arrancan
-      siempre iguales — deslogueado, no-hidratado — y recién después se corrige con lo que haya en
-      `localStorage`).
+- [ ] **Completar los filtros de Explorar contra el backend.** Hoy el texto y los chips de tipo/Hoy
+      filtran el feed ya descargado en el cliente. Falta una UI para ciudad, rango de fechas y
+      disponibilidad, y enviar `type`, `city`, `dateFrom`, `dateTo` y `availability` a
+      `GET /api/activities`. Definir búsqueda por título: el backend no expone ese filtro, por lo que
+      debe agregarse al contrato o documentarse que seguirá siendo local.
+- [ ] **Permitir al organizador administrar una votación activa.** Existen los proxies
+      `PUT /api/votations/:id/options` y `PUT /api/votations/:id/settings`, pero ninguna pantalla los
+      utiliza. Falta distinguir organizador/participante y permitir reemplazar opciones manuales
+      dentro del rango válido, además de editar quórum mínimo y duración, mostrando errores del
+      backend cuando una fecha no tenga clima favorable o quede fuera del rango.
+- [ ] **Exponer la franja horaria de reprogramación en el wizard.** Actualmente sólo se eligen los
+      días máximos y `CrearActividadPage` envía siempre `09:00:00-21:00:00`. La US4 exige que el
+      organizador configure también hora inicial y final; agregar controles y validación cruzada.
+- [ ] **Diferenciar correctamente las acciones del organizador en el detalle.** Confirmar si el
+      organizador puede sumarse/bajarse como participante desde la UI y mostrar acciones/textos
+      específicos para evitar que se confunda "organizar" con "participar".
+- [ ] **Actualizar los feeds inmediatamente después de mutaciones.** Al crear, votar, sumarse,
+      bajarse o marcar una notificación como leída, revisar invalidación/refetch de Explorar, Mis
+      Actividades, detalle y contador de notificaciones para que no requieran F5.
 
-## En curso ahora
+## Prioridad alta - robustez y estados
 
-_(nada activo — decime cuál sigue)_
+- [ ] **Unificar errores de UI.** Crear un patrón reusable (toast/banner/pantalla) para errores de
+      red, validación, 401, 403, 404, proveedor meteorológico y almacenamiento de imágenes. Hoy se
+      mezclan textos sueltos y errores sin acción de reintento.
+- [ ] **Agregar `error.tsx`, `not-found.tsx` y estados de carga consistentes.** Reemplazar textos
+      "Cargando..." por skeletons o indicadores accesibles en feeds, detalle, estadísticas y wizard;
+      ofrecer reintento donde corresponda.
+- [ ] **Cubrir estados vacíos con acciones útiles.** Validar sin actividades, sin actividades propias,
+      sin votaciones, sin notificaciones, sin resultados de búsqueda y estadísticas sin eventos.
+- [ ] **Manejar expiración y recuperación de sesión.** `check-sso` restaura la cookie de Keycloak al
+      recargar; falta verificar expiración durante uso prolongado, refresh fallido, logout desde otra
+      pestaña y redirección al login conservando la ruta original.
+- [ ] **Evitar requests duplicados de notificaciones.** `HeaderLayout` obtiene el contador y
+      `NotifDrawer` usa otra instancia de `useNotifications`; centralizar el estado o compartir un
+      único hook/provider para no hacer dos GET ni desincronizar el contador.
 
-## Datos reales (reemplazar mocks)
+## Mapas e imágenes
 
-- [ ] Reemplazar `src/data/mockData.ts` por fetches reales a `/api/*` en `useActivities` /
-      `useNotifications`, sin tocar los componentes que consumen esos hooks.
-- [ ] Mapear el `ActivityResponse` real del backend (fecha, ubicación, clima, estado, participantes)
-      al modelo que hoy usa la UI — o adaptar la UI al shape real, lo que tenga más sentido una vez
-      que lo tengamos delante.
-- [ ] Reemplazar el login mockeado por uno real contra el backend (JWT HMAC). Hoy el backend cae a
-      `development-user` si no hay `Authentication`; ver cómo/cuándo metemos auth real y qué pasa con
-      el roster mock (`src/data/mockUsers.ts`) una vez que exista.
-- [ ] Wizard: publicar actividad real — `POST /api/activities` (multipart, con imágenes) en vez del
-      estado local de `useWizardForm`.
-- [ ] Votación real — `PUT /api/votations/:id/votes/me` en vez del estado local de `useVoting`.
-- [ ] Sumarse/salir real — `PUT`/`DELETE /api/activities/:id/participants/me` en vez de
-      `useJoinActivity`.
-- [ ] Notificaciones reales + marcar como leída — `GET /api/notifications`,
-      `PATCH /api/notifications/:id/read`.
-- [ ] Buscador/filtros de Explorar contra `GET /api/activities` (`type`, `city`, `dateFrom`,
-      `dateTo`, `availability`) en vez de filtrar el array mock en el cliente.
+- [ ] **Robustecer Nominatim/OpenStreetMap.** Agregar debounce, cancelación con `AbortController`,
+      mensajes de sin resultados/error, timeout y rate limiting/cache server-side para respetar la
+      política pública de Nominatim. Evaluar un servicio propio o proveedor contratado antes de
+      producción.
+- [ ] **Mejorar selección de ubicación.** Permitir arrastrar el marcador, usar ubicación actual con
+      permiso explícito, mostrar coordenadas/dirección seleccionada y validar límites de latitud y
+      longitud. Verificar interacción táctil, teclado y lectores de pantalla.
+- [ ] **Completar validación de imágenes antes de publicar.** Mostrar errores para archivos
+      rechazados (tipo, tamaño, más de cinco) en vez de ignorarlos; detectar duplicados, permitir
+      reordenar para elegir portada y liberar todos los object URLs al descartar/publicar/salir.
+- [ ] **Estados de carga y error por imagen.** Mostrar placeholder si una URL presignada venció o no
+      carga, y verificar renovación/refetch de URLs en feeds y galería.
 
-## UX / estados
+## Responsive y UX
 
-- [ ] Estados de carga (skeletons) mientras llegan datos reales.
-- [ ] Estados de error (fetch falla, 401/403, actividad inexistente).
-- [ ] Estados vacíos (sin actividades, sin notificaciones, sin resultados de búsqueda).
-- [ ] Validación de formulario en el wizard (título requerido, fecha futura, mín ≤ máx, etc.).
-- [ ] Feedback tipo toast para acciones (votar, sumarse, publicar) en vez de solo cambiar el label
-      del botón.
+- [ ] **Pasada visual sistemática mobile/desktop.** Probar 320, 375, 430, 768, 1024 y 1440 px en
+      login, feeds, detalle, galería, mapa, wizard de cinco pasos, drawer y estadísticas. Revisar en
+      especial que el chrome fijo no tape botones/contenido y que cards/textos no desborden.
+- [ ] **Revisar el detalle desktop.** Validar la grilla de clima/votación/descripción con y sin
+      votación, descripción, participantes e imágenes; evitar espacios artificiales y mantener la
+      acción principal visible.
+- [ ] **Feedback de acciones.** Agregar confirmación tipo toast para crear, votar, sumarse, bajarse y
+      marcar como leída; deshabilitar doble click y comunicar claramente operaciones pendientes.
+- [ ] **Accesibilidad completa.** Revisar foco visible, orden de tabulación, etiquetas, mensajes con
+      `aria-live`, contraste, navegación de galería/mapa por teclado, tamaños táctiles y reduced
+      motion.
+- [ ] **Perfil/logout más claro.** El avatar actualmente cierra sesión inmediatamente; reemplazarlo
+      por menú que muestre identidad/rol y pida confirmación o presente una acción explícita.
+- [ ] **Metadata y branding.** Agregar favicon y metadata por página; verificar títulos para login,
+      actividad y estadísticas.
 
-## Pulido
+## Estadísticas admin
 
-- [ ] Pasada de accesibilidad (foco visible, `aria-label`s, contraste de color).
-- [ ] Favicon y metadata por página (`title`/`description` dinámicos por ruta).
-- [ ] Definir si hace falta una pantalla de Perfil — el spec de Planazo no la pidió explícitamente,
-      pero el avatar del header hace pensar que sí en algún momento.
+- [ ] **Pulir filtros de rango.** Mostrar fechas formateadas en zona local, preservar el rango en la
+      URL o al navegar, agregar presets útiles y reintento ante error. Verificar extremos inclusivos y
+      días con cambios de horario.
+- [ ] **Mejorar la visualización.** Agregar comparaciones o gráficos sólo si aportan legibilidad;
+      mantener cards y tablas accesibles para actividades creadas, reprogramadas, canceladas,
+      suspendidas por clima y llamadas al proveedor.
+- [ ] **Probar autorización en profundidad.** Confirmar que usuarios sin `ADMIN` no vean el acceso,
+      sean redirigidos si escriben `/estadisticas` y reciban 403 del backend incluso si llaman al
+      proxy manualmente.
 
-## Calidad / infra
+## Pruebas y calidad
 
-- [ ] Tests de componentes clave y hooks.
-- [ ] Pipeline de CI para el frontend (lint + build en cada PR).
-- [ ] Definir estrategia de deploy del frontend (Vercel / Docker junto al backend / otra).
+- [ ] **Agregar tests automatizados de componentes y hooks.** Priorizar auth/check-sso, filtros,
+      validación y navegación del wizard, mapa/geocoding, imágenes multipart, galería, voto,
+      join/leave, notificaciones y estadísticas por rol/rango.
+- [ ] **Agregar pruebas end-to-end.** Cubrir login/refresh/logout; crear con y sin imágenes; buscar y
+      seleccionar ubicación; explorar/filtros; detalle/galería/clima; join/leave; voto; edición de
+      votación por organizador; notificaciones; estadísticas admin y rechazo para USER.
+- [ ] **Probar fallos reales.** Backend caído, Keycloak caído, Mongo/MinIO indisponibles, Open-Meteo y
+      Nominatim lentos o sin respuesta, JWT vencido, presigned URL vencida y respuestas 400/401/403/
+      404/409/413/500/503.
+- [ ] **Agregar CI del frontend.** Ejecutar `npm ci`, `npm run lint`, `npx tsc --noEmit` y
+      `npm run build` en cada PR; considerar tests de componentes/E2E cuando existan.
+- [ ] **Revisar warnings y tamaño del bundle.** Leaflet se carga client-only; medir impacto y revisar
+      dependencias, accesibilidad y errores del navegador en build de producción.
+
+## Infraestructura y despliegue
+
+- [ ] **Agregar healthcheck del frontend en Compose** y hacer que la disponibilidad del stack pueda
+      verificarse automáticamente después de `docker compose up --build`.
+- [ ] **Externalizar credenciales locales sensibles.** Los defaults de Keycloak, Mongo y MinIO son
+      sólo para desarrollo; documentar variables obligatorias y eliminar defaults inseguros para un
+      despliegue real.
+- [ ] **Definir estrategia de producción.** Configurar hosts públicos, TLS, redirect URIs/web origins
+      de Keycloak, `BACKEND_URL`, storage GCS/MinIO, política CORS/CSP y observabilidad del frontend.
+
+## Implementado y verificado
+
+- [x] TypeScript estricto, Redux Toolkit y proxy Next.js hacia el backend.
+- [x] Autenticación Keycloak con Authorization Code + PKCE, roles y restauración SSO con `check-sso`;
+      tokens únicamente en memoria.
+- [x] Integración real de actividades, detalle, clima, join/leave, votación, notificaciones y creación
+      multipart.
+- [x] Wizard de cinco pasos con validación por paso: información, lugar/fecha, clima, imágenes y
+      alertas.
+- [x] Búsqueda y selección de ubicación con Nominatim + Leaflet/OpenStreetMap; envío de coordenadas.
+- [x] Primera imagen en cards, galería deslizable en detalle y placeholder para actividades sin
+      imágenes.
+- [x] Estadísticas exclusivas para `ADMIN` con rango de fechas inclusivo y últimos siete días.
+- [x] Notificaciones marcables como leídas.
+- [x] Layout responsive inicial con feeds en grilla desktop y chrome inferior funcional en mobile y
+      desktop.
+- [x] Build Docker del frontend y stack completo en Docker Compose.

@@ -2,11 +2,12 @@ import type { CSSProperties } from "react";
 import { Slider } from "@/components/ui/slider";
 import { MiniStepper } from "@/components/common/MiniStepper";
 import type { WizardFormState } from "@/types/domain";
-import type { FieldSetter } from "@/hooks/useWizardForm";
+import type { FieldSetter, FormPatchSetter } from "@/hooks/useWizardForm";
 
 interface StepProps {
   form: WizardFormState;
   set: FieldSetter;
+  patch?: FormPatchSetter;
 }
 
 const THUMB =

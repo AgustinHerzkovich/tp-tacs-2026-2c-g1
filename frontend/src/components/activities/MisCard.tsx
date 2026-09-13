@@ -15,9 +15,9 @@ export function MisCard({ activity }: { activity: MisActivity }) {
   const names = activity.participantIds.slice(0, 2).map((id) => participantDisplayName(id, user));
   return (
     <Link href={`/actividades/${activity.id}`}>
-      <Card className="tap mb-4 overflow-hidden gap-0 py-0 rounded-2xl">
+      <Card className="tap mb-4 lg:mb-0 lg:h-full overflow-hidden gap-0 py-0 rounded-2xl">
         <div className="flex gap-3.5 p-3.5">
-          <Scene scene={activity.scene} height={84} className="w-[84px] shrink-0 rounded-2xl" />
+          <Scene scene={activity.scene} imageUrl={activity.imageUrl} alt={activity.title} height={84} className="w-[84px] shrink-0 rounded-2xl" />
           <div className="min-w-0 flex-1 py-0.5">
             <StatusBadge status={activity.status} className="mb-1.5" />
             <h3 className="font-display font-semibold text-[15px] leading-tight truncate">{activity.title}</h3>

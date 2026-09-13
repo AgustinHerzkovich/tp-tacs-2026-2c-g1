@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, MapPin, Clock } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Scene } from "@/components/common/Scene";
+import { ActivityGallery } from "@/components/activities/ActivityGallery";
 import { PillBadge, TypeBadge } from "@/components/common/PillBadge";
 import { AvatarStack } from "@/components/common/AvatarStack";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
@@ -71,10 +71,10 @@ export function ActivityDetailPage({ id }: { id: string }) {
   const maxRain = activity.weatherConditions.maxRainProbability;
 
   return (
-    <div className="fade-in">
+    <div className="fade-in lg:max-w-5xl lg:mx-auto lg:py-8 lg:px-8 lg:pb-24">
       <div>
-        <div className="relative">
-          <Scene scene={scene} height={220} />
+        <div className="relative lg:rounded-3xl lg:overflow-hidden">
+          <ActivityGallery images={activity.imageUrls} scene={scene} title={activity.title} />
           <div className="absolute inset-x-0 bottom-0 h-28" style={{ background: "linear-gradient(to top, rgba(58,51,82,.75), transparent)" }} />
           <button
             onClick={() => router.back()}
@@ -97,7 +97,7 @@ export function ActivityDetailPage({ id }: { id: string }) {
           </div>
         </div>
 
-        <div className="px-5 pt-5">
+        <div className="px-5 pt-5 lg:px-0 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.7fr)] lg:gap-5 lg:items-start">
           <WeatherWidget loading={weather.loading} unavailable={weather.unavailable} forecast={weather.weather?.activityForecast ?? null} />
 
           {hasVoting && (
@@ -111,7 +111,7 @@ export function ActivityDetailPage({ id }: { id: string }) {
             />
           )}
 
-          <div className="mb-4">
+          <div className="mb-4 lg:col-start-1 lg:row-start-1 lg:mt-36">
             <h3 className="font-display font-semibold text-[15px] mb-2">Sobre la actividad</h3>
             <p className="text-[13px] font-semibold leading-relaxed mb-3" style={{ color: "var(--muted-foreground)" }}>
               {activity.description ?? "Sin descripción."}
@@ -138,7 +138,7 @@ export function ActivityDetailPage({ id }: { id: string }) {
         </div>
       </div>
 
-      <div className="px-5 py-4 border-t-2 flex items-center gap-4" style={{ borderColor: "var(--border)" }}>
+      <div className="px-5 py-4 border-t-2 flex items-center gap-4 lg:px-0" style={{ borderColor: "var(--border)" }}>
         <div>
           <AvatarStack names={participantNames.slice(0, 3)} extra={Math.max(0, participantNames.length - 3)} />
           <p className="text-[10px] font-extrabold mt-1" style={{ color: "var(--muted-foreground)" }}>

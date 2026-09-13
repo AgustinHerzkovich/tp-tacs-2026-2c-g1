@@ -22,8 +22,11 @@ export type MockStatusKey =
 interface ActivityBase {
   id: string;
   scene: SceneKey;
+  imageUrl: string | null;
   title: string;
   type: MockActivityType;
+  /** Backend LocalDateTime retained for exact filtering, without timezone conversion. */
+  dateTime: string;
   when: string;
   where: string;
   /** Real participant user ids (Keycloak subjects) — see
@@ -53,6 +56,9 @@ export interface WizardFormState {
   desc: string;
   type: MockActivityType;
   place: string;
+  latitude: number | null;
+  longitude: number | null;
+  images: Array<{ file: File; previewUrl: string }>;
   date: string;
   time: string;
   min: number;
