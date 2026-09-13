@@ -42,10 +42,17 @@ export function AuthBootstrap() {
       void keycloak.updateToken(-1).then(synchronizeSession).catch(() => dispatch(anonymous()));
     };
 
+    const refreshTimer = window.setInterval(() => {
+      if (keycloak.authenticated) {
+        void keycloak.updateToken(60).then(synchronizeSession).catch(() => dispatch(anonymous()));
+      }
+    }, 30_000);
+
     void keycloak
       .init({ onLoad: "check-sso", pkceMethod: "S256", checkLoginIframe: false })
       .then(synchronizeSession)
       .catch(() => dispatch(anonymous()));
+    return () => window.clearInterval(refreshTimer);
   }, [dispatch]);
 
   return null;

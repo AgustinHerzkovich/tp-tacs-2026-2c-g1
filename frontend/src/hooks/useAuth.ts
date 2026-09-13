@@ -23,8 +23,7 @@ export function useAuth(): UseAuth {
     initialized,
     isAuthenticated: initialized && user !== null,
     hasRole: (role: string) => user?.roles.includes(role) ?? false,
-    login: () =>
-      getKeycloak().login({ redirectUri: `${window.location.origin}/mis-actividades` }),
+    login: () => getKeycloak().login({ redirectUri: window.location.href }),
     logout: () => getKeycloak().logout({ redirectUri: `${window.location.origin}/login` }),
   };
 }

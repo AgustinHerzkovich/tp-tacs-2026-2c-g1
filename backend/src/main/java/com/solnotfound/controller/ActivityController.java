@@ -4,6 +4,7 @@ import com.solnotfound.dto.ActivityFilterDTO;
 import com.solnotfound.dto.ActivityResponse;
 import com.solnotfound.dto.ActivityWeatherResponse;
 import com.solnotfound.dto.CreateActivityRequest;
+import com.solnotfound.dto.PageResponse;
 import com.solnotfound.entity.activity.ActivityType;
 import com.solnotfound.service.ActivityService;
 import com.solnotfound.storage.MultipartImageFile;
@@ -16,6 +17,8 @@ import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -83,16 +86,20 @@ public class ActivityController {
       CreateActivityRequest activity, List<MultipartFile> images) {}
 
   @GetMapping
-  public ResponseEntity<List<ActivityResponse>> getAll(
+  public ResponseEntity<PageResponse<ActivityResponse>> getAll(
       @RequestParam(required = false) ActivityType type,
       @RequestParam(required = false) String city,
       @RequestParam(required = false) Boolean availability,
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
           LocalDateTime dateFrom,
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-          LocalDateTime dateTo) {
-    List<ActivityResponse> activities =
-        activityService.search(new ActivityFilterDTO(type, city, dateFrom, dateTo, availability));
+          LocalDateTime dateTo,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "12") int size) {
+    PageResponse<ActivityResponse> activities =
+        activityService.search(
+            new ActivityFilterDTO(type, city, dateFrom, dateTo, availability),
+            pageRequest(page, size, "dateTime"));
     return ResponseEntity.ok(activities);
   }
 
@@ -124,13 +131,31 @@ public class ActivityController {
   }
 
   @GetMapping("/organizers/me")
-  public ResponseEntity<List<ActivityResponse>> getOrganized(Authentication authentication) {
-    return ResponseEntity.ok(activityService.getByOrganizerId(jwt(authentication).getSubject()));
+  public ResponseEntity<PageResponse<ActivityResponse>> getOrganized(
+      Authentication authentication,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "12") int size) {
+    return ResponseEntity.ok(
+        activityService.getByOrganizerId(
+            jwt(authentication).getSubject(), pageRequest(page, size, "dateTime")));
   }
 
   @GetMapping("/participants/me")
-  public ResponseEntity<List<ActivityResponse>> getJoined(Authentication authentication) {
-    return ResponseEntity.ok(activityService.getByParticipantId(jwt(authentication).getSubject()));
+  public ResponseEntity<PageResponse<ActivityResponse>> getJoined(
+      Authentication authentication,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "12") int size) {
+    return ResponseEntity.ok(
+        activityService.getByParticipantId(
+            jwt(authentication).getSubject(), pageRequest(page, size, "dateTime")));
+  }
+
+  private PageRequest pageRequest(int page, int size, String sortProperty) {
+    if (page < 0 || size < 1 || size > 100) {
+      throw new IllegalArgumentException(
+          "Page must be non-negative and size must be between 1 and 100");
+    }
+    return PageRequest.of(page, size, Sort.by(sortProperty).ascending());
   }
 
   private Jwt jwt(Authentication authentication) {

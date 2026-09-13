@@ -6,6 +6,7 @@ import com.solnotfound.dto.ActivityResponse;
 import com.solnotfound.dto.ActivityWeatherResponse;
 import com.solnotfound.dto.CreateActivityRequest;
 import com.solnotfound.dto.LocationDTO;
+import com.solnotfound.dto.PageResponse;
 import com.solnotfound.dto.ParticipantDTO;
 import com.solnotfound.dto.ReprogramationRangeDTO;
 import com.solnotfound.dto.WeatherConditionsDTO;
@@ -35,6 +36,8 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -209,6 +212,21 @@ public class ActivityService {
         .toList();
   }
 
+  /** Searches activities in MongoDB and returns one page with inclusive date filtering. */
+  public PageResponse<ActivityResponse> search(ActivityFilterDTO filter, Pageable pageable) {
+    validateSearchDates(filter);
+    Page<ActivityResponse> page = activityRepository.search(filter, pageable).map(this::toResponse);
+    return PageResponse.from(page);
+  }
+
+  private void validateSearchDates(ActivityFilterDTO filter) {
+    if (filter.dateFrom() != null
+        && filter.dateTo() != null
+        && filter.dateFrom().isAfter(filter.dateTo())) {
+      throw new InvalidActivityException("Search start date cannot be after end date");
+    }
+  }
+
   private boolean matches(Activity activity, ActivityFilterDTO filter) {
     if (filter.type() != null && filter.type() != activity.getType()) {
       return false;
@@ -217,7 +235,12 @@ public class ActivityService {
     if (filter.city() != null
         && !filter.city().isBlank()
         && (activity.getLocation().city() == null
-            || !filter.city().equalsIgnoreCase(activity.getLocation().city().name()))) {
+            || !activity
+                .getLocation()
+                .city()
+                .name()
+                .toLowerCase(java.util.Locale.ROOT)
+                .contains(filter.city().trim().toLowerCase(java.util.Locale.ROOT)))) {
       return false;
     }
 
@@ -306,6 +329,16 @@ public class ActivityService {
   public List<ActivityResponse> getByParticipantId(String id) {
     List<Activity> activities = activityRepository.findActivitiesByParticipantId(id);
     return activities.stream().map(this::toResponse).toList();
+  }
+
+  public PageResponse<ActivityResponse> getByOrganizerId(String id, Pageable pageable) {
+    return PageResponse.from(
+        activityRepository.findActivitiesByOrganizerId(id, pageable).map(this::toResponse));
+  }
+
+  public PageResponse<ActivityResponse> getByParticipantId(String id, Pageable pageable) {
+    return PageResponse.from(
+        activityRepository.findActivitiesByParticipantId(id, pageable).map(this::toResponse));
   }
 
   private void validate(CreateActivityRequest request) {

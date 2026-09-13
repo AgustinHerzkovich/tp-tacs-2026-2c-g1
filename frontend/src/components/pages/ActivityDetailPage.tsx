@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, MapPin, Clock } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -19,24 +20,29 @@ import { STATUS_META } from "@/lib/activityVisuals";
 import { mapActivityStatus, mapActivityType, pickScene } from "@/lib/activityMapping";
 import { formatActivityWhen } from "@/lib/formatDate";
 import { participantDisplayName } from "@/lib/initials";
+import { api } from "@/lib/api";
+import { ErrorState, LoadingState } from "@/components/common/AsyncState";
 
 export function ActivityDetailPage({ id }: { id: string }) {
   const router = useRouter();
   const { user } = useAuth();
-  const { activity, loading, notFound, error } = useActivity(id);
+  const { activity, loading, notFound, error, refresh } = useActivity(id);
   const weather = useActivityWeather(id);
   const voting = useVoting(id);
+  const [isOrganizer, setIsOrganizer] = useState(false);
 
   const initialJoined = activity?.participants.some((p) => p.userId === user?.id) ?? false;
-  const join = useJoinActivity(id, initialJoined);
+  const join = useJoinActivity(id, initialJoined, refresh);
 
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center gap-3 py-20">
-        <p className="font-display font-semibold text-lg">Cargando…</p>
-      </div>
-    );
-  }
+  useEffect(() => {
+    let cancelled = false;
+    api.activities.organized().then((activities) => {
+      if (!cancelled) setIsOrganizer(activities.content.some((item) => item.id === id));
+    }).catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [id]);
+
+  if (loading) return <LoadingState label="Cargando actividad..." />;
 
   if (notFound || !activity) {
     return (
@@ -98,7 +104,7 @@ export function ActivityDetailPage({ id }: { id: string }) {
         </div>
 
         <div className="px-5 pt-5 lg:px-0 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.7fr)] lg:gap-5 lg:items-start">
-          <WeatherWidget loading={weather.loading} unavailable={weather.unavailable} forecast={weather.weather?.activityForecast ?? null} />
+          <WeatherWidget loading={weather.loading} unavailable={weather.unavailable} forecast={weather.weather?.activityForecast ?? null} current={weather.weather?.currentWeather ?? null} />
 
           {hasVoting && (
             <VotingRoom
@@ -134,6 +140,18 @@ export function ActivityDetailPage({ id }: { id: string }) {
                 </p>
               </Card>
             </div>
+            <Card className="p-4 rounded-2xl mt-3">
+              <p className="font-display font-semibold text-sm px-4 mb-2">Condiciones y planificación</p>
+              <div className="grid grid-cols-2 gap-2 px-4 text-xs font-bold" style={{ color: "var(--muted-foreground)" }}>
+                <span>Mínimo: {activity.minParticipants}</span>
+                <span>Aviso: {activity.anticipationWindow} h antes</span>
+                <span>Lluvia máx.: {activity.weatherConditions.maxRainProbability ?? "-"}%</span>
+                <span>Viento máx.: {activity.weatherConditions.maxWindSpeed ?? "-"} km/h</span>
+                <span>Temp.: {activity.weatherConditions.minTemperature ?? "-"}° a {activity.weatherConditions.maxTemperature ?? "-"}°</span>
+                <span>Reprogramación: {activity.reprogramationRange.maxDays} días</span>
+                <span className="col-span-2">Horario: {activity.reprogramationRange.initialHour.slice(0, 5)} a {activity.reprogramationRange.finalHour.slice(0, 5)}</span>
+              </div>
+            </Card>
           </div>
         </div>
       </div>

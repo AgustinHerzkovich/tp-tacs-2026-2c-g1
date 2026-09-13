@@ -1,16 +1,25 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { useNotifications } from "@/hooks/useNotifications";
 import { NOTIF_META } from "@/lib/activityVisuals";
+import type { NotificationView } from "@/hooks/useNotifications";
+import { PageControls } from "@/components/common/PageControls";
 
 interface NotifDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  notifications: NotificationView[];
+  loading: boolean;
+  error: string | null;
+  markRead: (id: string) => Promise<void>;
+  page: number;
+  totalPages: number;
+  setPage: (page: number) => void;
 }
 
-export function NotifDrawer({ open, onOpenChange }: NotifDrawerProps) {
-  const { notifications, loading, error, markRead } = useNotifications();
+export function NotifDrawer({ open, onOpenChange, notifications, loading, error, markRead, page, totalPages, setPage }: NotifDrawerProps) {
+  const router = useRouter();
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -42,7 +51,7 @@ export function NotifDrawer({ open, onOpenChange }: NotifDrawerProps) {
               <button
                 key={n.id}
                 type="button"
-                onClick={() => void markRead(n.id)}
+                onClick={() => void markRead(n.id).then(() => { onOpenChange(false); router.push(`/actividades/${n.activityId}`); })}
                 className="tap block w-full text-left rounded-2xl p-3.5 border-2"
                 style={{ background: m.bg, borderColor: m.border }}
               >
@@ -63,6 +72,7 @@ export function NotifDrawer({ open, onOpenChange }: NotifDrawerProps) {
               </button>
             );
           })}
+          {!loading && !error && <PageControls page={page} totalPages={totalPages} onPageChange={setPage} />}
         </div>
       </SheetContent>
     </Sheet>

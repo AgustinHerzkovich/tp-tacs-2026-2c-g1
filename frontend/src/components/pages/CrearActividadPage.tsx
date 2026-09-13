@@ -29,10 +29,6 @@ interface StepProps {
 
 const STEP_COMPONENTS: ComponentType<StepProps>[] = [StepInfo, StepLugarFecha, StepClima, StepImagenes, StepAlertas];
 
-// No UI control exists yet for the reprogramming window's daily hour bounds
-// (only its day count, via form.reschedule) — see frontend/TODO.md.
-const DEFAULT_REPROGRAMATION_HOURS: [string, string] = ["09:00:00", "21:00:00"];
-
 function buildCreateRequest(form: WizardFormState): CreateActivityRequest {
   return {
     title: form.title.trim(),
@@ -51,8 +47,8 @@ function buildCreateRequest(form: WizardFormState): CreateActivityRequest {
     anticipationWindow: Number(form.anticipation),
     reprogramationRange: {
       maxDays: Number(form.reschedule),
-      initialHour: DEFAULT_REPROGRAMATION_HOURS[0],
-      finalHour: DEFAULT_REPROGRAMATION_HOURS[1],
+      initialHour: `${form.reprogramStart}:00`,
+      finalHour: `${form.reprogramEnd}:00`,
     },
   };
 }

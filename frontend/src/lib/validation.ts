@@ -50,17 +50,25 @@ function validateLugarFecha(form: WizardFormState): WizardErrors {
   return errors;
 }
 
+function validateAlerts(form: WizardFormState): WizardErrors {
+  if (!form.reprogramStart || !form.reprogramEnd || form.reprogramEnd <= form.reprogramStart) {
+    return { reprogramEnd: "La hora final debe ser posterior a la inicial." };
+  }
+  return {};
+}
+
 /** Returns the errors for a single wizard step (0..3). Slider/select steps
  * (clima, alertas) are constrained by their own controls, so they validate empty. */
 export function validateStep(step: number, form: WizardFormState): WizardErrors {
   if (step === 0) return validateInfo(form);
   if (step === 1) return validateLugarFecha(form);
+  if (step === 4) return validateAlerts(form);
   return {};
 }
 
 /** Union of every step's errors, used right before publishing. */
 export function validateAll(form: WizardFormState): WizardErrors {
-  return { ...validateInfo(form), ...validateLugarFecha(form) };
+  return { ...validateInfo(form), ...validateLugarFecha(form), ...validateAlerts(form) };
 }
 
 /** Index of the first step whose current value is invalid, or -1. */

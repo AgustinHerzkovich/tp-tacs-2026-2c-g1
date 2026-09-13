@@ -288,14 +288,14 @@ class ActivityServiceTest {
   }
 
   @Test
-  void searchFiltersByCityCaseInsensitively() {
+  void searchFiltersByPartialCityCaseInsensitively() {
     activityService.create(
         requestWith(ActivityType.OUTDOOR, "Buenos Aires", LocalDateTime.now().plusDays(1)));
     activityService.create(
         requestWith(ActivityType.OUTDOOR, "Cordoba", LocalDateTime.now().plusDays(1)));
 
     List<ActivityResponse> results =
-        activityService.search(new ActivityFilterDTO(null, "buenos aires", null, null, null));
+        activityService.search(new ActivityFilterDTO(null, " BUENOS ", null, null, null));
 
     assertThat(results)
         .extracting(response -> response.location().city())

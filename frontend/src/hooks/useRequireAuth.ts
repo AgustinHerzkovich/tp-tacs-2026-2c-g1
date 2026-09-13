@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import type { CurrentUser } from "@/types/domain";
 
@@ -9,10 +10,11 @@ import type { CurrentUser } from "@/types/domain";
 export function useRequireAuth(): CurrentUser | null {
   const { user, initialized } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
-    if (initialized && !user) router.replace("/login");
-  }, [initialized, user, router]);
+    if (initialized && !user) router.replace(`/login?returnTo=${encodeURIComponent(pathname ?? "/mis-actividades")}`);
+  }, [initialized, pathname, user, router]);
 
   return user;
 }

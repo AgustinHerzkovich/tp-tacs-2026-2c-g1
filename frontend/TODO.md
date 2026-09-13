@@ -5,40 +5,50 @@ son trabajo pendiente; lo ya implementado se resume al final para evitar reabrir
 
 ## Prioridad alta - funcionalidad faltante
 
-- [ ] **Completar los filtros de Explorar contra el backend.** Hoy el texto y los chips de tipo/Hoy
+- [x] **Completar los filtros de Explorar contra el backend.** El texto se conserva local porque el
+      backend no expone filtro por título; tipo, ciudad, rango y disponibilidad se envían a la API.
       filtran el feed ya descargado en el cliente. Falta una UI para ciudad, rango de fechas y
       disponibilidad, y enviar `type`, `city`, `dateFrom`, `dateTo` y `availability` a
       `GET /api/activities`. Definir búsqueda por título: el backend no expone ese filtro, por lo que
       debe agregarse al contrato o documentarse que seguirá siendo local.
-- [ ] **Permitir al organizador administrar una votación activa.** Existen los proxies
+- [x] **Permitir al organizador administrar una votación activa.** La UI determina al organizador
+      mediante `/activities/organizers/me` y permite reemplazar opciones, quórum y duración.
       `PUT /api/votations/:id/options` y `PUT /api/votations/:id/settings`, pero ninguna pantalla los
-      utiliza. Falta distinguir organizador/participante y permitir reemplazar opciones manuales
+      utiliza. Falta distinguir organizador/participante (no agregar roles organizador y participante,
+      se distinguen mediante el id del creador) y permitir reemplazar opciones manuales
       dentro del rango válido, además de editar quórum mínimo y duración, mostrando errores del
       backend cuando una fecha no tenga clima favorable o quede fuera del rango.
-- [ ] **Exponer la franja horaria de reprogramación en el wizard.** Actualmente sólo se eligen los
+- [x] **Exponer la franja horaria de reprogramación en el wizard.** Se eligen y validan horas inicial
+      y final, y se envían al backend.
       días máximos y `CrearActividadPage` envía siempre `09:00:00-21:00:00`. La US4 exige que el
       organizador configure también hora inicial y final; agregar controles y validación cruzada.
-- [ ] **Diferenciar correctamente las acciones del organizador en el detalle.** Confirmar si el
+- [x] **Diferenciar correctamente las acciones del organizador en el detalle.** El organizador se
+      identifica por su actividad y puede sumarse también como participante explícitamente.
       organizador puede sumarse/bajarse como participante desde la UI y mostrar acciones/textos
       específicos para evitar que se confunda "organizar" con "participar".
-- [ ] **Actualizar los feeds inmediatamente después de mutaciones.** Al crear, votar, sumarse,
+- [x] **Actualizar vistas inmediatamente después de mutaciones.** Voto y join/leave aplican/refrescan
+      la respuesta; notificaciones comparten estado entre contador y drawer.
       bajarse o marcar una notificación como leída, revisar invalidación/refetch de Explorar, Mis
       Actividades, detalle y contador de notificaciones para que no requieran F5.
 
 ## Prioridad alta - robustez y estados
 
-- [ ] **Unificar errores de UI.** Crear un patrón reusable (toast/banner/pantalla) para errores de
+- [x] **Unificar errores de UI.** Se agregaron estados comunes de error con reintento y boundaries.
       red, validación, 401, 403, 404, proveedor meteorológico y almacenamiento de imágenes. Hoy se
       mezclan textos sueltos y errores sin acción de reintento.
-- [ ] **Agregar `error.tsx`, `not-found.tsx` y estados de carga consistentes.** Reemplazar textos
+- [x] **Agregar `error.tsx`, `not-found.tsx` y estados de carga consistentes.** Hay boundaries globales
+      y estados comunes aplicados a los feeds principales y detalle.
       "Cargando..." por skeletons o indicadores accesibles en feeds, detalle, estadísticas y wizard;
       ofrecer reintento donde corresponda.
-- [ ] **Cubrir estados vacíos con acciones útiles.** Validar sin actividades, sin actividades propias,
+- [x] **Cubrir estados vacíos principales.** Explorar, actividades propias y notificaciones muestran
+      estados dedicados; Mis Actividades conserva CTA de creación en el chrome.
       sin votaciones, sin notificaciones, sin resultados de búsqueda y estadísticas sin eventos.
-- [ ] **Manejar expiración y recuperación de sesión.** `check-sso` restaura la cookie de Keycloak al
+- [x] **Manejar expiración y recuperación de sesión.** `check-sso` restaura sesión, se refresca el token
+      periódicamente y se conserva la ruta solicitada al redirigir al login.
       recargar; falta verificar expiración durante uso prolongado, refresh fallido, logout desde otra
       pestaña y redirección al login conservando la ruta original.
-- [ ] **Evitar requests duplicados de notificaciones.** `HeaderLayout` obtiene el contador y
+- [x] **Evitar requests duplicados de notificaciones.** `HeaderLayout` mantiene una única instancia
+      compartida por contador y drawer.
       `NotifDrawer` usa otra instancia de `useNotifications`; centralizar el estado o compartir un
       único hook/provider para no hacer dos GET ni desincronizar el contador.
 
@@ -74,6 +84,13 @@ son trabajo pendiente; lo ya implementado se resume al final para evitar reabrir
       por menú que muestre identidad/rol y pida confirmación o presente una acción explícita.
 - [ ] **Metadata y branding.** Agregar favicon y metadata por página; verificar títulos para login,
       actividad y estadísticas.
+- [ ] **Hacer que el botón de logout sea un poco más declarativo ya que actualmente no se sabe lo que hace
+      hasta que se hace click en él.** Agregar un menú desplegable con la opción de cerrar sesión y mostrar
+      el nombre del usuario.
+- [ ] **Aplicar filtros de búsqueda de actividad automáticamente sin necesidad de darle al botón de aplicar.**
+- [ ] **Los participantes de una actividad, desde el pov de otro participante aparecen como "I".** Debería
+      mostrarse aunque sea las iniciales del nombre del participante, y al pararse encima con el cursor mostrar
+      el nombre completo.
 
 ## Estadísticas admin
 

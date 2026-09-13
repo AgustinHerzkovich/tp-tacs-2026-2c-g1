@@ -69,6 +69,8 @@ export interface WizardFormState {
   tMax: number;
   anticipation: string;
   reschedule: string;
+  reprogramStart: string;
+  reprogramEnd: string;
 }
 
 /** Non-sensitive identity claims used by the UI, read from the Keycloak ID

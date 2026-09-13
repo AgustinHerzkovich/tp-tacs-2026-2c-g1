@@ -27,6 +27,8 @@ export interface UseVoting {
   requestVote: () => void;
   cancelVote: () => void;
   confirmVote: () => Promise<void>;
+  updateOptions: (dates: string[]) => Promise<void>;
+  updateSettings: (minQuorum: number, durationHours: number) => Promise<void>;
 }
 
 /** Finds and drives the reprogramming vote for one activity. GET /votations
@@ -69,7 +71,7 @@ export function useVoting(activityId: string): UseVoting {
   const selectedOption = options.find((option) => option.id === selectedId);
 
   const select = (id: string) => {
-    if (!votedId) setSelectedId(id);
+    setSelectedId(id);
   };
   const requestVote = () => {
     if (selectedId) setConfirmOpen(true);
@@ -78,10 +80,20 @@ export function useVoting(activityId: string): UseVoting {
 
   const confirmVote = async () => {
     if (!votation || !selectedId) return;
-    await api.votations.vote(votation.id, selectedId);
+    const updated = await api.votations.vote(votation.id, selectedId);
+    setVotation(updated);
     setVotedId(selectedId);
     setConfirmOpen(false);
-    load();
+  };
+
+  const updateOptions = async (dates: string[]) => {
+    if (!votation) return;
+    setVotation(await api.votations.updateOptions(votation.id, { dates }));
+  };
+
+  const updateSettings = async (minQuorum: number, durationHours: number) => {
+    if (!votation) return;
+    setVotation(await api.votations.updateSettings(votation.id, { minQuorum, duration: `PT${durationHours}H` }));
   };
 
   return {
@@ -98,5 +110,7 @@ export function useVoting(activityId: string): UseVoting {
     requestVote,
     cancelVote,
     confirmVote,
+    updateOptions,
+    updateSettings,
   };
 }
