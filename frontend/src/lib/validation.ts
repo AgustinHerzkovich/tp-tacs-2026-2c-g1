@@ -23,6 +23,8 @@ function validateLugarFecha(form: WizardFormState): WizardErrors {
   const errors: WizardErrors = {};
   if (!form.place.trim()) {
     errors.place = "Indicá la ubicación de la actividad.";
+  } else if (form.latitude === null || form.longitude === null) {
+    errors.place = "Buscá una ubicación o marcala en el mapa.";
   }
   if (form.min < 1) {
     errors.min = "Se necesita al menos 1 participante.";
@@ -63,7 +65,7 @@ export function validateAll(form: WizardFormState): WizardErrors {
 
 /** Index of the first step whose current value is invalid, or -1. */
 export function firstInvalidStep(form: WizardFormState): number {
-  for (let step = 0; step < 4; step += 1) {
+  for (let step = 0; step < 5; step += 1) {
     if (Object.keys(validateStep(step, form)).length > 0) return step;
   }
   return -1;

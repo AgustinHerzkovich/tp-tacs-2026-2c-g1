@@ -1,6 +1,7 @@
 "use client";
 
-import { Bell } from "lucide-react";
+import Link from "next/link";
+import { BarChart3, Bell } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { getInitials } from "@/lib/initials";
@@ -11,7 +12,7 @@ interface HeaderProps {
 }
 
 export function Header({ onBellClick, unread = 0 }: HeaderProps) {
-  const { user, logout } = useAuth();
+  const { user, hasRole, logout } = useAuth();
 
   const handleAvatarClick = () => {
     void logout();
@@ -26,6 +27,16 @@ export function Header({ onBellClick, unread = 0 }: HeaderProps) {
         Planazo
       </h1>
       <div className="flex items-center gap-3">
+        {hasRole("ADMIN") && (
+          <Link
+            href="/estadisticas"
+            className="tap w-10 h-10 rounded-full bg-white border-2 flex items-center justify-center"
+            style={{ borderColor: "var(--border)" }}
+            aria-label="Estadísticas"
+          >
+            <BarChart3 className="size-[18px]" style={{ color: "var(--foreground)" }} />
+          </Link>
+        )}
         <button
           onClick={onBellClick}
           className="tap relative w-10 h-10 rounded-full bg-white border-2 flex items-center justify-center"

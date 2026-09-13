@@ -4,11 +4,12 @@ import { Label } from "@/components/ui/label";
 import { TYPE_META } from "@/lib/activityVisuals";
 import type { WizardErrors } from "@/lib/validation";
 import type { WizardFormState } from "@/types/domain";
-import type { FieldSetter } from "@/hooks/useWizardForm";
+import type { FieldSetter, FormPatchSetter } from "@/hooks/useWizardForm";
 
 interface StepProps {
   form: WizardFormState;
   set: FieldSetter;
+  patch?: FormPatchSetter;
   errors?: WizardErrors;
 }
 

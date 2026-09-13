@@ -6,9 +6,11 @@
 import { authFetch } from "@/lib/authFetch";
 import { beginRequest, endRequest } from "@/lib/loading";
 import type {
+  ActivityFilterParams,
   ActivityResponse,
   ActivityWeatherResponse,
   NotificationResponse,
+  StatisticsResponse,
   VotationDTO,
 } from "@/types/backend";
 
@@ -45,9 +47,17 @@ function json(method: string, body: unknown): RequestInit {
   return { method, headers: { "content-type": "application/json" }, body: JSON.stringify(body) };
 }
 
+function queryString(params?: Record<string, string | number | boolean | undefined>): string {
+  if (!params) return "";
+  const entries = Object.entries(params).filter(([, value]) => value !== undefined && value !== "");
+  if (entries.length === 0) return "";
+  return `?${new URLSearchParams(entries.map(([key, value]) => [key, String(value)])).toString()}`;
+}
+
 export const api = {
   activities: {
-    list: () => request<ActivityResponse[]>("/activities"),
+    list: (filters?: ActivityFilterParams) =>
+      request<ActivityResponse[]>(`/activities${queryString({ ...filters })}`),
     get: (id: string) => request<ActivityResponse>(`/activities/${id}`),
     /** Activities the current user organizes. */
     organized: () => request<ActivityResponse[]>("/activities/organizers/me"),
@@ -69,5 +79,9 @@ export const api = {
   notifications: {
     list: () => request<NotificationResponse[]>("/notifications"),
     markRead: (id: string) => request<NotificationResponse>(`/notifications/${id}/read`, { method: "PATCH" }),
+  },
+  statistics: {
+    get: (params?: { from?: string; to?: string }) =>
+      request<StatisticsResponse>(`/statistics${queryString(params)}`),
   },
 };

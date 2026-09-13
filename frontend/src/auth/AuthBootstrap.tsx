@@ -21,7 +21,8 @@ function userFromToken(token: PlanazoToken | undefined): CurrentUser | null {
   };
 }
 
-/** Initializes Keycloak without contacting the IdP until the user starts login. */
+/** Restores an existing Keycloak SSO session after reload while keeping the
+ * newly issued access and refresh tokens only in the adapter's memory. */
 export function AuthBootstrap() {
   const dispatch = useAppDispatch();
 
@@ -42,7 +43,7 @@ export function AuthBootstrap() {
     };
 
     void keycloak
-      .init({ pkceMethod: "S256", checkLoginIframe: false })
+      .init({ onLoad: "check-sso", pkceMethod: "S256", checkLoginIframe: false })
       .then(synchronizeSession)
       .catch(() => dispatch(anonymous()));
   }, [dispatch]);

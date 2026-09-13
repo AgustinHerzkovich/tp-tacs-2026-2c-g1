@@ -14,9 +14,9 @@ export function ExploreCard({ activity }: { activity: ExploreActivity }) {
   const names = activity.participantIds.slice(0, 3).map((id) => participantDisplayName(id, user));
   return (
     <Link href={`/actividades/${activity.id}`}>
-      <Card className="tap mb-5 overflow-hidden gap-0 py-0 rounded-2xl">
+      <Card className="tap mb-5 lg:mb-0 lg:h-full overflow-hidden gap-0 py-0 rounded-2xl">
         <div className="relative">
-          <Scene scene={activity.scene} height={150} />
+          <Scene scene={activity.scene} imageUrl={activity.imageUrl} alt={activity.title} height={180} />
           <TypeBadge type={activity.type} className="absolute top-3 left-3" />
         </div>
         <div className="p-4">

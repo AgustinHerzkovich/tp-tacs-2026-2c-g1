@@ -14,7 +14,7 @@ export function LoginPage() {
   }, [isAuthenticated, router]);
 
   return (
-    <div className="fade-in min-h-screen flex flex-col justify-center px-6 py-10">
+    <div className="fade-in min-h-screen flex flex-col justify-center px-6 py-10 lg:max-w-xl lg:mx-auto lg:w-full">
       <div className="text-center mb-8">
         <h1 className="font-display font-semibold text-4xl" style={{ color: "var(--primary)" }}>
           Planazo
