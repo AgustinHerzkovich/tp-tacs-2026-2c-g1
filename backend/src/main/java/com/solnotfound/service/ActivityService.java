@@ -527,7 +527,7 @@ public class ActivityService {
   private List<ParticipantDTO> toParticipantsDTO(
       List<com.solnotfound.entity.user.User> participants) {
     return participants.stream()
-        .map(participant -> new ParticipantDTO(participant.getId()))
+        .map(participant -> new ParticipantDTO(participant.getId(), participant.getName()))
         .toList();
   }
 

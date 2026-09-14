@@ -68,10 +68,10 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Levantar el stack (backend, Keycloak, Mongo, MinIO)
-        run: |
-          docker compose up -d --build
-          echo "Esperando a que el stack esté healthy..."
-          sleep 30
+        working-directory: ${{ github.workspace }}
+        run: docker compose up -d --build --wait
+        env:
+          APP_SEED_ENABLED: "true"
 
       - name: Correr E2E (mobile + desktop)
         run: npx playwright test
@@ -82,6 +82,7 @@ jobs:
           E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD }}
           E2E_ADMIN_USERNAME: ${{ vars.E2E_ADMIN_USERNAME }}
           E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+          E2E_REUSE_SERVER: "true"
 
       - name: Subir reporte de Playwright
         if: always()

@@ -33,6 +33,7 @@ interface ActivityBase {
    * src/lib/initials.ts's participantDisplayName for why these can't be
    * resolved to real names for anyone but the current user. */
   participantIds: string[];
+  participantNames: string[];
 }
 
 /** Explorar feed card and the "votación pendiente" card share this shape. */

@@ -5,6 +5,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { NOTIF_META } from "@/lib/activityVisuals";
 import type { NotificationView } from "@/hooks/useNotifications";
 import { PageControls } from "@/components/common/PageControls";
+import { useState } from "react";
+import { useToast } from "@/components/common/ToastProvider";
 
 interface NotifDrawerProps {
   open: boolean;
@@ -20,6 +22,8 @@ interface NotifDrawerProps {
 
 export function NotifDrawer({ open, onOpenChange, notifications, loading, error, markRead, page, totalPages, setPage }: NotifDrawerProps) {
   const router = useRouter();
+  const toast = useToast();
+  const [pendingId, setPendingId] = useState<string | null>(null);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -51,7 +55,15 @@ export function NotifDrawer({ open, onOpenChange, notifications, loading, error,
               <button
                 key={n.id}
                 type="button"
-                onClick={() => void markRead(n.id).then(() => { onOpenChange(false); router.push(`/actividades/${n.activityId}`); })}
+                disabled={pendingId === n.id}
+                onClick={() => {
+                  if (pendingId) return;
+                  setPendingId(n.id);
+                  void markRead(n.id)
+                    .then(() => { toast("Notificación marcada como leída."); onOpenChange(false); router.push(`/actividades/${n.activityId}`); })
+                    .catch(() => toast("No pudimos marcar la notificación.", "error"))
+                    .finally(() => setPendingId(null));
+                }}
                 className="tap block w-full text-left rounded-2xl p-3.5 border-2"
                 style={{ background: m.bg, borderColor: m.border }}
               >

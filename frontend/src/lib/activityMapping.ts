@@ -80,6 +80,7 @@ function toBase(dto: ActivityResponse) {
     when: formatActivityWhen(dto.dateTime),
     where: dto.location.city ?? "Ubicación a confirmar",
     participantIds: dto.participants.map((p) => p.userId),
+    participantNames: dto.participants.map((p) => p.name ?? p.userId),
   };
 }
 

@@ -103,7 +103,7 @@ describe("StatisticsPage range filtering", () => {
     statisticsGet.mockResolvedValue(EMPTY_STATS);
     render(<StatisticsPage />);
     expect(
-      await screen.findByText(/No hay eventos registrados en el período seleccionado/),
+      await screen.findByText(/No hay eventos de actividades en el período seleccionado/),
     ).toBeInTheDocument();
   });
 

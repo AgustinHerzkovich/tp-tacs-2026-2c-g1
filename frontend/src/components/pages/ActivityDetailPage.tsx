@@ -22,10 +22,12 @@ import { formatActivityWhen } from "@/lib/formatDate";
 import { participantDisplayName } from "@/lib/initials";
 import { api } from "@/lib/api";
 import { ErrorState, LoadingState } from "@/components/common/AsyncState";
+import { useToast } from "@/components/common/ToastProvider";
 
 export function ActivityDetailPage({ id }: { id: string }) {
   const router = useRouter();
   const { user } = useAuth();
+  const toast = useToast();
   const { activity, loading, notFound, error, refresh } = useActivity(id);
   const weather = useActivityWeather(id);
   const voting = useVoting(id);
@@ -77,7 +79,7 @@ export function ActivityDetailPage({ id }: { id: string }) {
   const status = mapActivityStatus(activity.status);
   const statusMeta = STATUS_META[status];
   const hasVoting = voting.votation !== null;
-  const participantNames = activity.participants.map((p) => participantDisplayName(p.userId, user));
+  const participantNames = activity.participants.map((p) => p.name ?? participantDisplayName(p.userId, user));
   const maxRain = activity.weatherConditions.maxRainProbability;
 
   return (
@@ -107,21 +109,9 @@ export function ActivityDetailPage({ id }: { id: string }) {
           </div>
         </div>
 
-        <div className="px-5 pt-5 lg:px-0 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.7fr)] lg:gap-5 lg:items-start">
-          <WeatherWidget loading={weather.loading} unavailable={weather.unavailable} forecast={weather.weather?.activityForecast ?? null} current={weather.weather?.currentWeather ?? null} />
-
-          {hasVoting && (
-            <VotingRoom
-              voting={voting}
-              warningText={
-                maxRain != null
-                  ? `Se superó el máximo de lluvia permitido (${maxRain}%). Elegí una fecha alternativa para reprogramar.`
-                  : undefined
-              }
-            />
-          )}
-
-          <div className="mb-4 lg:col-start-1 lg:row-start-1 lg:mt-36">
+        <div className={`px-5 pt-5 lg:px-0 lg:grid lg:gap-5 lg:items-start ${hasVoting ? "lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.7fr)]" : "lg:grid-cols-2"}`}>
+          <div className="min-w-0">
+            <WeatherWidget loading={weather.loading} unavailable={weather.unavailable} forecast={weather.weather?.activityForecast ?? null} current={weather.weather?.currentWeather ?? null} />
             <h3 className="font-display font-semibold text-[15px] mb-2">Sobre la actividad</h3>
             <p className="text-[13px] font-semibold leading-relaxed mb-3" style={{ color: "var(--muted-foreground)" }}>
               {activity.description ?? "Sin descripción."}
@@ -157,6 +147,16 @@ export function ActivityDetailPage({ id }: { id: string }) {
               </div>
             </Card>
           </div>
+          {hasVoting && (
+            <VotingRoom
+              voting={voting}
+              warningText={
+                maxRain != null
+                  ? `Se superó el máximo de lluvia permitido (${maxRain}%). Elegí una fecha alternativa para reprogramar.`
+                  : undefined
+              }
+            />
+          )}
         </div>
       </div>
 
@@ -201,7 +201,8 @@ export function ActivityDetailPage({ id }: { id: string }) {
         title="Confirmá tu voto"
         description={`¿Confirmás tu voto por "${voting.selectedOption?.label ?? ""}"? No vas a poder cambiarlo después.`}
         confirmLabel="Confirmar voto"
-        onConfirm={() => void voting.confirmVote()}
+        pending={voting.pending}
+        onConfirm={() => void voting.confirmVote().then(() => toast("Tu voto quedó registrado."), () => toast("No pudimos registrar tu voto.", "error"))}
       />
       <ConfirmModal
         open={join.confirmOpen}
@@ -209,7 +210,8 @@ export function ActivityDetailPage({ id }: { id: string }) {
         title="¿Sumarte a esta actividad?"
         description="Vas a recibir notificaciones sobre el clima, la fecha y los demás participantes."
         confirmLabel="Sí, sumarme"
-        onConfirm={() => void join.confirmJoin()}
+        pending={join.pending}
+        onConfirm={() => void join.confirmJoin().then(() => toast("Te sumaste a la actividad."), () => toast("No pudimos sumarte a la actividad.", "error"))}
       />
       <ConfirmModal
         open={join.leaveConfirmOpen}
@@ -217,7 +219,8 @@ export function ActivityDetailPage({ id }: { id: string }) {
         title="¿Darte de baja de la actividad?"
         description="Vas a dejar de recibir notificaciones sobre el clima, la fecha y los demás participantes."
         confirmLabel="Sí, bajarme"
-        onConfirm={() => void join.confirmLeave()}
+        pending={join.pending}
+        onConfirm={() => void join.confirmLeave().then(() => toast("Te diste de baja de la actividad."), () => toast("No pudimos darte de baja.", "error"))}
       />
     </div>
   );

@@ -21,7 +21,7 @@ function makeActivity(overrides: Partial<ActivityResponse> = {}): ActivityRespon
     minParticipants: 4,
     maxParticipants: 12,
     participantCount: 6,
-    participants: [{ userId: "u1" }, { userId: "u2" }],
+    participants: [{ userId: "u1", name: "Ana Pérez" }, { userId: "u2", name: "Juan López" }],
     weatherConditions: {
       maxRainProbability: 40,
       minTemperature: 12,
@@ -83,6 +83,7 @@ describe("toExploreActivity / toMisActivity", () => {
       type: "outdoor",
       where: "CABA",
       participantIds: ["u1", "u2"],
+      participantNames: ["Ana Pérez", "Juan López"],
       imageUrl: "https://cdn.example.com/a.jpg",
       scene: pickScene("act-1"),
       status: "confirmada",

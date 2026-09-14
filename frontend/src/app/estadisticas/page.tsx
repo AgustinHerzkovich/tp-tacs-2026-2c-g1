@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import { StatisticsPage } from "@/components/pages/StatisticsPage";
 
 export default function StatisticsRoute() {
@@ -16,3 +17,4 @@ export default function StatisticsRoute() {
     </Suspense>
   );
 }
+export const metadata: Metadata = { title: "Estadísticas" };

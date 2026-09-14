@@ -34,7 +34,7 @@ export default defineConfig({
     command: "npm run dev",
     // Reuse a server already started by the developer instead of spawning a
     // second one; in CI a fresh `npm run dev` is started for the job.
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: !process.env.CI || process.env.E2E_REUSE_SERVER === "true",
     url: baseURL,
     timeout: 120_000,
   },

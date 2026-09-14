@@ -7,10 +7,10 @@ integración con el backend, etc.).
 
 ## Cómo levantar la aplicación
 
-Se requiere Node.js. Desde la carpeta `frontend/`:
+Se requiere Node.js 22. Desde la carpeta `frontend/`:
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
@@ -45,9 +45,28 @@ ejecutá `docker compose up --build --wait` desde la raíz. En ese modo el proxy
 ## Calidad de código
 
 ```bash
+npm test
 npm run lint
+npm run typecheck
 npm run build
 ```
+
+Los tests unitarios y de componentes usan Vitest y Testing Library. Para los E2E con Playwright,
+levantar el stack con seed desde la raíz y luego ejecutar desde `frontend/`:
+
+```bash
+# Raíz del repositorio
+APP_SEED_ENABLED=true docker compose up --build --wait
+
+# frontend/
+npx playwright install chromium
+npm run test:e2e
+```
+
+Las cuentas locales predeterminadas son `alumno/alumno` y `admin/admin`. Las variables
+`E2E_USER_USERNAME`, `E2E_USER_PASSWORD`, `E2E_ADMIN_USERNAME`, `E2E_ADMIN_PASSWORD` y
+`E2E_BASE_URL` permiten reemplazarlas. Ver el [README raíz](../README.md#calidad-de-código) para el
+procedimiento completo y las consideraciones de seguridad.
 
 ## Estado actual
 

@@ -14,7 +14,7 @@ interface VotingRoomProps {
 }
 
 export function VotingRoom({ voting, warningText, organizer = false }: VotingRoomProps) {
-  const { options, total, selectedId, votedId, select, requestVote } = voting;
+  const { options, total, selectedId, votedId, select, requestVote, pending } = voting;
   const [editing, setEditing] = useState(false);
   const [dates, setDates] = useState<string[]>([]);
   const [quorum, setQuorum] = useState("50");
@@ -67,8 +67,8 @@ export function VotingRoom({ voting, warningText, organizer = false }: VotingRoo
       </div>
 
       <div className="px-4">
-        <Button className="w-full h-auto py-3.5 rounded-2xl font-display font-semibold" disabled={!selectedId || selectedId === votedId} onClick={requestVote}>
-          {votedId ? "Cambiar voto" : "Votar fecha alternativa"}
+        <Button className="w-full h-auto py-3.5 rounded-2xl font-display font-semibold" disabled={pending || !selectedId || selectedId === votedId} onClick={requestVote}>
+          {pending ? "Guardando voto..." : votedId ? "Cambiar voto" : "Votar fecha alternativa"}
         </Button>
       </div>
 

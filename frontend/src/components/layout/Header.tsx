@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { BarChart3, Bell } from "lucide-react";
+import { BarChart3, Bell, LogOut, UserRound } from "lucide-react";
+import { useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { getInitials } from "@/lib/initials";
+import { ConfirmModal } from "@/components/common/ConfirmModal";
 
 interface HeaderProps {
   onBellClick: () => void;
@@ -13,10 +15,8 @@ interface HeaderProps {
 
 export function Header({ onBellClick, unread = 0 }: HeaderProps) {
   const { user, hasRole, logout } = useAuth();
-
-  const handleAvatarClick = () => {
-    void logout();
-  };
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [logoutOpen, setLogoutOpen] = useState(false);
 
   return (
     <div
@@ -51,14 +51,31 @@ export function Header({ onBellClick, unread = 0 }: HeaderProps) {
             />
           )}
         </button>
-        <button onClick={handleAvatarClick} aria-label="Cerrar sesión" className="tap">
-          <Avatar>
-            <AvatarFallback className="font-display font-semibold text-[13px]" style={{ background: "var(--lav)", color: "var(--lav-ink)" }}>
-              {user ? getInitials(user.name) : "?"}
-            </AvatarFallback>
-          </Avatar>
-        </button>
+        <div className="relative">
+          <button onClick={() => setProfileOpen((open) => !open)} aria-label="Abrir menú de perfil" aria-expanded={profileOpen} className="tap rounded-full focus-visible:ring-2 focus-visible:ring-[var(--ring)]">
+            <Avatar>
+              <AvatarFallback className="font-display font-semibold text-[13px]" style={{ background: "var(--lav)", color: "var(--lav-ink)" }}>
+                {user ? getInitials(user.name) : "?"}
+              </AvatarFallback>
+            </Avatar>
+          </button>
+          {profileOpen && (
+            <div className="absolute right-0 top-12 z-50 w-64 rounded-2xl border-2 bg-white p-3 shadow-xl" role="menu">
+              <div className="flex items-center gap-3 border-b pb-3" style={{ borderColor: "var(--border)" }}>
+                <UserRound className="size-5" aria-hidden="true" />
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-extrabold">{user?.name}</p>
+                  <p className="text-[11px] font-bold" style={{ color: "var(--muted-foreground)" }}>{hasRole("ADMIN") ? "Administrador" : "Usuario"}</p>
+                </div>
+              </div>
+              <button type="button" role="menuitem" className="mt-2 flex min-h-11 w-full items-center gap-2 rounded-xl px-3 text-left text-sm font-extrabold hover:bg-muted focus-visible:ring-2 focus-visible:ring-[var(--ring)]" onClick={() => { setProfileOpen(false); setLogoutOpen(true); }}>
+                <LogOut className="size-4" /> Cerrar sesión
+              </button>
+            </div>
+          )}
+        </div>
       </div>
+      <ConfirmModal open={logoutOpen} onOpenChange={setLogoutOpen} title="¿Cerrar sesión?" description={`Vas a salir de la cuenta de ${user?.name ?? "Planazo"}.`} confirmLabel="Cerrar sesión" destructive onConfirm={() => void logout()} />
     </div>
   );
 }

@@ -30,6 +30,7 @@ export interface LocationDTO {
 
 export interface ParticipantDTO {
   userId: string;
+  name: string | null;
 }
 
 export interface ReprogramationRangeDTO {

@@ -13,7 +13,7 @@ export function AvatarStack({ names, extra = 0, size = "default" }: AvatarStackP
   return (
     <div className="flex -space-x-2.5">
       {names.map((name, i) => (
-        <Avatar key={i} size={size} className="ring-2 ring-white">
+        <Avatar key={`${name}-${i}`} size={size} className="ring-2 ring-white" title={name} aria-label={name}>
           <AvatarFallback
             className="font-display font-bold text-[var(--foreground)]"
             style={{ background: AV_COLORS[i % AV_COLORS.length] }}

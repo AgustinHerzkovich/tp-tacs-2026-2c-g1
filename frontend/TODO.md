@@ -69,26 +69,26 @@ son trabajo pendiente; lo ya implementado se resume al final para evitar reabrir
 
 ## Responsive y UX
 
-- [ ] **Pasada visual sistemática mobile/desktop.** Probar 320, 375, 430, 768, 1024 y 1440 px en
+- [x] **Pasada visual sistemática mobile/desktop.** Probar 320, 375, 430, 768, 1024 y 1440 px en
       login, feeds, detalle, galería, mapa, wizard de cinco pasos, drawer y estadísticas. Revisar en
       especial que el chrome fijo no tape botones/contenido y que cards/textos no desborden.
-- [ ] **Revisar el detalle desktop.** Validar la grilla de clima/votación/descripción con y sin
+- [x] **Revisar el detalle desktop.** Validar la grilla de clima/votación/descripción con y sin
       votación, descripción, participantes e imágenes; evitar espacios artificiales y mantener la
       acción principal visible.
-- [ ] **Feedback de acciones.** Agregar confirmación tipo toast para crear, votar, sumarse, bajarse y
+- [x] **Feedback de acciones.** Agregar confirmación tipo toast para crear, votar, sumarse, bajarse y
       marcar como leída; deshabilitar doble click y comunicar claramente operaciones pendientes.
-- [ ] **Accesibilidad completa.** Revisar foco visible, orden de tabulación, etiquetas, mensajes con
+- [x] **Accesibilidad completa.** Revisar foco visible, orden de tabulación, etiquetas, mensajes con
       `aria-live`, contraste, navegación de galería/mapa por teclado, tamaños táctiles y reduced
       motion.
-- [ ] **Perfil/logout más claro.** El avatar actualmente cierra sesión inmediatamente; reemplazarlo
+- [x] **Perfil/logout más claro.** El avatar actualmente cierra sesión inmediatamente; reemplazarlo
       por menú que muestre identidad/rol y pida confirmación o presente una acción explícita.
-- [ ] **Metadata y branding.** Agregar favicon y metadata por página; verificar títulos para login,
+- [x] **Metadata y branding.** Agregar favicon y metadata por página; verificar títulos para login,
       actividad y estadísticas.
-- [ ] **Hacer que el botón de logout sea un poco más declarativo ya que actualmente no se sabe lo que hace
+- [x] **Hacer que el botón de logout sea un poco más declarativo ya que actualmente no se sabe lo que hace
       hasta que se hace click en él.** Agregar un menú desplegable con la opción de cerrar sesión y mostrar
       el nombre del usuario.
-- [ ] **Aplicar filtros de búsqueda de actividad automáticamente sin necesidad de darle al botón de aplicar.**
-- [ ] **Los participantes de una actividad, desde el pov de otro participante aparecen como "I".** Debería
+- [x] **Aplicar filtros de búsqueda de actividad automáticamente sin necesidad de darle al botón de aplicar.**
+- [x] **Los participantes de una actividad, desde el pov de otro participante aparecen como "I".** Debería
       mostrarse aunque sea las iniciales del nombre del participante, y al pararse encima con el cursor mostrar
       el nombre completo.
 

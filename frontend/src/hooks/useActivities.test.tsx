@@ -27,7 +27,7 @@ function makeActivity(id: string, overrides: Partial<ActivityResponse> = {}): Ac
     minParticipants: 4,
     maxParticipants: 12,
     participantCount: 5,
-    participants: [{ userId: "u1" }],
+    participants: [{ userId: "u1", name: "Ana Pérez" }],
     weatherConditions: { maxRainProbability: null, minTemperature: null, maxTemperature: null, maxWindSpeed: null },
     anticipationWindow: 24,
     reprogramationRange: { maxDays: 3, initialHour: "09:00:00", finalHour: "21:00:00" },
