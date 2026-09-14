@@ -38,6 +38,7 @@ interface ActivityBase {
 /** Explorar feed card and the "votación pendiente" card share this shape. */
 export interface ExploreActivity extends ActivityBase {
   people: number;
+  status: MockStatusKey;
 }
 
 /** "Mis actividades" feed card. */

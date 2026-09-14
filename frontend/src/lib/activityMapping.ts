@@ -84,7 +84,7 @@ function toBase(dto: ActivityResponse) {
 }
 
 export function toExploreActivity(dto: ActivityResponse): ExploreActivity {
-  return { ...toBase(dto), people: dto.participantCount };
+  return { ...toBase(dto), people: dto.participantCount, status: mapActivityStatus(dto.status) };
 }
 
 export function toMisActivity(dto: ActivityResponse): MisActivity {

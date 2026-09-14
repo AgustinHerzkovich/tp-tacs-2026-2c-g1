@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Scene } from "@/components/common/Scene";
-import { TypeBadge } from "@/components/common/PillBadge";
+import { TypeBadge, StatusBadge } from "@/components/common/PillBadge";
 import { AvatarStack } from "@/components/common/AvatarStack";
 import { useAuth } from "@/hooks/useAuth";
 import { participantDisplayName } from "@/lib/initials";
@@ -18,6 +18,7 @@ export function ExploreCard({ activity }: { activity: ExploreActivity }) {
         <div className="relative">
           <Scene scene={activity.scene} imageUrl={activity.imageUrl} alt={activity.title} height={180} />
           <TypeBadge type={activity.type} className="absolute top-3 left-3" />
+          <StatusBadge status={activity.status} className="absolute top-3 right-3" />
         </div>
         <div className="p-4">
           <h3 className="font-display font-semibold text-[16.5px] leading-snug">{activity.title}</h3>
