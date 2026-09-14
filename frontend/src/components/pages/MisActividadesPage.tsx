@@ -3,7 +3,8 @@
 import { useActivities } from "@/hooks/useActivities";
 import { VotingPendingCard } from "@/components/activities/VotingPendingCard";
 import { MisCard } from "@/components/activities/MisCard";
-import { ErrorState, LoadingState } from "@/components/common/AsyncState";
+import { ErrorState } from "@/components/common/AsyncState";
+import { MisGridSkeleton } from "@/components/common/Skeletons";
 import { PageControls } from "@/components/common/PageControls";
 
 export function MisActividadesPage() {
@@ -17,7 +18,7 @@ export function MisActividadesPage() {
         <p className="text-xs font-extrabold uppercase" style={{ color: "var(--primary)" }}>Tu agenda</p>
         <h2 className="font-display font-semibold text-4xl">Mis actividades</h2>
       </div>
-      {votingPending.length > 0 && (
+      {!loading && !error && votingPending.length > 0 && (
         <>
           <p className="font-display font-semibold text-[13px] uppercase tracking-wide mb-2" style={{ color: "var(--muted-foreground)" }}>
             Votaciones pendientes
@@ -33,18 +34,20 @@ export function MisActividadesPage() {
       <p className="font-display font-semibold text-[13px] uppercase tracking-wide mt-6 mb-2" style={{ color: "var(--muted-foreground)" }}>
         Tus actividades
       </p>
-      {loading && <LoadingState label="Cargando tus actividades..." />}
+      {loading && <MisGridSkeleton />}
       {error && <ErrorState message={error} retry={refresh} />}
       {!loading && !error && misFeed.length === 0 && (
         <p className="text-center text-[13px] font-bold py-10" style={{ color: "var(--muted-foreground)" }}>
           Todavía no organizaste ni te sumaste a ninguna actividad.
         </p>
       )}
-      <div className="lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-4">
-        {remainingActivities.map((a) => (
-          <MisCard key={a.id} activity={a} onRefreshImages={refresh} />
-        ))}
-      </div>
+      {!loading && !error && (
+        <div className="lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-4">
+          {remainingActivities.map((a) => (
+            <MisCard key={a.id} activity={a} onRefreshImages={refresh} />
+          ))}
+        </div>
+      )}
       {!loading && !error && <PageControls page={misPage} totalPages={misTotalPages} onPageChange={setMisPage} />}
     </div>
   );

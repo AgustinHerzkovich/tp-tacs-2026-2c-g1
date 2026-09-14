@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ErrorState, LoadingState } from "@/components/common/AsyncState";
+import { StatisticsSkeleton } from "@/components/common/Skeletons";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 import type { ActivityStatisticsResponse, StatisticsResponse } from "@/types/backend";
@@ -182,6 +183,7 @@ export function StatisticsPage() {
               size="sm"
               className="rounded-xl"
               onClick={() => applyPreset(preset.from, preset.to)}
+              disabled={loading}
               aria-pressed={from === preset.from && to === preset.to}
             >
               {preset.label}
@@ -191,7 +193,7 @@ export function StatisticsPage() {
       </Card>
 
       {error && <ErrorState message={error} retry={retry} />}
-      {!error && loading && !statistics && <LoadingState label="Cargando estadísticas..." />}
+      {!error && loading && !statistics && <StatisticsSkeleton />}
       {!error && statistics && (
         <>
           <p className="text-[12px] font-bold mb-3" style={{ color: "var(--muted-foreground)" }}>

@@ -1,9 +1,21 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+
+const noopSubscribe = () => () => {};
+
+/** True only once hydration has committed. The server always renders the
+ * "checking session" state (it can't know Keycloak's client-side auth
+ * status), so this keeps the very first client render identical to that —
+ * otherwise a session restored before/during hydration (e.g. right after a
+ * Keycloak logout redirect back to this page) makes React's first client
+ * pass disagree with the server HTML and throws a hydration-mismatch error. */
+function useHasMounted(): boolean {
+  return useSyncExternalStore(noopSubscribe, () => true, () => false);
+}
 
 export function LoginPage() {
   const router = useRouter();
@@ -11,6 +23,7 @@ export function LoginPage() {
   const requestedRoute = searchParams?.get("returnTo");
   const returnTo = requestedRoute?.startsWith("/") ? requestedRoute : "/mis-actividades";
   const { initialized, isAuthenticated, login } = useAuth();
+  const ready = useHasMounted() && initialized;
 
   useEffect(() => {
     if (isAuthenticated) router.replace(returnTo);
@@ -30,10 +43,10 @@ export function LoginPage() {
 
       <Button
         className="h-auto py-3.5 rounded-2xl font-display font-semibold"
-        disabled={!initialized || isAuthenticated}
+        disabled={!ready || isAuthenticated}
         onClick={() => void login()}
       >
-        {initialized ? "Ingresar o registrarme" : "Comprobando sesión..."}
+        {ready ? "Ingresar o registrarme" : "Comprobando sesión..."}
       </Button>
     </div>
   );

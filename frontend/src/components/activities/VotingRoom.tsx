@@ -46,6 +46,7 @@ export function VotingRoom({ voting, warningText, organizer = false }: VotingRoo
               key={option.id}
               type="button"
               onClick={() => select(option.id)}
+              aria-pressed={active}
               className="tap block w-full text-left rounded-xl border-2 p-3"
               style={{ borderColor: active ? "var(--primary)" : "var(--border)", background: active ? "var(--secondary)" : "#fff" }}
             >

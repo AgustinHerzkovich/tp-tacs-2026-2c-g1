@@ -34,20 +34,21 @@ export function useActivities(filters?: ActivityFilterParams): UseActivities {
   const [exploreFeed, setExploreFeed] = useState<ExploreActivity[]>([]);
   const [misFeed, setMisFeed] = useState<MisActivity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadedRequest, setLoadedRequest] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [explorePage, setExplorePage] = useState(0);
   const [misPage, setMisPage] = useState(0);
   const [exploreTotalPages, setExploreTotalPages] = useState(0);
   const [misTotalPages, setMisTotalPages] = useState(0);
+  const requestKey = [type, city, dateFrom, dateTo, availability, explorePage, misPage, reloadKey]
+    .map((value) => String(value ?? ""))
+    .join("|");
+  const requestPending = loading || loadedRequest !== requestKey;
 
   useEffect(() => {
     let cancelled = false;
 
-    // Reset happens once the fetch actually resolves (see .then below), not
-    // synchronously here — an effect should only set state from a callback
-    // reacting to the external system (the fetch), never as a direct,
-    // synchronous statement in its body.
     Promise.all([
       api.activities.list({ type, city, dateFrom, dateTo, availability, page: explorePage, size: 12 }),
       api.activities.organized(misPage, 12),
@@ -70,13 +71,16 @@ export function useActivities(filters?: ActivityFilterParams): UseActivities {
         }
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+          setLoadedRequest(requestKey);
+        }
       });
 
     return () => {
       cancelled = true;
     };
-  }, [availability, city, dateFrom, dateTo, explorePage, misPage, reloadKey, type]);
+  }, [availability, city, dateFrom, dateTo, explorePage, misPage, reloadKey, requestKey, type]);
 
   const refresh = useCallback(() => setReloadKey((k) => k + 1), []);
 
@@ -84,7 +88,7 @@ export function useActivities(filters?: ActivityFilterParams): UseActivities {
     exploreFeed,
     misFeed,
     votingPending: misFeed.filter((a) => a.status === "propuesta"),
-    loading,
+    loading: requestPending,
     error,
     refresh,
     explorePage,

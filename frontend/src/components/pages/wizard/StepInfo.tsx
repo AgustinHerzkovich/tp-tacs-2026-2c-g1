@@ -64,6 +64,7 @@ export function StepInfo({ form, set, errors }: StepProps) {
                 key={key}
                 type="button"
                 onClick={() => set("type")(key as WizardFormState["type"])}
+                aria-pressed={active}
                 className="tap aspect-square rounded-2xl border-2 flex flex-col items-center justify-center gap-2 font-display font-semibold text-[12.5px]"
                 style={active ? { background: m.bg, borderColor: m.bg, color: m.ink } : { background: "#fff", borderColor: "var(--border)", color: "var(--muted-foreground)" }}
               >

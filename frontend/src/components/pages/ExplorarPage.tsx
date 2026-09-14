@@ -7,7 +7,8 @@ import { ExploreCard } from "@/components/activities/ExploreCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { ActivityFilterParams, ActivityType } from "@/types/backend";
-import { ErrorState, LoadingState } from "@/components/common/AsyncState";
+import { ErrorState } from "@/components/common/AsyncState";
+import { ExploreGridSkeleton } from "@/components/common/Skeletons";
 import { PageControls } from "@/components/common/PageControls";
 
 const FILTERS = ["Todo", "Outdoor", "Indoor", "Mixto", "Hoy"] as const;
@@ -50,12 +51,11 @@ export function ExplorarPage() {
     [debouncedCity, effectiveFrom, effectiveTo, filter, invalidDates, onlyAvailable],
   );
 
-  const [prevApplied, setPrevApplied] = useState(applied);
   const { exploreFeed, loading, error, refresh, explorePage, exploreTotalPages, setExplorePage } = useActivities(applied);
-  if (prevApplied !== applied) {
-    setPrevApplied(applied);
+
+  useEffect(() => {
     setExplorePage(0);
-  }
+  }, [applied, setExplorePage]);
 
   const results = exploreFeed.filter((a) => {
     const matchesQuery = a.title.toLowerCase().includes(query.toLowerCase());
@@ -63,6 +63,7 @@ export function ExplorarPage() {
   });
 
   const clearFilters = () => {
+    setQuery("");
     setFilter("Todo");
     setCity("");
     setDateFrom("");
@@ -95,6 +96,7 @@ export function ExplorarPage() {
             <button
               key={f}
               onClick={() => setFilter(f)}
+              aria-pressed={active}
               className="tap shrink-0 px-4 py-2 rounded-full text-[12.5px] font-extrabold border-2 whitespace-nowrap"
               style={
                 active
@@ -123,7 +125,7 @@ export function ExplorarPage() {
       <div className="flex gap-2 mb-6">
         <Button type="button" variant="outline" className="flex-1 rounded-xl" onClick={clearFilters}>Limpiar</Button>
       </div>
-      {loading && <LoadingState label="Cargando actividades..." />}
+      {loading && <ExploreGridSkeleton />}
       {error && (
         <ErrorState message={error} retry={refresh} />
       )}
@@ -136,9 +138,14 @@ export function ExplorarPage() {
         </>
       )}
       {!loading && !error && results.length === 0 && (
-        <p className="text-center text-[13px] font-bold py-10" style={{ color: "var(--muted-foreground)" }}>
-          No encontramos actividades con esos filtros.
-        </p>
+        <div className="text-center py-10">
+          <p className="text-[13px] font-bold" style={{ color: "var(--muted-foreground)" }}>
+            No encontramos actividades con esos filtros.
+          </p>
+          <Button type="button" variant="outline" className="mt-3 rounded-xl" onClick={clearFilters}>
+            Limpiar filtros
+          </Button>
+        </div>
       )}
     </div>
   );
