@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.solnotfound.dto.StatisticsResponse;
@@ -76,6 +77,17 @@ class StatisticsServiceTest {
   void rejectsInvertedRange() {
     assertThatThrownBy(() -> service.getStatistics(NOW, NOW.minusSeconds(1)))
         .isInstanceOf(InvalidStatisticsRangeException.class);
+  }
+
+  @Test
+  void passesInclusiveRangeBoundariesToRepository() {
+    Instant from = Instant.parse("2026-03-08T05:00:00Z");
+    Instant to = Instant.parse("2026-03-09T03:59:59.999Z");
+    stubEvents();
+
+    service.getStatistics(from, to);
+
+    verify(repository).findOccurredBetween(from, to);
   }
 
   private void stubEvents(StatisticsEvent... events) {

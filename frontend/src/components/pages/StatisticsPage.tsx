@@ -11,45 +11,7 @@ import { ErrorState, LoadingState } from "@/components/common/AsyncState";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 import type { ActivityStatisticsResponse, StatisticsResponse } from "@/types/backend";
-
-const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/;
-
-function pad(value: number): string {
-  return String(value).padStart(2, "0");
-}
-
-function dateKey(date: Date): string {
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
-
-function parseDateKey(key: string): Date {
-  const [year, month, day] = key.split("-");
-  return new Date(Number(year), Number(month) - 1, Number(day));
-}
-
-function shiftDays(key: string, days: number): string {
-  const date = parseDateKey(key);
-  date.setDate(date.getDate() + days);
-  return dateKey(date);
-}
-
-function startOfDayIso(key: string): string {
-  const date = parseDateKey(key);
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0).toISOString();
-}
-
-function endOfDayIso(key: string): string {
-  const date = parseDateKey(key);
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999).toISOString();
-}
-
-function sanitizeDate(value: string | null | undefined): string {
-  return value && DATE_KEY.test(value) ? value : "";
-}
-
-function formatLocalDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric" });
-}
+import { dateKey, formatLocalDate, localDayRange, sanitizeDate, shiftDays } from "@/lib/statisticsRange";
 
 function formatRangeLabel(fromIso?: string, toIso?: string): string {
   if (fromIso && toIso) return `${formatLocalDate(fromIso)} al ${formatLocalDate(toIso)}`;
@@ -99,10 +61,8 @@ export function StatisticsPage() {
 
   if (!invalidRange && appliedSignature !== signature) {
     setAppliedSignature(signature);
-    setAppliedParams({
-      from: from ? startOfDayIso(from) : undefined,
-      to: to ? endOfDayIso(to) : undefined,
-    });
+    const range = localDayRange(from, to);
+    setAppliedParams(range);
     setStatistics(null);
     setError(null);
     setLoading(true);
@@ -253,8 +213,6 @@ export function StatisticsPage() {
                     statistics.activities.cancelledByWeather,
                     1,
                   );
-                  const share =
-                    statistics.activities.created > 0 ? Math.round((value / statistics.activities.created) * 100) : 0;
                   return (
                     <Card key={key} className="p-4 rounded-2xl">
                       <p className="text-2xl lg:text-3xl font-display font-semibold">{value}</p>
@@ -269,19 +227,24 @@ export function StatisticsPage() {
                           style={{ width: `${Math.round((value / maxMetric) * 100)}%`, background: "var(--primary)" }}
                         />
                       </div>
-                      <p className="mt-1.5 text-[10px] font-bold" style={{ color: "var(--muted-foreground)" }}>
-                        {share}% de las creadas
-                      </p>
                     </Card>
                   );
                 })}
               </section>
-              <Card className="p-5 rounded-2xl">
-                <div className="flex items-center gap-2 px-4">
-                  <CloudSun className="size-5" style={{ color: "var(--primary)" }} />
-                  <h2 className="font-display font-semibold text-lg">Open-Meteo</h2>
-                </div>
-                <dl className="grid grid-cols-2 gap-3 px-4 mt-3">
+            </>
+          ) : (
+            <Card className="p-5 rounded-2xl mb-4">
+              <p className="text-center text-[13px] font-bold py-6" style={{ color: "var(--muted-foreground)" }}>
+                No hay eventos de actividades en el período seleccionado.
+              </p>
+            </Card>
+          )}
+          <Card className="p-5 rounded-2xl">
+            <div className="flex items-center gap-2 px-4">
+              <CloudSun className="size-5" style={{ color: "var(--primary)" }} />
+              <h2 className="font-display font-semibold text-lg">Open-Meteo</h2>
+            </div>
+            <dl className="grid grid-cols-2 gap-3 px-4 mt-3">
                   <div>
                     <dt className="text-[11px] font-extrabold uppercase" style={{ color: "var(--muted-foreground)" }}>Consultas</dt>
                     <dd className="mt-0.5 text-2xl font-display font-semibold">{statistics.weatherProvider.requests}</dd>
@@ -300,21 +263,13 @@ export function StatisticsPage() {
                       {Math.round(statistics.weatherProvider.averageResponseTimeMs)} ms
                     </dd>
                   </div>
-                </dl>
-                {statistics.weatherProvider.requests > 0 && (
-                  <p className="px-4 mt-3 text-xs font-bold" style={{ color: "var(--muted-foreground)" }}>
-                    Tasa de éxito: {Math.round((statistics.weatherProvider.successful / statistics.weatherProvider.requests) * 100)}%
-                  </p>
-                )}
-              </Card>
-            </>
-          ) : (
-            <Card className="p-5 rounded-2xl">
-              <p className="text-center text-[13px] font-bold py-6" style={{ color: "var(--muted-foreground)" }}>
-                No hay eventos registrados en el período seleccionado. Probá con un rango más amplio o con un preset.
+            </dl>
+            {statistics.weatherProvider.requests > 0 && (
+              <p className="px-4 mt-3 text-xs font-bold" style={{ color: "var(--muted-foreground)" }}>
+                Tasa de éxito: {Math.round((statistics.weatherProvider.successful / statistics.weatherProvider.requests) * 100)}%
               </p>
-            </Card>
-          )}
+            )}
+          </Card>
         </>
       )}
     </main>
