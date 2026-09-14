@@ -37,8 +37,10 @@ permanecen en memoria dentro de `keycloak-js` y Redux solo conserva `sub`, nombr
 llamadas autenticadas deben usar `authFetch`, que renueva el access token y lo envía al proxy como
 Bearer.
 
-Para levantar el sistema completo, ejecutá `docker compose up --build` desde la raíz. En ese modo el
-proxy del frontend usa `http://backend:8080` dentro de la red de Compose.
+Para construir, levantar el sistema completo y esperar automáticamente a que esté disponible,
+ejecutá `docker compose up --build --wait` desde la raíz. En ese modo el proxy del frontend usa
+`http://backend:8080` dentro de la red de Compose. Compose considera saludable al frontend cuando
+`/api/healthcheck` responde correctamente a través de Next.js y del backend.
 
 ## Calidad de código
 

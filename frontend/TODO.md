@@ -54,17 +54,17 @@ son trabajo pendiente; lo ya implementado se resume al final para evitar reabrir
 
 ## Mapas e imágenes
 
-- [ ] **Robustecer Nominatim/OpenStreetMap.** Agregar debounce, cancelación con `AbortController`,
+- [x] **Robustecer Nominatim/OpenStreetMap.** Agregar debounce, cancelación con `AbortController`,
       mensajes de sin resultados/error, timeout y rate limiting/cache server-side para respetar la
       política pública de Nominatim. Evaluar un servicio propio o proveedor contratado antes de
       producción.
-- [ ] **Mejorar selección de ubicación.** Permitir arrastrar el marcador, usar ubicación actual con
+- [x] **Mejorar selección de ubicación.** Permitir arrastrar el marcador, usar ubicación actual con
       permiso explícito, mostrar coordenadas/dirección seleccionada y validar límites de latitud y
       longitud. Verificar interacción táctil, teclado y lectores de pantalla.
-- [ ] **Completar validación de imágenes antes de publicar.** Mostrar errores para archivos
+- [x] **Completar validación de imágenes antes de publicar.** Mostrar errores para archivos
       rechazados (tipo, tamaño, más de cinco) en vez de ignorarlos; detectar duplicados, permitir
       reordenar para elegir portada y liberar todos los object URLs al descartar/publicar/salir.
-- [ ] **Estados de carga y error por imagen.** Mostrar placeholder si una URL presignada venció o no
+- [x] **Estados de carga y error por imagen.** Mostrar placeholder si una URL presignada venció o no
       carga, y verificar renovación/refetch de URLs en feeds y galería.
 
 ## Responsive y UX
@@ -122,7 +122,7 @@ son trabajo pendiente; lo ya implementado se resume al final para evitar reabrir
 
 ## Infraestructura y despliegue
 
-- [ ] **Agregar healthcheck del frontend en Compose** y hacer que la disponibilidad del stack pueda
+- [x] **Agregar healthcheck del frontend en Compose** y hacer que la disponibilidad del stack pueda
       verificarse automáticamente después de `docker compose up --build`.
 - [ ] **Externalizar credenciales locales sensibles.** Los defaults de Keycloak, Mongo y MinIO son
       sólo para desarrollo; documentar variables obligatorias y eliminar defaults inseguros para un

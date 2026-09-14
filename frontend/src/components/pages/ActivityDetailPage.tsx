@@ -34,6 +34,10 @@ export function ActivityDetailPage({ id }: { id: string }) {
   const initialJoined = activity?.participants.some((p) => p.userId === user?.id) ?? false;
   const join = useJoinActivity(id, initialJoined, refresh);
 
+  const handleRefreshImages = () => {
+    refresh();
+  };
+
   useEffect(() => {
     let cancelled = false;
     api.activities.organized().then((activities) => {
@@ -80,7 +84,7 @@ export function ActivityDetailPage({ id }: { id: string }) {
     <div className="fade-in lg:max-w-5xl lg:mx-auto lg:py-8 lg:px-8 lg:pb-24">
       <div>
         <div className="relative lg:rounded-3xl lg:overflow-hidden">
-          <ActivityGallery images={activity.imageUrls} scene={scene} title={activity.title} />
+          <ActivityGallery images={activity.imageUrls} scene={scene} title={activity.title} onRefresh={handleRefreshImages} />
           <div className="absolute inset-x-0 bottom-0 h-28" style={{ background: "linear-gradient(to top, rgba(58,51,82,.75), transparent)" }} />
           <button
             onClick={() => router.back()}

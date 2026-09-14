@@ -42,7 +42,7 @@ export function MisActividadesPage() {
       )}
       <div className="lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-4">
         {remainingActivities.map((a) => (
-          <MisCard key={a.id} activity={a} />
+          <MisCard key={a.id} activity={a} onRefreshImages={refresh} />
         ))}
       </div>
       {!loading && !error && <PageControls page={misPage} totalPages={misTotalPages} onPageChange={setMisPage} />}
