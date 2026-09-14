@@ -1,0 +1,92 @@
+name: Frontend CI
+
+on:
+  pull_request:
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "frontend/**"
+  workflow_dispatch:
+
+jobs:
+  checks:
+    name: Lint, types, test y build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Tests unitarios y de componentes
+        run: npm test
+
+      - name: Build de producción
+        run: npm run build
+
+  e2e:
+    name: E2E contra el stack real
+    needs: checks
+    runs-on: ubuntu-latest
+    # Requiere levantar Keycloak + backend + Mongo + MinIO con seeds reales, por
+    # eso corre on-demand en vez de en cada PR.
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Instalar dependencias del frontend
+        run: npm ci
+
+      - name: Instalar navegadores de Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Levantar el stack (backend, Keycloak, Mongo, MinIO)
+        run: |
+          docker compose up -d --build
+          echo "Esperando a que el stack esté healthy..."
+          sleep 30
+
+      - name: Correr E2E (mobile + desktop)
+        run: npx playwright test
+        env:
+          E2E_BASE_URL: http://localhost:3000
+          # Credenciales de los usuarios sembrados en el realm solnotfound.
+          E2E_USER_USERNAME: ${{ vars.E2E_USER_USERNAME }}
+          E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD }}
+          E2E_ADMIN_USERNAME: ${{ vars.E2E_ADMIN_USERNAME }}
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+
+      - name: Subir reporte de Playwright
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 7
