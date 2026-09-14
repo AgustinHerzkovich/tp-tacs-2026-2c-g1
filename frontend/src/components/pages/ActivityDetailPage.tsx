@@ -110,7 +110,7 @@ export function ActivityDetailPage({ id }: { id: string }) {
           </div>
         </div>
 
-        <div className={`px-5 pt-5 lg:px-0 lg:grid lg:gap-5 lg:items-start ${hasVoting ? "lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.7fr)]" : "lg:grid-cols-2"}`}>
+        <div className={`px-5 pt-5 lg:px-0 lg:grid lg:gap-5 lg:items-start ${hasVoting ? "lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.7fr)]" : "lg:grid-cols-1"}`}>
           <div className="min-w-0">
             <WeatherWidget loading={weather.loading} unavailable={weather.unavailable} forecast={weather.weather?.activityForecast ?? null} current={weather.weather?.currentWeather ?? null} />
             <h3 className="font-display font-semibold text-[15px] mb-2">Sobre la actividad</h3>
