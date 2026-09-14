@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, CloudSun, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,8 +18,25 @@ export function StatisticsPage() {
   const [error, setError] = useState<string | null>(null);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const [appliedRange, setAppliedRange] = useState<{ from?: string; to?: string }>({});
   const [loading, setLoading] = useState(true);
+
+  const desiredRange = useMemo(
+    () => ({
+      from: from ? new Date(`${from}T00:00:00`).toISOString() : undefined,
+      to: to ? new Date(`${to}T23:59:59.999`).toISOString() : undefined,
+    }),
+    [from, to],
+  );
+  const [appliedRange, setAppliedRange] = useState(desiredRange);
+  const invalidRange = Boolean(from && to && from > to);
+  const today = new Date();
+  const todayString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+  if (!invalidRange && appliedRange !== desiredRange) {
+    setAppliedRange(desiredRange);
+    setLoading(true);
+    setError(null);
+  }
 
   useEffect(() => {
     if (!initialized) return;
@@ -61,24 +78,9 @@ export function StatisticsPage() {
         ["Suspendidas por clima", statistics.activities.cancelledByWeather],
       ]
     : [];
-  const invalidRange = Boolean(from && to && from > to);
-
-  const applyRange = () => {
-    if (invalidRange) return;
-    setLoading(true);
-    setError(null);
-    setAppliedRange({
-      from: from ? new Date(`${from}T00:00:00`).toISOString() : undefined,
-      to: to ? new Date(`${to}T23:59:59.999`).toISOString() : undefined,
-    });
-  };
-
   const clearRange = () => {
     setFrom("");
     setTo("");
-    setLoading(true);
-    setError(null);
-    setAppliedRange({});
   };
 
   return (
@@ -98,7 +100,7 @@ export function StatisticsPage() {
         <div className="grid grid-cols-2 gap-3 px-4">
           <div>
             <Label htmlFor="statistics-from" className="mb-2 text-[11px] font-extrabold uppercase" style={{ color: "var(--muted-foreground)" }}>Desde</Label>
-            <Input id="statistics-from" type="date" value={from} onChange={(event) => setFrom(event.target.value)} className="rounded-xl" />
+            <Input id="statistics-from" type="date" value={from} max={todayString} onChange={(event) => setFrom(event.target.value)} className="rounded-xl" />
           </div>
           <div>
             <Label htmlFor="statistics-to" className="mb-2 text-[11px] font-extrabold uppercase" style={{ color: "var(--muted-foreground)" }}>Hasta</Label>
@@ -106,9 +108,8 @@ export function StatisticsPage() {
           </div>
         </div>
         {invalidRange && <p className="px-4 mt-2 text-xs font-extrabold" style={{ color: "var(--destructive)" }}>La fecha desde no puede ser posterior a la fecha hasta.</p>}
-        <div className="flex gap-2 px-4 mt-4">
-          <Button type="button" className="flex-1 rounded-xl" onClick={applyRange} disabled={invalidRange || loading}>Aplicar rango</Button>
-          <Button type="button" variant="outline" className="rounded-xl" onClick={clearRange} disabled={loading && !from && !to}>Últimos 7 días</Button>
+        <div className="flex px-4 mt-4">
+          <Button type="button" variant="outline" className="flex-1 rounded-xl" onClick={clearRange} disabled={loading && !from && !to}>Últimos 7 días</Button>
         </div>
       </Card>
 
