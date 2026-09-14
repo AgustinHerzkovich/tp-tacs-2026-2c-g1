@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
+import { fetchNominatim, NominatimError } from "@/lib/nominatim";
 
 interface NominatimResult {
   display_name: string;
@@ -19,14 +20,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return;
   }
 
-  const response = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&accept-language=es&q=${encodeURIComponent(query)}`, {
-    headers: { "User-Agent": "Planazo-TACS/1.0 (educational project)" },
-  });
-  if (!response.ok) {
-    res.status(502).json({ error: "No se pudo consultar OpenStreetMap." });
-    return;
+  try {
+    const params = new URLSearchParams({ format: "jsonv2", limit: "5", "accept-language": "es", q: query });
+    const results = await fetchNominatim<NominatimResult[]>("/search", params);
+    res.status(200).json(results.map((item) => ({ label: item.display_name, latitude: Number(item.lat), longitude: Number(item.lon) })));
+  } catch (error) {
+    const nominatimError = error instanceof NominatimError ? error : new NominatimError(502, "No se pudo consultar OpenStreetMap.");
+    res.status(nominatimError.status).json({ error: nominatimError.message });
   }
-
-  const results = (await response.json()) as NominatimResult[];
-  res.status(200).json(results.map((item) => ({ label: item.display_name, latitude: Number(item.lat), longitude: Number(item.lon) })));
 }

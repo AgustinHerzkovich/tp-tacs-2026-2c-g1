@@ -115,7 +115,7 @@ export function ExplorarPage() {
       {!loading && !error && (
         <>
           <div className="lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-5">
-            {results.map((a) => <ExploreCard key={a.id} activity={a} />)}
+            {results.map((a) => <ExploreCard key={a.id} activity={a} onRefreshImages={refresh} />)}
           </div>
           <PageControls page={explorePage} totalPages={exploreTotalPages} onPageChange={setExplorePage} />
         </>

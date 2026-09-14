@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { WizardFormState } from "@/types/domain";
 import { validateStep, type WizardErrors } from "@/lib/validation";
 
@@ -66,6 +66,15 @@ export function useWizardForm(): UseWizardForm {
   // Steps the user already tried to advance from; once attempted, their
   // errors stay visible and revalidate live as the user types.
   const attempted = useRef(new Set<number>());
+  const imagesRef = useRef(form.images);
+
+  useEffect(() => {
+    return () => imagesRef.current.forEach((image) => URL.revokeObjectURL(image.previewUrl));
+  }, []);
+
+  useEffect(() => {
+    imagesRef.current = form.images;
+  }, [form.images]);
 
   const validate = (targetStep: number, nextForm: WizardFormState): WizardErrors =>
     validateStep(targetStep, nextForm);
@@ -113,9 +122,18 @@ export function useWizardForm(): UseWizardForm {
     }
   };
 
-  const publish = () => setDone(true);
+  const releaseImages = () => {
+    imagesRef.current.forEach((image) => URL.revokeObjectURL(image.previewUrl));
+    imagesRef.current = [];
+  };
+
+  const publish = () => {
+    releaseImages();
+    setDone(true);
+  };
 
   const reset = () => {
+    releaseImages();
     setStep(0);
     setDone(false);
     setForm(INITIAL_FORM);

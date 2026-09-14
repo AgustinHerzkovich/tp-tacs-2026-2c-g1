@@ -9,14 +9,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { participantDisplayName } from "@/lib/initials";
 import type { ExploreActivity } from "@/types/domain";
 
-export function ExploreCard({ activity }: { activity: ExploreActivity }) {
+export function ExploreCard({ activity, onRefreshImages }: { activity: ExploreActivity; onRefreshImages?: () => void }) {
   const { user } = useAuth();
   const names = activity.participantIds.slice(0, 3).map((id) => participantDisplayName(id, user));
   return (
     <Link href={`/actividades/${activity.id}`}>
       <Card className="tap mb-5 lg:mb-0 lg:h-full overflow-hidden gap-0 py-0 rounded-2xl">
         <div className="relative">
-          <Scene scene={activity.scene} imageUrl={activity.imageUrl} alt={activity.title} height={180} />
+          <Scene scene={activity.scene} imageUrl={activity.imageUrl} alt={activity.title} height={180} onRefresh={onRefreshImages} />
           <TypeBadge type={activity.type} className="absolute top-3 left-3" />
         </div>
         <div className="p-4">

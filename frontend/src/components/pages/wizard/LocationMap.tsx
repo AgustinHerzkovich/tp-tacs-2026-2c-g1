@@ -36,7 +36,7 @@ export function LocationMap({ place, latitude, longitude, onChange, onQueryChang
   const abortControllerRef = useRef<AbortController | null>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const search = useCallback(async (signal?: AbortSignal) => {
+  const search = useCallback(async () => {
     if (place.trim().length < 3) {
       setResults([]);
       setShowNoResults(false);
@@ -48,16 +48,18 @@ export function LocationMap({ place, latitude, longitude, onChange, onQueryChang
     setError(null);
     setShowNoResults(false);
 
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
     try {
-      const controller = new AbortController();
-      abortControllerRef.current = controller;
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-      const response = await fetch(`/api/geocoding/search?q=${encodeURIComponent(place)}`, {
-        signal: signal || controller.signal,
-      });
-
-      clearTimeout(timeoutId);
+      let response: Response;
+      try {
+        response = await fetch(`/api/geocoding/search?q=${encodeURIComponent(place)}`, { signal: controller.signal });
+      } finally {
+        clearTimeout(timeoutId);
+      }
 
       if (!response.ok) {
         if (response.status === 429) {
@@ -67,8 +69,10 @@ export function LocationMap({ place, latitude, longitude, onChange, onQueryChang
       }
 
       const data = (await response.json()) as LocationOption[];
-      setResults(data);
-      setShowNoResults(data.length === 0);
+      if (abortControllerRef.current === controller) {
+        setResults(data);
+        setShowNoResults(data.length === 0);
+      }
     } catch (err) {
       if (err instanceof Error) {
         if (err.name === "AbortError") {
@@ -79,10 +83,12 @@ export function LocationMap({ place, latitude, longitude, onChange, onQueryChang
       } else {
         setError("Ocurrió un error al buscar la ubicación.");
       }
-      setResults([]);
-      setShowNoResults(false);
+      if (abortControllerRef.current === controller) {
+        setResults([]);
+        setShowNoResults(false);
+      }
     } finally {
-      setLoading(false);
+      if (abortControllerRef.current === controller) setLoading(false);
     }
   }, [place]);
 
@@ -96,10 +102,6 @@ export function LocationMap({ place, latitude, longitude, onChange, onQueryChang
       debounceTimerRef.current = setTimeout(() => {
         void search();
       }, 500); // 500ms debounce
-    } else {
-      setResults([]);
-      setShowNoResults(false);
-      setError(null);
     }
 
     return () => {
@@ -186,7 +188,13 @@ export function LocationMap({ place, latitude, longitude, onChange, onQueryChang
       <div className="flex gap-2">
         <Input
           value={place}
-          onChange={(event) => onQueryChange(event.target.value)}
+          onChange={(event) => {
+            abortControllerRef.current?.abort();
+            setResults([]);
+            setShowNoResults(false);
+            setError(null);
+            onQueryChange(event.target.value);
+          }}
           onKeyDown={(event) => {
             if (event.key === "Enter") {
               event.preventDefault();
@@ -244,7 +252,6 @@ export function LocationMap({ place, latitude, longitude, onChange, onQueryChang
               type="button" 
               onClick={() => choose(result)} 
               className="block w-full text-left px-3 py-2.5 text-xs font-bold border-b last:border-0 hover:bg-muted focus:bg-muted focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[var(--primary)]"
-              role="option"
               aria-label={`Seleccionar ${result.label}`}
             >
               {result.label}
@@ -254,14 +261,13 @@ export function LocationMap({ place, latitude, longitude, onChange, onQueryChang
       )}
       {latitude !== null && longitude !== null && (
         <div className="mt-2 text-[11px] font-bold" style={{ color: "var(--muted-foreground)" }}>
-          📍 {place || "Ubicación seleccionada"} · {latitude.toFixed(5)}, {longitude.toFixed(5)}
+          Ubicación: {place || "Ubicación seleccionada"} · {latitude.toFixed(5)}, {longitude.toFixed(5)}
         </div>
       )}
       <LeafletMap 
         latitude={latitude} 
         longitude={longitude} 
-        onChange={choose} 
-        onUseCurrentLocation={handleUseCurrentLocation}
+        onChange={choose}
       />
     </div>
   );

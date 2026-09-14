@@ -12,13 +12,6 @@ const MAX_LAT = 90;
 const MIN_LON = -180;
 const MAX_LON = 180;
 
-const markerIcon = L.divIcon({
-  className: "planazo-map-marker",
-  html: '<span aria-hidden="true"></span>',
-  iconSize: [30, 40],
-  iconAnchor: [15, 40],
-});
-
 const draggableMarkerIcon = L.divIcon({
   className: "planazo-map-marker cursor-move",
   html: '<span aria-hidden="true"></span>',
@@ -27,7 +20,6 @@ const draggableMarkerIcon = L.divIcon({
 });
 
 function DraggableMarker({ position, onChange }: { position: [number, number]; onChange: (location: LocationOption) => void }) {
-  const [resolving, setResolving] = useState(false);
   const markerRef = useRef<L.Marker | null>(null);
 
   useEffect(() => {
@@ -42,18 +34,13 @@ function DraggableMarker({ position, onChange }: { position: [number, number]; o
           return; // Invalid coordinates, ignore
         }
 
-        setResolving(true);
-        try {
-          const response = await fetch(`/api/geocoding/reverse?lat=${position.lat}&lon=${position.lng}`);
-          const body = response.ok ? ((await response.json()) as { label: string }) : null;
-          onChange({ 
-            label: body?.label ?? `${position.lat.toFixed(5)}, ${position.lng.toFixed(5)}`, 
-            latitude: position.lat, 
-            longitude: position.lng 
-          });
-        } finally {
-          setResolving(false);
-        }
+        const response = await fetch(`/api/geocoding/reverse?lat=${position.lat}&lon=${position.lng}`);
+        const body = response.ok ? ((await response.json()) as { label: string }) : null;
+        onChange({
+          label: body?.label ?? `${position.lat.toFixed(5)}, ${position.lng.toFixed(5)}`,
+          latitude: position.lat,
+          longitude: position.lng
+        });
       });
     }
     return () => {
@@ -75,7 +62,7 @@ function DraggableMarker({ position, onChange }: { position: [number, number]; o
   );
 }
 
-function MapController({ latitude, longitude, onChange, onUseCurrentLocation }: { latitude: number | null; longitude: number | null; onChange: (location: LocationOption) => void; onUseCurrentLocation?: () => void }) {
+function MapController({ latitude, longitude, onChange }: { latitude: number | null; longitude: number | null; onChange: (location: LocationOption) => void }) {
   const map = useMap();
   const [resolving, setResolving] = useState(false);
 
@@ -107,20 +94,28 @@ function MapController({ latitude, longitude, onChange, onUseCurrentLocation }: 
   return null;
 }
 
-export default function LeafletMap({ latitude, longitude, onChange, onUseCurrentLocation }: { 
+export default function LeafletMap({ latitude, longitude, onChange }: {
   latitude: number | null; 
   longitude: number | null; 
   onChange: (location: LocationOption) => void;
-  onUseCurrentLocation?: () => void;
 }) {
   const center: [number, number] = latitude !== null && longitude !== null ? [latitude, longitude] : DEFAULT_CENTER;
   const hasLocation = latitude !== null && longitude !== null;
+
+  const moveMarker = async (latitudeDelta: number, longitudeDelta: number) => {
+    if (latitude === null || longitude === null) return;
+    const nextLatitude = Math.max(MIN_LAT, Math.min(MAX_LAT, latitude + latitudeDelta));
+    const nextLongitude = Math.max(MIN_LON, Math.min(MAX_LON, longitude + longitudeDelta));
+    const response = await fetch(`/api/geocoding/reverse?lat=${nextLatitude}&lon=${nextLongitude}`);
+    const body = response.ok ? ((await response.json()) as { label: string }) : null;
+    onChange({ label: body?.label ?? `${nextLatitude.toFixed(5)}, ${nextLongitude.toFixed(5)}`, latitude: nextLatitude, longitude: nextLongitude });
+  };
 
   return (
     <div className="h-64 mt-3 rounded-2xl overflow-hidden border-2 relative z-0">
       <MapContainer center={center} zoom={13} scrollWheelZoom className="size-full" aria-label="Mapa de OpenStreetMap - hacé clic para seleccionar ubicación o arrastrá el marcador">
         <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-        <MapController latitude={latitude} longitude={longitude} onChange={onChange} onUseCurrentLocation={onUseCurrentLocation} />
+        <MapController latitude={latitude} longitude={longitude} onChange={onChange} />
         {hasLocation && (
           <DraggableMarker 
             position={[latitude, longitude]} 
@@ -128,6 +123,14 @@ export default function LeafletMap({ latitude, longitude, onChange, onUseCurrent
           />
         )}
       </MapContainer>
+      {hasLocation && (
+        <div className="absolute bottom-2 left-2 z-[500] grid grid-cols-3 gap-1 rounded-xl bg-white/95 p-1 shadow" aria-label="Ajustar marcador con teclado">
+          <button type="button" className="col-start-2 size-8 rounded-lg font-bold" onClick={() => void moveMarker(0.0005, 0)} aria-label="Mover marcador al norte">↑</button>
+          <button type="button" className="size-8 rounded-lg font-bold" onClick={() => void moveMarker(0, -0.0005)} aria-label="Mover marcador al oeste">←</button>
+          <button type="button" className="size-8 rounded-lg font-bold" onClick={() => void moveMarker(-0.0005, 0)} aria-label="Mover marcador al sur">↓</button>
+          <button type="button" className="size-8 rounded-lg font-bold" onClick={() => void moveMarker(0, 0.0005)} aria-label="Mover marcador al este">→</button>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { ImagePlus, X, AlertCircle, GripVertical } from "lucide-react";
 import type { WizardFormState } from "@/types/domain";
 import type { FieldSetter, FormPatchSetter } from "@/hooks/useWizardForm";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 
 interface ImageError {
   fileName: string;
@@ -39,12 +39,12 @@ function ImagePreview({
       <button 
         type="button" 
         onClick={onRemove} 
-        className="absolute top-2 right-2 size-8 rounded-full bg-black/65 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" 
+        className="absolute top-2 right-2 size-8 rounded-full bg-black/65 text-white flex items-center justify-center lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100 transition-opacity"
         aria-label={`Quitar ${fileName}`}
       >
         <X className="size-4" />
       </button>
-      <div className="absolute top-2 left-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="absolute top-2 left-2 flex flex-col gap-1 lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100 transition-opacity">
         <button 
           type="button" 
           onClick={onMoveUp} 
@@ -58,7 +58,7 @@ function ImagePreview({
         <button 
           type="button" 
           onClick={onMoveDown} 
-          disabled={isCover}
+          disabled={false}
           className="size-8 rounded-full bg-black/65 text-white flex items-center justify-center disabled:opacity-30" 
           aria-label="Mover hacia abajo"
           title="Mover hacia abajo"
@@ -74,15 +74,6 @@ function ImagePreview({
 export function StepImagenes({ form, set }: StepProps) {
   const [errors, setErrors] = useState<ImageError[]>([]);
 
-  // Cleanup object URLs on unmount
-  useEffect(() => {
-    return () => {
-      form.images.forEach((image: { file: File; previewUrl: string }) => {
-        URL.revokeObjectURL(image.previewUrl);
-      });
-    };
-  }, [form.images]);
-
   const handleFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files) return;
@@ -94,6 +85,11 @@ export function StepImagenes({ form, set }: StepProps) {
     const MAX_IMAGES = 5;
 
     Array.from(files).forEach((file) => {
+      if (file.size === 0) {
+        newErrors.push({ fileName: file.name, message: "El archivo está vacío" });
+        return;
+      }
+
       // Check file type
       if (!ALLOWED_TYPES.includes(file.type)) {
         newErrors.push({ fileName: file.name, message: "Tipo no válido (solo JPEG, PNG o WebP)" });
@@ -109,7 +105,7 @@ export function StepImagenes({ form, set }: StepProps) {
       // Check for duplicates
       const isDuplicate = form.images.some(
         (existing: { file: File; previewUrl: string }) => existing.file.name === file.name && existing.file.size === file.size
-      );
+      ) || validFiles.some((existing) => existing.file.name === file.name && existing.file.size === file.size);
       if (isDuplicate) {
         newErrors.push({ fileName: file.name, message: "Ya agregaste esta imagen" });
         return;

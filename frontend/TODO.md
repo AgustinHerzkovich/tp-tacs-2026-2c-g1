@@ -122,7 +122,7 @@ son trabajo pendiente; lo ya implementado se resume al final para evitar reabrir
 
 ## Infraestructura y despliegue
 
-- [ ] **Agregar healthcheck del frontend en Compose** y hacer que la disponibilidad del stack pueda
+- [x] **Agregar healthcheck del frontend en Compose** y hacer que la disponibilidad del stack pueda
       verificarse automáticamente después de `docker compose up --build`.
 - [ ] **Externalizar credenciales locales sensibles.** Los defaults de Keycloak, Mongo y MinIO son
       sólo para desarrollo; documentar variables obligatorias y eliminar defaults inseguros para un
