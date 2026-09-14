@@ -37,6 +37,7 @@ export function useJoinActivity(activityId: string, initialJoined: boolean, onCh
   const cancelJoin = () => setConfirmOpen(false);
 
   const confirmJoin = async () => {
+    if (pending) return;
     setPending(true);
     try {
       await api.activities.join(activityId);
@@ -52,6 +53,7 @@ export function useJoinActivity(activityId: string, initialJoined: boolean, onCh
   const cancelLeave = () => setLeaveConfirmOpen(false);
 
   const confirmLeave = async () => {
+    if (pending) return;
     setPending(true);
     try {
       await api.activities.leave(activityId);

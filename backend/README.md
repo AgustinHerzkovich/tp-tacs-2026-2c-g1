@@ -112,11 +112,10 @@ Keycloak. La identidad de dominio se obtiene del claim verificado `sub`.
 Estas decisiones cubren aspectos no definidos de forma exhaustiva por el enunciado:
 
 - **Repositorios intercambiables y almacenamiento en memoria:** los servicios dependen de
-  interfaces de repositorio. La Entrega 1 usa implementaciones con `ConcurrentHashMap`; en la
-  Entrega 2 podrán reemplazarse por MongoDB sin cambiar los casos de uso.
+  interfaces de repositorio. La Entrega 2 usa Spring Data MongoDB sin acoplar los casos de uso a la
+  tecnología; los repositorios en memoria se conservan únicamente como dobles de prueba.
 - **Backend sin sesión HTTP:** la identidad se obtiene del `subject` de un JWT y no se mantiene
-  estado de sesión en el backend. En desarrollo se admite `development-user` para facilitar las
-  pruebas de esta entrega.
+  estado de sesión en el backend. Spring Security valida los tokens RS256 emitidos por Keycloak.
 - **Monitoreo periódico configurable:** Spring Scheduler evalúa clima, cierre de votaciones,
   finalización y avisos de inicio con periodicidades configurables.
 - **Organizador como participante:** el organizador puede sumarse y bajarse como participante. Para
@@ -132,16 +131,14 @@ Estas decisiones cubren aspectos no definidos de forma exhaustiva por el enuncia
   cachés acotadas, timeout, retry y circuit breaker. La indisponibilidad no se interpreta como clima
   favorable.
 - **Estadísticas mediante eventos:** las métricas históricas se registran como eventos inmutables en
-  memoria. Se cuentan las llamadas HTTP reales a Open-Meteo, no los accesos resueltos por caché. El
-  diseño permite migrar la colección de eventos a MongoDB.
+  MongoDB. Se cuentan las llamadas HTTP reales a Open-Meteo, no los accesos resueltos por caché.
 - **Rangos estadísticos inclusivos:** `from` y `to` incluyen ambos extremos; sin parámetros se
   consultan los últimos siete días. Una cancelación climática incluye mal clima y ausencia de
   alternativas favorables.
 
-No se adoptaron las decisiones antiguas de CDC/Stream ETL ni de filtros ejecutados por una base de
-datos porque no existe persistencia en la Entrega 1. Tampoco se documenta Firebase Auth como una
-decisión vigente: la implementación actual usa JWT HMAC local. Esas alternativas deberán evaluarse
-nuevamente cuando exista una necesidad concreta de volumen, persistencia o proveedor de identidad.
+No se adoptó CDC/Stream ETL porque el volumen actual no justifica esa complejidad: las consultas y
+agregaciones se resuelven directamente sobre MongoDB. Tampoco se usa Firebase Auth ni JWT HMAC
+local; Keycloak es la decisión vigente para identidad y tokens RS256.
 
 ## Servicio meteorológico
 

@@ -69,26 +69,26 @@ son trabajo pendiente; lo ya implementado se resume al final para evitar reabrir
 
 ## Responsive y UX
 
-- [ ] **Pasada visual sistemática mobile/desktop.** Probar 320, 375, 430, 768, 1024 y 1440 px en
+- [x] **Pasada visual sistemática mobile/desktop.** Probar 320, 375, 430, 768, 1024 y 1440 px en
       login, feeds, detalle, galería, mapa, wizard de cinco pasos, drawer y estadísticas. Revisar en
       especial que el chrome fijo no tape botones/contenido y que cards/textos no desborden.
-- [ ] **Revisar el detalle desktop.** Validar la grilla de clima/votación/descripción con y sin
+- [x] **Revisar el detalle desktop.** Validar la grilla de clima/votación/descripción con y sin
       votación, descripción, participantes e imágenes; evitar espacios artificiales y mantener la
       acción principal visible.
-- [ ] **Feedback de acciones.** Agregar confirmación tipo toast para crear, votar, sumarse, bajarse y
+- [x] **Feedback de acciones.** Agregar confirmación tipo toast para crear, votar, sumarse, bajarse y
       marcar como leída; deshabilitar doble click y comunicar claramente operaciones pendientes.
-- [ ] **Accesibilidad completa.** Revisar foco visible, orden de tabulación, etiquetas, mensajes con
+- [x] **Accesibilidad completa.** Revisar foco visible, orden de tabulación, etiquetas, mensajes con
       `aria-live`, contraste, navegación de galería/mapa por teclado, tamaños táctiles y reduced
       motion.
-- [ ] **Perfil/logout más claro.** El avatar actualmente cierra sesión inmediatamente; reemplazarlo
+- [x] **Perfil/logout más claro.** El avatar actualmente cierra sesión inmediatamente; reemplazarlo
       por menú que muestre identidad/rol y pida confirmación o presente una acción explícita.
-- [ ] **Metadata y branding.** Agregar favicon y metadata por página; verificar títulos para login,
+- [x] **Metadata y branding.** Agregar favicon y metadata por página; verificar títulos para login,
       actividad y estadísticas.
-- [ ] **Hacer que el botón de logout sea un poco más declarativo ya que actualmente no se sabe lo que hace
+- [x] **Hacer que el botón de logout sea un poco más declarativo ya que actualmente no se sabe lo que hace
       hasta que se hace click en él.** Agregar un menú desplegable con la opción de cerrar sesión y mostrar
       el nombre del usuario.
-- [ ] **Aplicar filtros de búsqueda de actividad automáticamente sin necesidad de darle al botón de aplicar.**
-- [ ] **Los participantes de una actividad, desde el pov de otro participante aparecen como "I".** Debería
+- [x] **Aplicar filtros de búsqueda de actividad automáticamente sin necesidad de darle al botón de aplicar.**
+- [x] **Los participantes de una actividad, desde el pov de otro participante aparecen como "I".** Debería
       mostrarse aunque sea las iniciales del nombre del participante, y al pararse encima con el cursor mostrar
       el nombre completo.
 
@@ -106,19 +106,28 @@ son trabajo pendiente; lo ya implementado se resume al final para evitar reabrir
 
 ## Pruebas y calidad
 
-- [ ] **Agregar tests automatizados de componentes y hooks.** Priorizar auth/check-sso, filtros,
-      validación y navegación del wizard, mapa/geocoding, imágenes multipart, galería, voto,
-      join/leave, notificaciones y estadísticas por rol/rango.
-- [ ] **Agregar pruebas end-to-end.** Cubrir login/refresh/logout; crear con y sin imágenes; buscar y
-      seleccionar ubicación; explorar/filtros; detalle/galería/clima; join/leave; voto; edición de
-      votación por organizador; notificaciones; estadísticas admin y rechazo para USER.
-- [ ] **Probar fallos reales.** Backend caído, Keycloak caído, Mongo/MinIO indisponibles, Open-Meteo y
-      Nominatim lentos o sin respuesta, JWT vencido, presigned URL vencida y respuestas 400/401/403/
-      404/409/413/500/503.
-- [ ] **Agregar CI del frontend.** Ejecutar `npm ci`, `npm run lint`, `npx tsc --noEmit` y
-      `npm run build` en cada PR; considerar tests de componentes/E2E cuando existan.
-- [ ] **Revisar warnings y tamaño del bundle.** Leaflet se carga client-only; medir impacto y revisar
-      dependencias, accesibilidad y errores del navegador en build de producción.
+- [x] **Agregar tests automatizados de componentes y hooks.** Vitest + Testing Library con
+      137 tests en 21 archivos (todos verdes en `npm test`): auth/check-sso, filtros, wizard y su
+      validación, imágenes multipart (object URLs), galería, voto, join/leave, notificaciones,
+      estadísticas por rol/rango y async states.
+- [x] **Agregar pruebas end-to-end.** Playwright configurado (`npm run test:e2e`) con proyectos
+      mobile/desktop y specs en `e2e/`: login/refresh/logout, crear con y sin imágenes, explorar/
+      filtros, detalle/galería/clima, join/leave, voto, notificaciones, estadísticas admin y rechazo
+      para USER. Corren contra el stack completo (`docker compose up`) y hay job on-demand en CI;
+      las que dependen de datos sembrados se auto-saltan si el stack no los tiene.
+- [x] **Probar fallos reales.** `api.test.ts` cubre 400/401/403/404/409/413/500/503 y mensajes no-JSON;
+      `authFetch.test.ts` cubre JWT vencido y refresh fallido; ErrorState/LoadingState y los hooks
+      prueban slowness/caída (rechazos) con reintento. Faltaría verificar contra infraestructura
+      real caída (Keycloak/Mongo/MinIO abajo), que hoy se simula con mocks.
+- [x] **Agregar CI del frontend.** `.github/workflows/frontend-ci.yml`: en cada PR corre `npm ci`,
+      `npm run lint`, `npm run typecheck`, `npm test` y `npm run build`; job E2E on-demand
+      (`workflow_dispatch`) contra el stack de `docker compose`.
+- [x] **Revisar warnings y tamaño del bundle.** Build de producción limpio (Turbopack, sin warnings
+      propios; Next.js colecta telemetría anónima por defecto). Leaflet sigue client-only y es el
+      bundle más pesado: ~196 KiB de JS (react-leaflet) + ~145 KiB de chunk de Leaflet/CSS, cargado
+      sólo en el wizard (paso 2) y detalle. Medición reproducible con `npm run build:analyze`
+      (usa `--webpack`, el analyzer de Turbopack no genera reporte). Dependencias grandes globales:
+      framework ~185 KiB, polyfills ~110 KiB, main ~130 KiB.
 
 ## Infraestructura y despliegue
 

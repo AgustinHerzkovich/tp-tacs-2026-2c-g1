@@ -23,6 +23,7 @@ export interface UseVoting {
   votedId: string | null;
   selectedOption: VoteOptionView | undefined;
   confirmOpen: boolean;
+  pending: boolean;
   select: (id: string) => void;
   requestVote: () => void;
   cancelVote: () => void;
@@ -42,6 +43,7 @@ export function useVoting(activityId: string): UseVoting {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [votedId, setVotedId] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pending, setPending] = useState(false);
 
   const load = useCallback(() => {
     api.votations
@@ -79,11 +81,16 @@ export function useVoting(activityId: string): UseVoting {
   const cancelVote = () => setConfirmOpen(false);
 
   const confirmVote = async () => {
-    if (!votation || !selectedId) return;
-    const updated = await api.votations.vote(votation.id, selectedId);
-    setVotation(updated);
-    setVotedId(selectedId);
-    setConfirmOpen(false);
+    if (!votation || !selectedId || pending) return;
+    setPending(true);
+    try {
+      const updated = await api.votations.vote(votation.id, selectedId);
+      setVotation(updated);
+      setVotedId(selectedId);
+      setConfirmOpen(false);
+    } finally {
+      setPending(false);
+    }
   };
 
   const updateOptions = async (dates: string[]) => {
@@ -106,6 +113,7 @@ export function useVoting(activityId: string): UseVoting {
     votedId,
     selectedOption,
     confirmOpen,
+    pending,
     select,
     requestVote,
     cancelVote,

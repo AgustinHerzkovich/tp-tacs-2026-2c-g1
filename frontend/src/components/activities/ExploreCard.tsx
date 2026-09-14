@@ -6,12 +6,11 @@ import { Scene } from "@/components/common/Scene";
 import { TypeBadge, StatusBadge } from "@/components/common/PillBadge";
 import { AvatarStack } from "@/components/common/AvatarStack";
 import { useAuth } from "@/hooks/useAuth";
-import { participantDisplayName } from "@/lib/initials";
 import type { ExploreActivity } from "@/types/domain";
 
 export function ExploreCard({ activity, onRefreshImages }: { activity: ExploreActivity; onRefreshImages?: () => void }) {
   const { user } = useAuth();
-  const names = activity.participantIds.slice(0, 3).map((id) => participantDisplayName(id, user));
+  const names = activity.participantNames.slice(0, 3);
   return (
     <Link href={`/actividades/${activity.id}`}>
       <Card className="tap mb-5 lg:mb-0 lg:h-full overflow-hidden gap-0 py-0 rounded-2xl">

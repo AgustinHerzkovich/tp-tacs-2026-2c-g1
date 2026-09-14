@@ -19,6 +19,7 @@ import { firstInvalidStep, validateAll, type WizardErrors } from "@/lib/validati
 import type { WizardFormState } from "@/types/domain";
 import type { FieldSetter, FormPatchSetter } from "@/hooks/useWizardForm";
 import type { CreateActivityRequest } from "@/types/backend";
+import { useToast } from "@/components/common/ToastProvider";
 
 interface StepProps {
   form: WizardFormState;
@@ -56,6 +57,7 @@ function buildCreateRequest(form: WizardFormState): CreateActivityRequest {
 export function CrearActividadPage() {
   const router = useRouter();
   const wizard = useWizardForm();
+  const toast = useToast();
   const user = useRequireAuth();
   const StepComponent = STEP_COMPONENTS[wizard.step];
   const [submitting, setSubmitting] = useState(false);
@@ -80,6 +82,7 @@ export function CrearActividadPage() {
       formData.append("activity", new Blob([JSON.stringify(activity)], { type: "application/json" }));
       wizard.form.images.forEach(({ file }) => formData.append("images", file));
       await api.activities.create(formData);
+      toast("Actividad publicada correctamente.");
       wizard.publish();
     } catch (err) {
       setSubmitError(err instanceof ApiError ? err.message : "No pudimos publicar la actividad. Probá de nuevo.");

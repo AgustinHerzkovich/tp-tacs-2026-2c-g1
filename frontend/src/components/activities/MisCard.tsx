@@ -7,12 +7,11 @@ import { StatusBadge } from "@/components/common/PillBadge";
 import { AvatarStack } from "@/components/common/AvatarStack";
 import { TYPE_META } from "@/lib/activityVisuals";
 import { useAuth } from "@/hooks/useAuth";
-import { participantDisplayName } from "@/lib/initials";
 import type { MisActivity } from "@/types/domain";
 
 export function MisCard({ activity, onRefreshImages }: { activity: MisActivity; onRefreshImages?: () => void }) {
   const { user } = useAuth();
-  const names = activity.participantIds.slice(0, 2).map((id) => participantDisplayName(id, user));
+  const names = activity.participantNames.slice(0, 2);
   return (
     <Link href={`/actividades/${activity.id}`}>
       <Card className="tap mb-4 lg:mb-0 lg:h-full overflow-hidden gap-0 py-0 rounded-2xl">

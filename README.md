@@ -1,5 +1,18 @@
 # tp-tacs-2026-2c-g1
 
+Planazo es una aplicación web para organizar actividades, consultar el pronóstico, gestionar
+participantes y resolver reprogramaciones mediante votaciones. El repositorio contiene el frontend
+Next.js y la API Spring Boot, junto con toda la infraestructura necesaria para ejecutarlos
+localmente.
+
+## Requisitos
+
+- Para ejecutar el sistema completo: Docker Engine con Docker Compose v2.
+- Para ejecutar el backend fuera de Docker: JDK 21; Maven no es necesario porque se incluye el
+  wrapper.
+- Para ejecutar el frontend fuera de Docker: Node.js 22 y npm; se recomienda `npm ci` para una
+  instalación reproducible.
+
 ## Cómo levantar la aplicación
 
 El frontend queda disponible en `http://localhost:3000`, Keycloak en `http://localhost:8090`, la API
@@ -40,11 +53,12 @@ Ejemplo del JSON que debe enviarse en la parte `activity` de `POST /activities`:
 Se requiere Docker con Docker Compose. Desde la raíz del proyecto, ejecutar:
 
 ```bash
-docker compose up --build
+docker compose up --build --wait
 ```
 
 Este único comando construye y levanta frontend, backend, MongoDB, MinIO y Keycloak. Para detener
-la aplicación, ejecutar `docker compose down`.
+la aplicación, ejecutar `docker compose down`. `--wait` termina cuando los healthchecks confirman
+que todos los servicios están listos; puede verificarse también con `docker compose ps`.
 
 ### Con Maven
 
@@ -59,8 +73,38 @@ Maven. Desde la raíz del proyecto, ejecutar:
 ./mvnw spring-boot:run
 ```
 
-Las variables admitidas por Compose y los valores locales seguros se documentan en `.env.example`;
-las variables exclusivas del frontend están en `frontend/.env.example`.
+Las variables admitidas por Compose y los valores locales de desarrollo se documentan en
+`.env.example`; las variables exclusivas del frontend están en `frontend/.env.example`. No es
+necesario copiar estos archivos para usar los valores predeterminados. Para personalizarlos, crear
+un `.env` local no versionado o definir variables en el entorno.
+
+## Arquitectura
+
+```text
+Navegador
+  |-- OIDC Authorization Code + PKCE --> Keycloak
+  |-- HTTP --> Next.js (UI y proxies /api)
+                  |-- Bearer JWT --> Spring Boot REST API
+                                        |-- MongoDB (dominio y eventos)
+                                        |-- MinIO/GCS (imágenes)
+                                        |-- Open-Meteo (clima)
+                  |-- HTTP --> Nominatim/OpenStreetMap (geocodificación y mapas)
+```
+
+- **Frontend:** Next.js 16 App Router, React 19, TypeScript estricto, Tailwind CSS v4 y shadcn/ui.
+  El navegador no conoce la URL interna del backend: las rutas de `frontend/src/pages/api` actúan
+  como proxy y reenvían el token Bearer.
+- **Backend:** Java 21, Spring Boot, API REST stateless y arquitectura por capas. Los servicios de
+  aplicación dependen de interfaces de repositorio y de adapters externos, lo que permite probar la
+  lógica de negocio sin red.
+- **Persistencia:** MongoDB almacena actividades, usuarios, votaciones, notificaciones y eventos de
+  estadísticas. MinIO implementa almacenamiento S3 local; GCS es la alternativa para nube.
+- **Identidad:** Keycloak administra usuarios, contraseñas y roles. Spring Security valida los JWT
+  mediante issuer, audience y JWKS antes de obtener la identidad desde `sub`.
+- **Procesamiento periódico:** schedulers configurables controlan clima, cierres de votación,
+  finalización de actividades y avisos de inicio. El estado persistido permite ejecutar varias
+  instancias, aunque una futura ejecución distribuida deberá coordinar los schedulers para evitar
+  trabajo duplicado.
 
 ## Alcance
 
@@ -76,6 +120,10 @@ Swagger están en [`docs/SWAGGER_TEST_CASES.md`](docs/SWAGGER_TEST_CASES.md).
 
 Swagger UI, OpenAPI y `/healthcheck` son públicos. El resto de las rutas exige un access token de
 Keycloak; `/statistics` además requiere el rol de realm `ADMIN`.
+
+- Swagger UI: `http://localhost:8080/swagger-ui.html`
+- Especificación OpenAPI JSON: `http://localhost:8080/v3/api-docs`
+- Casos manuales autenticados: [`docs/SWAGGER_TEST_CASES.md`](docs/SWAGGER_TEST_CASES.md)
 
 El backend valida firma RS256, vigencia, issuer y audience mediante Spring Security y el JWKS de
 Keycloak. Se configuran con `SECURITY_JWT_ISSUER_URI`, `SECURITY_JWT_JWK_SET_URI` y
@@ -118,6 +166,22 @@ Keycloak es el proveedor de identidad y el backend funciona como OAuth2 Resource
 administrar contraseñas. Los access y refresh tokens permanecen en memoria en `keycloak-js`; el
 frontend usa Authorization Code con PKCE y nunca persiste tokens en el navegador.
 
+### Seguridad y secretos
+
+- Los valores de `.env.example`, el realm importado y las cuentas `alumno/alumno` y `admin/admin`
+  son exclusivamente de desarrollo. Deben reemplazarse antes de publicar el sistema.
+- `.env`, `.env.local`, API keys y credenciales reales no deben versionarse. En producción deben
+  inyectarse mediante variables de entorno o un secret manager de la plataforma.
+- El cliente SPA de Keycloak es público y no contiene client secret. Las contraseñas se delegan a
+  Keycloak y nunca se almacenan en la aplicación.
+- Los recursos de negocio requieren JWT; las operaciones de administrador vuelven a validar el rol
+  en el backend, independientemente de lo que muestre la UI.
+- Las imágenes se validan por cantidad, tamaño y tipo de contenido. El bucket es privado y se
+  entregan URLs firmadas temporales; para GCP se usa identidad de servicio en lugar de archivos JSON
+  con claves.
+- En un despliegue público deben usarse HTTPS, orígenes y redirect URIs explícitos, credenciales
+  rotadas para MongoDB/MinIO/Keycloak y SMTP para restablecimiento y verificación de email.
+
 ## Servicio meteorológico
 
 La aplicación usa [Open-Meteo](https://open-meteo.com/) para clima actual y pronóstico horario.
@@ -153,6 +217,14 @@ Los datos meteorológicos provienen de Open-Meteo y están sujetos a su licencia
 [CC BY 4.0](https://open-meteo.com/en/licence). Los pronósticos son estimaciones y no deben usarse
 como única fuente para decisiones de seguridad.
 
+La selección de ubicaciones usa Nominatim y mosaicos de OpenStreetMap desde el frontend. Las
+búsquedas pasan por una ruta server-side con debounce en la UI, caché temporal, serialización de
+requests, timeout, cancelación y manejo explícito de respuestas `429`; de esta forma no se expone el
+proveedor a una llamada por pulsación. Ante una caída se conserva el resto del formulario y se
+informa el error para poder reintentar. Deben respetarse las políticas de uso de
+[Nominatim](https://operations.osmfoundation.org/policies/nominatim/) y la atribución de
+OpenStreetMap, incluida en el mapa.
+
 ## Calidad de código
 
 El proyecto incluye Maven Wrapper. Para aplicar el formato, comprobarlo y ejecutar la verificación
@@ -171,6 +243,40 @@ completa:
 ```
 
 `verify` ejecuta los tests y las validaciones de Spotless, Checkstyle y SpotBugs.
+
+La lógica de evaluación del clima, generación de alternativas y resolución de votaciones se prueba
+con adapters y repositorios en memoria; no depende de Open-Meteo, MongoDB ni Docker. Las pruebas de
+persistencia usan Testcontainers cuando necesitan una instancia real de MongoDB.
+
+Para verificar el frontend desde `frontend/`:
+
+```bash
+npm ci
+npm test
+npm run lint
+npm run typecheck
+npm run build
+```
+
+Las pruebas unitarias y de componentes usan Vitest y Testing Library. Los flujos completos usan
+Playwright contra el stack real:
+
+```bash
+# Desde la raíz
+APP_SEED_ENABLED=true docker compose up --build --wait
+
+# Desde frontend/, en otra terminal
+npx playwright install chromium
+npm run test:e2e
+```
+
+Playwright usa por defecto `alumno/alumno` y `admin/admin` del realm local. Se pueden reemplazar con
+`E2E_USER_USERNAME`, `E2E_USER_PASSWORD`, `E2E_ADMIN_USERNAME` y `E2E_ADMIN_PASSWORD`; la URL se
+configura con `E2E_BASE_URL`. Estas credenciales son datos de prueba, no cuentas productivas.
+
+El procedimiento de prueba de carga, sus límites y los criterios para registrar resultados están en
+[`docs/LOAD_TEST.md`](docs/LOAD_TEST.md). El escenario usa el proveedor meteorológico en memoria
+para no trasladar la carga a un servicio público externo.
 
 ### Pre-commit
 
@@ -191,7 +297,9 @@ pero se intentó ejecutar con Java 17. El hook evita esa mezcla configurando Jav
 ## Uso de inteligencia artificial
 
 Durante el desarrollo utilizamos asistentes de IA generativa, principalmente ChatGPT y Claude,
-como herramientas de apoyo. Su uso se concentró en las siguientes tareas:
+desde sus interfaces web y CLIs integradas al repositorio, como herramientas de apoyo. Los modelos
+disponibles variaron durante el proyecto; no se incorporó una dependencia de IA al producto ni se
+enviaron secretos deliberadamente a los asistentes. Su uso se concentró en las siguientes tareas:
 
 - Generación y adaptación de código repetitivo o *boilerplate*.
 - Propuesta de casos de prueba y revisión de la cobertura de tests.
@@ -209,7 +317,30 @@ como herramientas de apoyo. Su uso se concentró en las siguientes tareas:
 
 Las respuestas de estas herramientas se tomaron como sugerencias y no como resultados definitivos.
 El equipo revisó las propuestas, las adaptó al diseño y las convenciones del proyecto, y validó los
-cambios mediante revisión del código, ejecución de tests y el proceso de verificación de Maven.
+cambios mediante revisión del código, ejecución de tests y los gates de Maven y npm. El criterio fue
+pedir contexto y alternativas antes de editar, mantener cambios pequeños, no aceptar afirmaciones
+sin contrastarlas con el código y no dar por terminado un cambio sin compilarlo o probarlo. Ejemplos
+representativos de pedidos fueron: revisar una user story contra implementación y tests, proponer
+casos límite para el cierre de una votación, diagnosticar un fallo de compilación y revisar una
+decisión de autenticación. No se conservaron prompts exhaustivos porque no son artefactos necesarios
+para reproducir la aplicación; sí se documentan aquí el propósito, el criterio y la validación.
+
+## Trazabilidad de requisitos no funcionales
+
+| Requisito del enunciado | Implementación y documentación |
+| --- | --- |
+| SCM | Repositorio Git; flujo de ramas documentado en [Git flow](#git-flow). |
+| Métodos no triviales documentados | Javadoc exigido por las convenciones de `backend/AGENTS.md` y revisado junto con cada cambio. |
+| Ejecución portable y contenerizada | Dockerfiles de frontend/backend y un único `docker compose up --build --wait`. |
+| Aplicación, DB y red en Compose | `docker-compose.yaml` define frontend, backend, MongoDB, MinIO, Keycloak, volúmenes, red y healthchecks. |
+| Seguridad y secretos | Keycloak, OAuth2/JWT, PKCE, roles y política detallada en [Seguridad y secretos](#seguridad-y-secretos). |
+| Clima desacoplado y testeable | `IWeatherAdapter`, adapter en memoria y pruebas sin proveedor externo. |
+| Uso responsable de proveedores | Caché, límites, timeout, retry, circuit breaker y degradación controlada descritos en [Servicio meteorológico](#servicio-meteorológico). |
+| API documentada | OpenAPI, Swagger UI y casos manuales enlazados en [API y autenticación](#api-y-autenticación). |
+| Calidad y tests | Maven, Vitest, Testing Library y Playwright documentados en [Calidad de código](#calidad-de-código). |
+| Load test | Escenario y protocolo reproducible en [`docs/LOAD_TEST.md`](docs/LOAD_TEST.md). |
+| Frontend amigable con framework CSS | Next.js responsive con Tailwind CSS v4 y componentes shadcn/ui. |
+| Uso de IA | Herramientas, tareas, criterio y ejemplos documentados en [Uso de inteligencia artificial](#uso-de-inteligencia-artificial). |
 ## Activity images
 
 Local development uses the private MinIO bucket started by `docker compose up --build`.
