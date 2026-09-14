@@ -13,10 +13,10 @@ import com.solnotfound.repository.IUserRepository;
 import com.solnotfound.repository.IVotationRepository;
 import com.solnotfound.service.NotificationService;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.IntStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -34,8 +34,8 @@ import org.springframework.stereotype.Component;
  * Enable for one run with {@code app.dev-seed.enabled=true} and {@code
  * app.dev-seed.user-id=<keycloak sub>} (e.g. {@code APP_DEV_SEED_ENABLED=true
  * APP_DEV_SEED_USER_ID=... docker compose up -d --build backend}), then turn it back off — unlike
- * {@link ActivitySeeder}, the votation is upserted by a fixed id (safe to re-run), but the
- * notifications are not deduplicated, so re-running with the flag left on keeps adding more.
+ * {@link ActivitySeeder}, the votation uses a fixed id and existing votations are never
+ * overwritten. Notifications are generated only when the seeded votation is created.
  */
 @Component
 @ConditionalOnProperty(prefix = "app.dev-seed", name = "enabled", havingValue = "true")
@@ -85,7 +85,9 @@ public class DevExtrasSeeder implements CommandLineRunner {
     }
 
     LocalDateTime now = LocalDateTime.now().withSecond(0).withNano(0);
-    seedVotation(activity, now);
+    if (!seedVotation(activity, now)) {
+      return;
+    }
     seedNotifications(activity);
 
     log.info(
@@ -114,33 +116,54 @@ public class DevExtrasSeeder implements CommandLineRunner {
         .orElse(null);
   }
 
-  private void seedVotation(Activity activity, LocalDateTime now) {
-    if (votationRepository.findActiveByActivityId(activity.getId()) != null) {
-      log.info(
-          "app.dev-seed: activity {} already has an active votation, skipping.", activity.getId());
-      return;
+  private boolean seedVotation(Activity activity, LocalDateTime now) {
+    String votationId = "dev-votation-" + activity.getId();
+    if (votationRepository.findById(votationId) != null
+        || votationRepository.findActiveByActivityId(activity.getId()) != null) {
+      log.info("app.dev-seed: activity {} already has a votation, skipping.", activity.getId());
+      return false;
     }
 
-    LocalDateTime original = activity.getDateTime();
+    List<VotationOption> options = buildOptions(activity);
+    if (options.size() < 3) {
+      log.warn(
+          "app.dev-seed: activity {} does not allow three distinct reprogramming options,"
+              + " skipping.",
+          activity.getId());
+      return false;
+    }
 
     Votation votation = new Votation();
-    votation.setId("dev-votation-" + activity.getId());
+    votation.setId(votationId);
     votation.setActivity(activity);
     votation.setCreationDate(now);
     votation.setClosingDate(now.plusDays(1));
     votation.setMinQuorum(0.5);
     votation.setStatus(VotationStatus.ACTIVE);
 
-    List<VotationOption> options = new ArrayList<>();
-    options.add(optionAt(original.plusDays(1)));
-    options.add(optionAt(original.plusDays(1).withHour(15).withMinute(0)));
-    options.add(optionAt(original.plusDays(2)));
     votation.setOptions(options);
 
     votationRepository.save(votation);
 
     activity.setStatus(ActivityStatus.PROPOSED);
     activityRepository.save(activity);
+    return true;
+  }
+
+  private List<VotationOption> buildOptions(Activity activity) {
+    var range = activity.getReprogramationRange();
+    if (range == null) {
+      return List.of();
+    }
+
+    LocalDateTime original = activity.getDateTime();
+    return IntStream.rangeClosed(1, range.getMaxDays())
+        .mapToObj(day -> original.toLocalDate().plusDays(day).atTime(range.getInitialHour()))
+        .filter(candidate -> range.isWithinRange(original, candidate))
+        .distinct()
+        .limit(3)
+        .map(this::optionAt)
+        .toList();
   }
 
   private VotationOption optionAt(LocalDateTime dateTime) {

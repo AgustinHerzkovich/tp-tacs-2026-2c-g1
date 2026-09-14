@@ -37,6 +37,7 @@ export function NotifDrawer({ open, onOpenChange, notifications, loading, error,
         <div className="px-4 py-4 space-y-3 overflow-y-auto">
           {loading && (
             <div className="space-y-3" aria-busy="true" aria-label="Cargando alertas">
+              <span className="sr-only" role="status">Cargando alertas</span>
               {Array.from({ length: 3 }, (_, i) => (
                 <div key={i} className="flex gap-3 rounded-2xl border-2 p-3.5" style={{ borderColor: "var(--border)" }}>
                   <Skeleton className="size-8 rounded-full shrink-0" />
@@ -59,7 +60,7 @@ export function NotifDrawer({ open, onOpenChange, notifications, loading, error,
               No tenés alertas nuevas.
             </p>
           )}
-          {notifications.map((n) => {
+          {!loading && !error && notifications.map((n) => {
             const m = NOTIF_META[n.kind];
             return (
               <button

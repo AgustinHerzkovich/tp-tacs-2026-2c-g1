@@ -19,6 +19,7 @@ export function WeatherWidget({ loading, unavailable, forecast, current }: Weath
       </p>
       {loading && (
         <div className="grid grid-cols-4 gap-1 px-4" aria-busy="true" aria-label="Cargando pronóstico">
+          <span className="sr-only" role="status">Cargando pronóstico</span>
           {Array.from({ length: 4 }, (_, i) => (
             <div key={i} className="flex flex-col items-center gap-1.5">
               <Skeleton className="size-8 rounded-full" />

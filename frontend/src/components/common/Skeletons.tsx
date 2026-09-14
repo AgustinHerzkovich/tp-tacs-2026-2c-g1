@@ -26,6 +26,7 @@ export function ExploreCardSkeleton() {
 export function ExploreGridSkeleton({ count = 6 }: { count?: number }) {
   return (
     <div className="lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-5" aria-busy="true" aria-label="Cargando actividades">
+      <span className="sr-only" role="status">Cargando actividades</span>
       {Array.from({ length: count }, (_, i) => (
         <ExploreCardSkeleton key={i} />
       ))}
@@ -55,6 +56,7 @@ export function MisCardSkeleton() {
 export function MisGridSkeleton({ count = 4 }: { count?: number }) {
   return (
     <div className="lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-4" aria-busy="true" aria-label="Cargando tus actividades">
+      <span className="sr-only" role="status">Cargando tus actividades</span>
       {Array.from({ length: count }, (_, i) => (
         <MisCardSkeleton key={i} />
       ))}
@@ -65,6 +67,7 @@ export function MisGridSkeleton({ count = 4 }: { count?: number }) {
 export function StatisticsSkeleton() {
   return (
     <div aria-busy="true" aria-label="Cargando estadísticas">
+      <span className="sr-only" role="status">Cargando estadísticas</span>
       <Skeleton className="h-3.5 w-48 mb-3" />
       <div className="grid grid-cols-2 gap-3 mb-4">
         {Array.from({ length: 4 }, (_, i) => (
@@ -89,8 +92,9 @@ export function StatisticsSkeleton() {
 export function ActivityDetailSkeleton() {
   return (
     <div className="fade-in lg:max-w-5xl lg:mx-auto lg:py-8 lg:px-8" aria-busy="true" aria-label="Cargando actividad">
+      <span className="sr-only" role="status">Cargando actividad</span>
       <Skeleton className="h-[260px] w-full rounded-none lg:rounded-3xl" />
-      <div className="px-5 pt-5 lg:px-0 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.7fr)] lg:gap-5">
+      <div className="px-5 pt-5 lg:px-0">
         <div className="mb-4">
           <Skeleton className="h-4 w-32 mb-3" />
           <Skeleton className="h-3 w-full mb-1.5" />
@@ -100,7 +104,6 @@ export function ActivityDetailSkeleton() {
             <Skeleton className="h-16 rounded-2xl" />
           </div>
         </div>
-        <Skeleton className="h-40 rounded-2xl mb-4" />
       </div>
     </div>
   );

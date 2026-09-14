@@ -51,12 +51,11 @@ export function ExplorarPage() {
     [debouncedCity, effectiveFrom, effectiveTo, filter, invalidDates, onlyAvailable],
   );
 
-  const [prevApplied, setPrevApplied] = useState(applied);
   const { exploreFeed, loading, error, refresh, explorePage, exploreTotalPages, setExplorePage } = useActivities(applied);
-  if (prevApplied !== applied) {
-    setPrevApplied(applied);
+
+  useEffect(() => {
     setExplorePage(0);
-  }
+  }, [applied, setExplorePage]);
 
   const results = exploreFeed.filter((a) => {
     const matchesQuery = a.title.toLowerCase().includes(query.toLowerCase());
