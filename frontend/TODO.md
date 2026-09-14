@@ -94,13 +94,13 @@ son trabajo pendiente; lo ya implementado se resume al final para evitar reabrir
 
 ## Estadísticas admin
 
-- [ ] **Pulir filtros de rango.** Mostrar fechas formateadas en zona local, preservar el rango en la
+- [x] **Pulir filtros de rango.** Mostrar fechas formateadas en zona local, preservar el rango en la
       URL o al navegar, agregar presets útiles y reintento ante error. Verificar extremos inclusivos y
       días con cambios de horario.
-- [ ] **Mejorar la visualización.** Agregar comparaciones o gráficos sólo si aportan legibilidad;
+- [x] **Mejorar la visualización.** Agregar comparaciones o gráficos sólo si aportan legibilidad;
       mantener cards y tablas accesibles para actividades creadas, reprogramadas, canceladas,
       suspendidas por clima y llamadas al proveedor.
-- [ ] **Probar autorización en profundidad.** Confirmar que usuarios sin `ADMIN` no vean el acceso,
+- [x] **Probar autorización en profundidad.** Confirmar que usuarios sin `ADMIN` no vean el acceso,
       sean redirigidos si escriben `/estadisticas` y reciban 403 del backend incluso si llaman al
       proxy manualmente.
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, MapPin, Clock } from "lucide-react";
+import { ArrowLeft, MapPin, Clock, LogOut } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ActivityGallery } from "@/components/activities/ActivityGallery";
@@ -167,18 +167,30 @@ export function ActivityDetailPage({ id }: { id: string }) {
             {activity.availability ? "quedan cupos disponibles" : "sin cupos disponibles"}
           </p>
         </div>
-        {hasVoting ? (
+        {activity.status === "CANCELLED" || activity.status === "FINISHED" ? (
+          <p className="flex-1 text-center text-[12.5px] font-bold" style={{ color: "var(--destructive)" }}>
+            {activity.status === "CANCELLED" ? "Esta actividad fue cancelada" : "Esta actividad finalizó"}
+          </p>
+        ) : hasVoting ? (
           <p className="flex-1 text-center text-[12.5px] font-bold" style={{ color: "var(--muted-foreground)" }}>
             Votá en la sala de votación arriba ↑
           </p>
+        ) : join.joined ? (
+          <Button
+            className="flex-1 h-auto py-3.5 rounded-2xl font-display font-semibold"
+            disabled={join.pending}
+            style={{ background: "var(--destructive)", color: "var(--primary-foreground)" }}
+            onClick={join.requestLeave}
+          >
+            <LogOut className="size-4" /> Bajarme de la actividad
+          </Button>
         ) : (
           <Button
             className="flex-1 h-auto py-3.5 rounded-2xl font-display font-semibold"
-            disabled={join.pending || (!join.joined && !activity.availability)}
-            style={join.joined ? { background: "var(--mint)", color: "var(--mint-ink)" } : undefined}
-            onClick={() => (join.joined ? void join.leave() : join.requestJoin())}
+            disabled={join.pending || !activity.availability}
+            onClick={join.requestJoin}
           >
-            {join.joined ? "¡Estás sumado! ✓" : activity.availability ? "Sumarme a la actividad" : "Sin cupos disponibles"}
+            {activity.availability ? "Sumarme a la actividad" : "Sin cupos disponibles"}
           </Button>
         )}
       </div>
@@ -198,6 +210,14 @@ export function ActivityDetailPage({ id }: { id: string }) {
         description="Vas a recibir notificaciones sobre el clima, la fecha y los demás participantes."
         confirmLabel="Sí, sumarme"
         onConfirm={() => void join.confirmJoin()}
+      />
+      <ConfirmModal
+        open={join.leaveConfirmOpen}
+        onOpenChange={(v) => !v && join.cancelLeave()}
+        title="¿Darte de baja de la actividad?"
+        description="Vas a dejar de recibir notificaciones sobre el clima, la fecha y los demás participantes."
+        confirmLabel="Sí, bajarme"
+        onConfirm={() => void join.confirmLeave()}
       />
     </div>
   );

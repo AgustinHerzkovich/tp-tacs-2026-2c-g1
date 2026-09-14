@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { useActivities } from "@/hooks/useActivities";
 import { ExploreCard } from "@/components/activities/ExploreCard";
@@ -26,28 +26,41 @@ export function ExplorarPage() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [onlyAvailable, setOnlyAvailable] = useState(false);
-  const [applied, setApplied] = useState<ActivityFilterParams>({});
+  const [debouncedCity, setDebouncedCity] = useState("");
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedCity(city), 400);
+    return () => window.clearTimeout(timer);
+  }, [city]);
+
+  const today = new Date();
+  const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const effectiveFrom = filter === "Hoy" ? todayKey : dateFrom;
+  const effectiveTo = filter === "Hoy" ? todayKey : dateTo;
+  const invalidDates = Boolean(effectiveFrom && effectiveTo && effectiveFrom > effectiveTo);
+
+  const applied = useMemo<ActivityFilterParams>(
+    () => ({
+      type: TYPES[filter],
+      city: debouncedCity.trim() || undefined,
+      dateFrom: invalidDates || !effectiveFrom ? undefined : `${effectiveFrom}T00:00:00`,
+      dateTo: invalidDates || !effectiveTo ? undefined : `${effectiveTo}T23:59:59`,
+      availability: onlyAvailable || undefined,
+    }),
+    [debouncedCity, effectiveFrom, effectiveTo, filter, invalidDates, onlyAvailable],
+  );
+
+  const [prevApplied, setPrevApplied] = useState(applied);
   const { exploreFeed, loading, error, refresh, explorePage, exploreTotalPages, setExplorePage } = useActivities(applied);
+  if (prevApplied !== applied) {
+    setPrevApplied(applied);
+    setExplorePage(0);
+  }
 
   const results = exploreFeed.filter((a) => {
     const matchesQuery = a.title.toLowerCase().includes(query.toLowerCase());
     return matchesQuery;
   });
-
-  const applyFilters = () => {
-    const today = new Date();
-    const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-    const from = filter === "Hoy" ? todayKey : dateFrom;
-    const to = filter === "Hoy" ? todayKey : dateTo;
-    setExplorePage(0);
-    setApplied({
-      type: TYPES[filter],
-      city: city.trim() || undefined,
-      dateFrom: from ? `${from}T00:00:00` : undefined,
-      dateTo: to ? `${to}T23:59:59` : undefined,
-      availability: onlyAvailable || undefined,
-    });
-  };
 
   const clearFilters = () => {
     setFilter("Todo");
@@ -55,8 +68,6 @@ export function ExplorarPage() {
     setDateFrom("");
     setDateTo("");
     setOnlyAvailable(false);
-    setApplied({});
-    setExplorePage(0);
   };
 
   return (
@@ -99,14 +110,18 @@ export function ExplorarPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
         <Input value={city} onChange={(event) => setCity(event.target.value)} placeholder="Ciudad" className="col-span-2 lg:col-span-1 rounded-xl bg-white" />
         <Input type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} disabled={filter === "Hoy"} aria-label="Fecha desde" className="rounded-xl bg-white" />
-        <Input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} disabled={filter === "Hoy"} aria-label="Fecha hasta" className="rounded-xl bg-white" />
+        <Input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} disabled={filter === "Hoy"} aria-label="Fecha hasta" aria-invalid={invalidDates} className="rounded-xl bg-white" />
         <label className="flex items-center gap-2 text-xs font-extrabold px-3">
           <input type="checkbox" checked={onlyAvailable} onChange={(event) => setOnlyAvailable(event.target.checked)} className="size-4 accent-[var(--primary)]" /> Con cupo
         </label>
       </div>
+      {invalidDates && (
+        <p className="px-4 mt-2 mb-4 text-xs font-extrabold" style={{ color: "var(--destructive)" }}>
+          La fecha desde no puede ser posterior a la fecha hasta.
+        </p>
+      )}
       <div className="flex gap-2 mb-6">
-        <Button type="button" className="flex-1 rounded-xl" onClick={applyFilters}>Aplicar filtros</Button>
-        <Button type="button" variant="outline" className="rounded-xl" onClick={clearFilters}>Limpiar</Button>
+        <Button type="button" variant="outline" className="flex-1 rounded-xl" onClick={clearFilters}>Limpiar</Button>
       </div>
       {loading && <LoadingState label="Cargando actividades..." />}
       {error && (
