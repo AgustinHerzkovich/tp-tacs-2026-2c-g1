@@ -15,6 +15,9 @@ Bearer JWT; es obligatorio para estadisticas con autoridad `ROLE_ADMIN`.
 
 **Request:** `POST /activities`
 
+Seleccionar `multipart/form-data`, pegar el siguiente JSON en la parte `activity` y omitir
+`images` para este caso. Para probar imagenes, adjuntar hasta cinco archivos JPEG, PNG o WebP.
+
 ```json
 {
   "title": "Partido en la plaza",

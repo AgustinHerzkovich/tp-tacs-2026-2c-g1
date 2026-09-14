@@ -1,5 +1,9 @@
 # Entrega 1 - Trazabilidad de requisitos
 
+> Documento histórico del estado entregado en la Entrega 1. No describe el estado actual: la
+> Entrega 2 incorporó MongoDB, Keycloak, frontend y pruebas E2E. Para la trazabilidad vigente ver
+> [Trazabilidad de requisitos no funcionales](../README.md#trazabilidad-de-requisitos-no-funcionales).
+
 ## Alcance exigido
 
 El enunciado pide para la Entrega 1 el esqueleto web, modelo de actividades, participantes y reglas
@@ -23,7 +27,7 @@ de IA. La base NoSQL y la UI corresponden a la Entrega 2; cloud corresponde a la
 | 11 | Resolver votacion | Cumplida | `VotationClosingScheduler` | `VotationClosingSchedulerTest` |
 | 12 | Ver actividades y votaciones propias | Cumplida | `/activities/organizers/me`, `/activities/participants/me`, `/votations` | tests de controllers y servicios |
 | 13 | Notificaciones de inicio, reprogramacion y cancelacion | Cumplida | schedulers, listener y `/notifications` | tests de notificaciones y transiciones |
-| 14 | Estadisticas administrativas | Cumplida en memoria | `GET /statistics`, eventos estadisticos | `StatisticsServiceTest`, `InMemoryStatisticsEventRepositoryTest` |
+| 14 | Estadisticas administrativas | Cumplida en memoria | `GET /statistics`, eventos estadisticos | `StatisticsServiceTest` |
 
 ## Requisitos no funcionales
 
