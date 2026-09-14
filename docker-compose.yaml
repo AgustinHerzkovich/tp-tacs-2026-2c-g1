@@ -51,6 +51,8 @@ services:
       SECURITY_JWT_JWK_SET_URI: ${SECURITY_JWT_JWK_SET_URI:-http://keycloak:8080/realms/solnotfound/protocol/openid-connect/certs}
       SECURITY_JWT_AUDIENCE: ${SECURITY_JWT_AUDIENCE:-solnotfoundBackend}
       APP_SEED_ENABLED: ${APP_SEED_ENABLED:-false}
+      APP_DEV_SEED_ENABLED: ${APP_DEV_SEED_ENABLED:-false}
+      APP_DEV_SEED_USER_ID: ${APP_DEV_SEED_USER_ID:-}
     depends_on:
       minio:
         condition: service_healthy
