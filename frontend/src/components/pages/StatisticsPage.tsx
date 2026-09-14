@@ -183,6 +183,7 @@ export function StatisticsPage() {
               size="sm"
               className="rounded-xl"
               onClick={() => applyPreset(preset.from, preset.to)}
+              disabled={loading}
               aria-pressed={from === preset.from && to === preset.to}
             >
               {preset.label}
