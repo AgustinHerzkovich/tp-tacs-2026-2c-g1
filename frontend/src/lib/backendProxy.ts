@@ -17,6 +17,8 @@ function forwardHeaders(req: NextApiRequest): Record<string, string> {
   const headers: Record<string, string> = {};
   const auth = req.headers.authorization;
   if (auth) headers.authorization = auth;
+  const timeZone = req.headers["x-time-zone"];
+  if (typeof timeZone === "string") headers["x-time-zone"] = timeZone;
   return headers;
 }
 

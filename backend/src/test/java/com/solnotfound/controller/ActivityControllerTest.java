@@ -3,6 +3,7 @@ package com.solnotfound.controller;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -67,7 +68,7 @@ class ActivityControllerTest {
             new ReprogramationRangeDTO(3, LocalTime.of(10, 0), LocalTime.of(20, 0)));
 
     ResponseEntity<ActivityResponse> response =
-        controller.create(request, List.of(), authentication("creator-1"));
+        controller.create(request, List.of(), null, authentication("creator-1"));
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
     assertThat(response.getBody()).isNotNull();
@@ -80,7 +81,7 @@ class ActivityControllerTest {
     ActivityService service = mock(ActivityService.class);
     ActivityResponse response = mock(ActivityResponse.class);
     when(response.id()).thenReturn("activity-1");
-    when(service.create(any(), eq("creator-1"), eq(List.of()))).thenReturn(response);
+    when(service.create(any(), eq("creator-1"), eq(List.of()), isNull())).thenReturn(response);
     ActivityController controller = new ActivityController(service);
     MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
     MockMultipartFile activityPart =
@@ -93,7 +94,7 @@ class ActivityControllerTest {
     mockMvc
         .perform(multipart("/activities").file(activityPart).principal(authentication("creator-1")))
         .andExpect(status().isCreated());
-    verify(service).create(any(), eq("creator-1"), eq(List.of()));
+    verify(service).create(any(), eq("creator-1"), eq(List.of()), isNull());
   }
 
   private CreateActivityRequest validRequest() {
@@ -135,7 +136,7 @@ class ActivityControllerTest {
             new ReprogramationRangeDTO(3, LocalTime.of(10, 0), LocalTime.of(20, 0)));
 
     ActivityResponse activity =
-        controller.create(request, List.of(), authentication("development-user")).getBody();
+        controller.create(request, List.of(), null, authentication("development-user")).getBody();
 
     ResponseEntity<ActivityResponse> response =
         controller.join(activity.id(), authentication("user-1"));
@@ -176,7 +177,7 @@ class ActivityControllerTest {
             new ReprogramationRangeDTO(3, LocalTime.of(10, 0), LocalTime.of(20, 0)));
 
     ActivityResponse activity =
-        controller.create(request, List.of(), authentication("development-user")).getBody();
+        controller.create(request, List.of(), null, authentication("development-user")).getBody();
 
     controller.join(activity.id(), authentication("user-1"));
 
@@ -218,7 +219,7 @@ class ActivityControllerTest {
             new ReprogramationRangeDTO(3, LocalTime.of(10, 0), LocalTime.of(20, 0)));
 
     ActivityResponse activity =
-        controller.create(request, List.of(), authentication("development-user")).getBody();
+        controller.create(request, List.of(), null, authentication("development-user")).getBody();
 
     controller.join(activity.id(), authentication("user-1"));
 

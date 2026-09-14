@@ -37,8 +37,10 @@ import com.solnotfound.storage.ImageStorage;
 import java.io.ByteArrayInputStream;
 import java.net.URI;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -262,6 +264,47 @@ class ActivityServiceTest {
     assertThatThrownBy(() -> activityService.create(request))
         .isInstanceOf(InvalidActivityException.class)
         .hasMessage("Latitude and longitude must be provided together");
+  }
+
+  @Test
+  void judgesFutureDateTimeAgainstTheCallersTimeZoneRatherThanTheServersClock() {
+    // Same wall-clock reading, five minutes after "now" as seen from UTC-12 — which is
+    // 26 hours behind UTC+14, so the identical literal is in the future in -12 but already
+    // well in the past in +14. A server-clock-only check (the original bug) would judge both
+    // requests identically regardless of which zone the organizer actually meant.
+    LocalDateTime organizerLocalTime =
+        LocalDateTime.ofInstant(Instant.now(), ZoneOffset.ofHours(-12)).plusMinutes(5);
+    CreateActivityRequest request = requestAt(organizerLocalTime);
+
+    ActivityResponse created = activityService.create(request, "creator-1", List.of(), "-12:00");
+    assertThat(created.id()).isNotBlank();
+
+    assertThatThrownBy(() -> activityService.create(request, "creator-1", List.of(), "+14:00"))
+        .isInstanceOf(InvalidActivityException.class)
+        .hasMessage("Activity date and time must be in the future");
+  }
+
+  @Test
+  void rejectsUnknownTimeZoneId() {
+    CreateActivityRequest request = requestAt(LocalDateTime.now().plusDays(1));
+
+    assertThatThrownBy(() -> activityService.create(request, "creator-1", List.of(), "Not/AZone"))
+        .isInstanceOf(InvalidActivityException.class)
+        .hasMessage("Unknown time zone: Not/AZone");
+  }
+
+  private CreateActivityRequest requestAt(LocalDateTime dateTime) {
+    return new CreateActivityRequest(
+        "Football match",
+        "Friendly match",
+        ActivityType.OUTDOOR,
+        cityLocation(),
+        dateTime,
+        10,
+        20,
+        validWeatherConditions(),
+        4,
+        validReprogramationRange());
   }
 
   @Test

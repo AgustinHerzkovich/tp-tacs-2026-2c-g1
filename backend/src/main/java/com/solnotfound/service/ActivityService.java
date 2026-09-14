@@ -29,7 +29,11 @@ import com.solnotfound.repository.IUserRepository;
 import com.solnotfound.storage.ImageFile;
 import com.solnotfound.storage.ImageStorage;
 import com.solnotfound.storage.NoOpImageStorage;
+import java.time.DateTimeException;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -109,12 +113,29 @@ public class ActivityService {
    * @return the persisted activity representation with temporary image URLs
    * @throws InvalidActivityException when activity or image constraints are not satisfied
    */
+  public ActivityResponse create(
+      CreateActivityRequest request, String creatorUserId, List<? extends ImageFile> images) {
+    return create(request, creatorUserId, images, null);
+  }
+
+  /**
+   * Same as {@link #create(CreateActivityRequest, String, List)}, but judges the request's {@code
+   * dateTime} as a wall-clock reading in {@code timeZoneId} (the organizer's own time zone, e.g.
+   * {@code "America/Argentina/Buenos_Aires"}) rather than the server's, so "is this in the future"
+   * is correct regardless of where the server happens to run. A null or blank id falls back to the
+   * server's own zone.
+   *
+   * @throws InvalidActivityException when timeZoneId is not a recognized IANA zone id
+   */
   @edu.umd.cs.findbugs.annotations.SuppressFBWarnings(
       value = "THROWS_METHOD_THROWS_RUNTIMEEXCEPTION",
       justification = "Storage failures are propagated after compensating object deletes")
   public ActivityResponse create(
-      CreateActivityRequest request, String creatorUserId, List<? extends ImageFile> images) {
-    validate(request);
+      CreateActivityRequest request,
+      String creatorUserId,
+      List<? extends ImageFile> images,
+      String timeZoneId) {
+    validate(request, timeZoneId);
     validateImages(images);
 
     Activity activity = new Activity();
@@ -341,14 +362,32 @@ public class ActivityService {
         activityRepository.findActivitiesByParticipantId(id, pageable).map(this::toResponse));
   }
 
-  private void validate(CreateActivityRequest request) {
+  private void validate(CreateActivityRequest request, String timeZoneId) {
     if (request.minParticipants() > request.maxParticipants()) {
       throw new InvalidActivityException("Minimum participants cannot exceed maximum participants");
     }
 
+    validateFutureDateTime(request.dateTime(), timeZoneId);
     validateLocation(request.location());
     validateWeatherConditions(request.weatherConditions());
     validateReprogramationRange(request.reprogramationRange());
+  }
+
+  private void validateFutureDateTime(LocalDateTime dateTime, String timeZoneId) {
+    if (!dateTime.atZone(resolveZone(timeZoneId)).toInstant().isAfter(Instant.now())) {
+      throw new InvalidActivityException("Activity date and time must be in the future");
+    }
+  }
+
+  private ZoneId resolveZone(String timeZoneId) {
+    if (timeZoneId == null || timeZoneId.isBlank()) {
+      return ZoneId.systemDefault();
+    }
+    try {
+      return ZoneId.of(timeZoneId);
+    } catch (DateTimeException exception) {
+      throw new InvalidActivityException("Unknown time zone: " + timeZoneId);
+    }
   }
 
   private void validateLocation(LocationDTO location) {
