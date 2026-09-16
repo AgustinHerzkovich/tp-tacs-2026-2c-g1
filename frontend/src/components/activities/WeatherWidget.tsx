@@ -13,7 +13,7 @@ interface WeatherWidgetProps {
 
 export function WeatherWidget({ loading, unavailable, forecast, current }: WeatherWidgetProps) {
   return (
-    <Card className="p-4 mb-4 rounded-2xl">
+    <Card className="p-4 mb-4">
       <p className="font-display font-semibold text-[11.5px] tracking-wide px-4 mb-3" style={{ color: "var(--muted-foreground)" }}>
         PRONÓSTICO PARA LA ACTIVIDAD
       </p>

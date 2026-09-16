@@ -42,7 +42,7 @@ export function LoginPage() {
       </div>
 
       <Button
-        className="h-auto py-3.5 rounded-2xl font-display font-semibold"
+        size="xl"
         disabled={!ready || isAuthenticated}
         onClick={() => void login()}
       >

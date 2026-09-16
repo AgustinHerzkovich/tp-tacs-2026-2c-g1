@@ -37,11 +37,12 @@ export function ConfirmModal({
           <SheetDescription className="text-[13.5px] font-bold leading-snug">{description}</SheetDescription>
         </SheetHeader>
         <SheetFooter className="p-0 flex-row gap-3 mt-4">
-          <Button variant="outline" className="flex-1 rounded-2xl h-12" onClick={() => onOpenChange(false)} disabled={pending}>
+          <Button variant="outline" size="xl" className="flex-1" onClick={() => onOpenChange(false)} disabled={pending}>
             {cancelLabel}
           </Button>
           <Button
-            className="flex-1 rounded-2xl h-12"
+            size="xl"
+            className="flex-1"
             variant={destructive ? "destructive" : "default"}
             onClick={onConfirm}
             disabled={pending}

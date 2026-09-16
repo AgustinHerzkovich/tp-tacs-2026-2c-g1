@@ -13,7 +13,7 @@ export function ExploreCard({ activity, onRefreshImages }: { activity: ExploreAc
   const names = activity.participantNames.slice(0, 3);
   return (
     <Link href={`/actividades/${activity.id}`}>
-      <Card className="tap mb-5 flex flex-col overflow-hidden gap-0 py-0 rounded-2xl transition-shadow lg:mb-0 lg:h-full lg:hover:shadow-lg lg:hover:shadow-[rgba(58,51,82,0.12)]">
+      <Card className="tap mb-5 flex flex-col overflow-hidden gap-0 py-0 transition-shadow lg:mb-0 lg:h-full lg:hover:shadow-lg lg:hover:shadow-[rgba(58,51,82,0.12)]">
         <div className="relative">
           <Scene scene={activity.scene} imageUrl={activity.imageUrl} alt={activity.title} height={180} onRefresh={onRefreshImages} />
           <TypeBadge type={activity.type} className="absolute top-3 left-3" />

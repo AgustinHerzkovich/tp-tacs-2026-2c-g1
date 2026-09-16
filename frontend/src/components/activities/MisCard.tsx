@@ -14,7 +14,7 @@ export function MisCard({ activity, onRefreshImages }: { activity: MisActivity; 
   const names = activity.participantNames.slice(0, 2);
   return (
     <Link href={`/actividades/${activity.id}`}>
-      <Card className="tap mb-4 overflow-hidden gap-0 py-0 rounded-2xl transition-shadow lg:mb-0 lg:h-full lg:hover:shadow-lg lg:hover:shadow-[rgba(58,51,82,0.12)]">
+      <Card className="tap mb-4 overflow-hidden gap-0 py-0 transition-shadow lg:mb-0 lg:h-full lg:hover:shadow-lg lg:hover:shadow-[rgba(58,51,82,0.12)]">
         <div className="flex gap-3.5 p-3.5">
           <Scene scene={activity.scene} imageUrl={activity.imageUrl} alt={activity.title} height={84} className="w-[84px] shrink-0 rounded-2xl" onRefresh={onRefreshImages} />
           <div className="min-w-0 flex-1 py-0.5">

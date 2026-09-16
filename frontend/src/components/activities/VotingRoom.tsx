@@ -22,7 +22,7 @@ export function VotingRoom({ voting, warningText, organizer = false }: VotingRoo
   const [adminError, setAdminError] = useState<string | null>(null);
 
   return (
-    <Card className="p-4 mb-4 rounded-2xl border-2" style={{ borderColor: "#F7DE6B" }}>
+    <Card className="p-4 mb-4 border-2" style={{ borderColor: "#F7DE6B" }}>
       <div className="flex gap-2.5 rounded-xl p-3 mb-4 mx-4" style={{ background: "var(--sun)" }}>
         <AlertTriangle className="size-[18px] shrink-0 mt-0.5" style={{ color: "var(--sun-ink)" }} />
         <p className="text-[11.5px] font-extrabold leading-snug" style={{ color: "var(--sun-ink)" }}>
@@ -68,7 +68,7 @@ export function VotingRoom({ voting, warningText, organizer = false }: VotingRoo
       </div>
 
       <div className="px-4">
-        <Button className="w-full h-auto py-3.5 rounded-2xl font-display font-semibold" disabled={pending || !selectedId || selectedId === votedId} onClick={requestVote}>
+        <Button size="xl" className="w-full" disabled={pending || !selectedId || selectedId === votedId} onClick={requestVote}>
           {pending ? "Guardando voto..." : votedId ? "Cambiar voto" : "Votar fecha alternativa"}
         </Button>
       </div>
