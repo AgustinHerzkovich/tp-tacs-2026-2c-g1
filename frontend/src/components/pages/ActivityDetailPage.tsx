@@ -118,7 +118,7 @@ export function ActivityDetailPage({ id }: { id: string }) {
               {activity.description ?? "Sin descripción."}
             </p>
             <div className="grid grid-cols-2 gap-3">
-              <Card className="p-3.5 rounded-2xl">
+              <Card className="p-3.5">
                 <p className="text-[10px] font-extrabold uppercase mb-1 px-4" style={{ color: "var(--muted-foreground)" }}>
                   Fecha y hora
                 </p>
@@ -126,7 +126,7 @@ export function ActivityDetailPage({ id }: { id: string }) {
                   <Clock className="size-[13px]" /> {formatActivityWhen(activity.dateTime)}
                 </p>
               </Card>
-              <Card className="p-3.5 rounded-2xl">
+              <Card className="p-3.5">
                 <p className="text-[10px] font-extrabold uppercase mb-1 px-4" style={{ color: "var(--muted-foreground)" }}>
                   Participantes
                 </p>
@@ -135,7 +135,7 @@ export function ActivityDetailPage({ id }: { id: string }) {
                 </p>
               </Card>
             </div>
-            <Card className="p-4 rounded-2xl mt-3">
+            <Card className="p-4 mt-3">
               <p className="font-display font-semibold text-sm px-4 mb-2">Condiciones y planificación</p>
               <div className="grid grid-cols-2 gap-2 px-4 text-xs font-bold" style={{ color: "var(--muted-foreground)" }}>
                 <span>Mínimo: {activity.minParticipants}</span>
@@ -178,7 +178,8 @@ export function ActivityDetailPage({ id }: { id: string }) {
           </p>
         ) : join.joined ? (
           <Button
-            className="flex-1 h-auto py-3.5 rounded-2xl font-display font-semibold"
+            size="xl"
+            className="flex-1"
             disabled={join.pending}
             style={{ background: "var(--destructive)", color: "var(--primary-foreground)" }}
             onClick={join.requestLeave}
@@ -187,7 +188,8 @@ export function ActivityDetailPage({ id }: { id: string }) {
           </Button>
         ) : (
           <Button
-            className="flex-1 h-auto py-3.5 rounded-2xl font-display font-semibold"
+            size="xl"
+            className="flex-1"
             disabled={join.pending || !activity.availability}
             onClick={join.requestJoin}
           >

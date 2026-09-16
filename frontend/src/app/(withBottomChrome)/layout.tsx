@@ -27,12 +27,13 @@ export default function BottomChromeLayout({ children }: { children: ReactNode }
       {/* Reserve space so scrolled content never ends up hidden behind the fixed bar below. */}
       <div className={showCreateButton ? "pb-36" : "pb-20"}>{children}</div>
 
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full z-30 lg:max-w-3xl lg:rounded-t-3xl lg:shadow-[0_-12px_40px_-20px_rgba(58,51,82,.35)] lg:overflow-hidden" style={{ background: "var(--background)" }}>
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full z-30" style={{ background: "var(--background)" }}>
         {showCreateButton && (
           <div className="px-4 pt-3 pb-3 border-t-2" style={{ borderColor: "var(--border)" }}>
             <Button
               asChild
-              className="w-full h-auto py-3.5 rounded-2xl text-[15px] font-display font-semibold shadow-[0_16px_30px_-12px_rgba(255,107,71,.55)]"
+              size="xl"
+              className="w-full shadow-[0_16px_30px_-12px_rgba(255,107,71,.55)]"
             >
               <Link href="/crear">✨ Crear Nueva Actividad</Link>
             </Button>

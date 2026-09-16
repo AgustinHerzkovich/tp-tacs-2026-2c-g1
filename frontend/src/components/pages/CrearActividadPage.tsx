@@ -99,7 +99,7 @@ export function CrearActividadPage() {
         <p className="text-[14px] font-bold mb-8" style={{ color: "var(--muted-foreground)" }}>
           Te avisamos si cambia el clima o se suma alguien nuevo.
         </p>
-        <Button className="h-auto py-3.5 px-6 rounded-2xl font-display font-semibold" onClick={() => router.push("/mis-actividades")}>
+        <Button size="xl" onClick={() => router.push("/mis-actividades")}>
           Ver mis actividades
         </Button>
       </div>
@@ -133,16 +133,16 @@ export function CrearActividadPage() {
 
       <div className="px-5 py-4 border-t-2 flex gap-3" style={{ borderColor: "var(--border)", background: "var(--background)" }}>
         {!wizard.isFirstStep && (
-          <Button variant="outline" className="flex-1 h-auto py-3.5 rounded-2xl font-display font-semibold" onClick={wizard.back} disabled={submitting}>
+          <Button variant="outline" size="xl" className="flex-1" onClick={wizard.back} disabled={submitting}>
             Atrás
           </Button>
         )}
         {wizard.isLastStep ? (
-          <Button className="flex-1 h-auto py-3.5 rounded-2xl font-display font-semibold" onClick={() => void handlePublish()} disabled={submitting}>
+          <Button size="xl" className="flex-1" onClick={() => void handlePublish()} disabled={submitting}>
             {submitting ? "Publicando…" : "Publicar Actividad"}
           </Button>
         ) : (
-          <Button className="flex-1 h-auto py-3.5 rounded-2xl font-display font-semibold" onClick={() => { setSubmitError(null); wizard.next(); }}>
+          <Button size="xl" className="flex-1" onClick={() => { setSubmitError(null); wizard.next(); }}>
             Continuar
           </Button>
         )}
