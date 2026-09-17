@@ -1,8 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { fetchNominatim, NominatimError } from "@/lib/nominatim";
+import { fetchNominatim, municipalityOf, NominatimError, type NominatimAddress } from "@/lib/nominatim";
 
 interface NominatimReverseResult {
   display_name: string;
+  address?: NominatimAddress;
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -20,9 +21,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const params = new URLSearchParams({ format: "jsonv2", "accept-language": "es", lat: String(latitude), lon: String(longitude) });
+    const params = new URLSearchParams({ format: "jsonv2", "accept-language": "es", addressdetails: "1", lat: String(latitude), lon: String(longitude) });
     const result = await fetchNominatim<NominatimReverseResult>("/reverse", params);
-    res.status(200).json({ label: result.display_name });
+    res.status(200).json({ label: result.display_name, city: municipalityOf(result.address) });
   } catch (error) {
     const nominatimError = error instanceof NominatimError ? error : new NominatimError(502, "No se pudo consultar OpenStreetMap.");
     res.status(nominatimError.status).json({ error: nominatimError.message });
