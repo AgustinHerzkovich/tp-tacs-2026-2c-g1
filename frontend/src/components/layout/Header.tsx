@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { BarChart3, Bell, LogOut, UserRound } from "lucide-react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { getInitials } from "@/lib/initials";
@@ -11,22 +11,27 @@ import { ConfirmModal } from "@/components/common/ConfirmModal";
 interface HeaderProps {
   onBellClick: () => void;
   unread?: number;
+  /** Optional content projected between the logo and the icon cluster (see
+   * `HeaderSlot.tsx`) — used by Explorar to dock its search bar summary here
+   * once the full search bar has scrolled out of view. */
+  centerSlot?: ReactNode;
 }
 
-export function Header({ onBellClick, unread = 0 }: HeaderProps) {
+export function Header({ onBellClick, unread = 0, centerSlot }: HeaderProps) {
   const { user, hasRole, logout } = useAuth();
   const [profileOpen, setProfileOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
 
   return (
     <div
-      className="sticky top-0 z-20 backdrop-blur px-5 pt-6 pb-3 flex items-center justify-between"
+      className="sticky top-0 z-20 backdrop-blur px-5 pt-6 pb-3 flex items-center justify-between gap-3"
       style={{ background: "rgba(255,248,242,.9)" }}
     >
-      <h1 className="font-display font-semibold text-[26px]" style={{ color: "var(--primary)" }}>
+      <h1 className="font-display font-semibold text-[26px] shrink-0" style={{ color: "var(--primary)" }}>
         Planazo
       </h1>
-      <div className="flex items-center gap-3">
+      {centerSlot && <div className="flex-1 min-w-0 flex justify-center">{centerSlot}</div>}
+      <div className="flex items-center gap-3 shrink-0">
         {hasRole("ADMIN") && (
           <Link
             href="/estadisticas"
