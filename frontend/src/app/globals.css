@@ -8,8 +8,9 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-body);
-  --font-display: var(--font-display);
-  --font-heading: var(--font-display);
+  --font-display: var(--font-body);
+  --font-brand: var(--font-brand);
+  --font-heading: var(--font-brand);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -117,9 +118,30 @@
   }
   h1,
   h2,
-  h3,
+  h3 {
+    font-family: var(--font-brand);
+  }
   .font-display {
     font-family: var(--font-display);
+  }
+  /* Brand moments only (logo, hero headings): the chunky display face.
+     Everything else — nav, chips, badges, buttons — stays on --font-display
+     (Nunito) since a fatface-style font is unreadable below heading size. */
+  .font-brand {
+    font-family: var(--font-brand);
+  }
+  /* Same brand face at small/dense sizes (card & activity titles): opened-up
+     tracking and a softened ink color keep it legible at 16-17px. */
+  .font-brand-title {
+    font-family: var(--font-brand);
+    letter-spacing: 0.04em;
+    color: #463f63;
+  }
+  /* Sticker die-cut outline for the wordmark: stroke painted behind the
+     fill so it doesn't eat into the letterforms. */
+  .sticker-outline {
+    -webkit-text-stroke: 6px #fff;
+    paint-order: stroke fill;
   }
 }
 

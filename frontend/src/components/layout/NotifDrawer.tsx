@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
-import { NOTIF_META } from "@/lib/activityVisuals";
+import { NOTIF_META, TONE_META } from "@/lib/activityVisuals";
 import type { NotificationView } from "@/hooks/useNotifications";
 import { PageControls } from "@/components/common/PageControls";
 import { useState } from "react";
@@ -61,7 +61,7 @@ export function NotifDrawer({ open, onOpenChange, notifications, loading, error,
             </p>
           )}
           {!loading && !error && notifications.map((n) => {
-            const m = NOTIF_META[n.kind];
+            const m = TONE_META[NOTIF_META[n.kind].tone];
             return (
               <button
                 key={n.id}

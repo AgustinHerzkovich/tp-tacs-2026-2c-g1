@@ -27,7 +27,10 @@ export function Header({ onBellClick, unread = 0, centerSlot }: HeaderProps) {
       className="sticky top-0 z-20 backdrop-blur px-5 pt-6 pb-3 flex items-center justify-between gap-3"
       style={{ background: "rgba(255,248,242,.9)" }}
     >
-      <h1 className="font-display font-semibold text-[26px] shrink-0" style={{ color: "var(--primary)" }}>
+      <h1
+        className="font-brand sticker-outline text-[28px] shrink-0"
+        style={{ color: "var(--primary)", transform: "rotate(-3deg)", filter: "drop-shadow(2px 3px 0 rgba(46,42,69,.18))" }}
+      >
         Planazo
       </h1>
       {centerSlot && <div className="flex-1 min-w-0 flex justify-center">{centerSlot}</div>}
@@ -35,8 +38,7 @@ export function Header({ onBellClick, unread = 0, centerSlot }: HeaderProps) {
         {hasRole("ADMIN") && (
           <Link
             href="/estadisticas"
-            className="tap w-10 h-10 rounded-full bg-white border-2 flex items-center justify-center"
-            style={{ borderColor: "var(--border)" }}
+            className="tap w-10 h-10 rounded-full bg-white shadow-[0_3px_0_var(--lav)] flex items-center justify-center"
             aria-label="Estadísticas"
           >
             <BarChart3 className="size-[18px]" style={{ color: "var(--foreground)" }} />
@@ -44,8 +46,7 @@ export function Header({ onBellClick, unread = 0, centerSlot }: HeaderProps) {
         )}
         <button
           onClick={onBellClick}
-          className="tap relative w-10 h-10 rounded-full bg-white border-2 flex items-center justify-center"
-          style={{ borderColor: "var(--border)" }}
+          className="tap relative w-10 h-10 rounded-full bg-white shadow-[0_3px_0_var(--lav)] flex items-center justify-center"
           aria-label="Notificaciones"
         >
           <Bell className="size-[18px]" style={{ color: "var(--foreground)" }} />
@@ -59,7 +60,7 @@ export function Header({ onBellClick, unread = 0, centerSlot }: HeaderProps) {
         <div className="relative">
           <button onClick={() => setProfileOpen((open) => !open)} aria-label="Abrir menú de perfil" aria-expanded={profileOpen} className="tap rounded-full focus-visible:ring-2 focus-visible:ring-[var(--ring)]">
             <Avatar>
-              <AvatarFallback className="font-display font-semibold text-[13px]" style={{ background: "var(--lav)", color: "var(--lav-ink)" }}>
+              <AvatarFallback className="font-brand text-[13px]" style={{ background: "var(--lav)", color: "var(--lav-ink)" }}>
                 {user ? getInitials(user.name) : "?"}
               </AvatarFallback>
             </Avatar>

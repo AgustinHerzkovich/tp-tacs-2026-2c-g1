@@ -6,7 +6,7 @@ import { ArrowLeft, MapPin, Clock, LogOut } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ActivityGallery } from "@/components/activities/ActivityGallery";
-import { PillBadge, TypeBadge } from "@/components/common/PillBadge";
+import { StatusBadge, TypeBadge } from "@/components/common/PillBadge";
 import { AvatarStack } from "@/components/common/AvatarStack";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { WeatherWidget } from "@/components/activities/WeatherWidget";
@@ -16,7 +16,6 @@ import { useActivityWeather } from "@/hooks/useActivityWeather";
 import { useVoting } from "@/hooks/useVoting";
 import { useJoinActivity } from "@/hooks/useJoinActivity";
 import { useAuth } from "@/hooks/useAuth";
-import { STATUS_META } from "@/lib/activityVisuals";
 import { mapActivityStatus, mapActivityType, pickScene } from "@/lib/activityMapping";
 import { formatActivityWhen } from "@/lib/formatDate";
 import { participantDisplayName } from "@/lib/initials";
@@ -78,7 +77,6 @@ export function ActivityDetailPage({ id }: { id: string }) {
   const scene = pickScene(activity.id);
   const type = mapActivityType(activity.type);
   const status = mapActivityStatus(activity.status);
-  const statusMeta = STATUS_META[status];
   const hasVoting = voting.votation !== null;
   const participantNames = activity.participants.map((p) => p.name ?? participantDisplayName(p.userId, user));
   const maxRain = activity.weatherConditions.maxRainProbability;
@@ -99,11 +97,9 @@ export function ActivityDetailPage({ id }: { id: string }) {
           <div className="absolute left-5 right-5 bottom-4">
             <div className="flex gap-2 mb-2">
               <TypeBadge type={type} />
-              <PillBadge bg={statusMeta.bg} ink={statusMeta.ink}>
-                {statusMeta.label}
-              </PillBadge>
+              <StatusBadge status={status} />
             </div>
-            <h1 className="font-display font-semibold text-[22px] text-white leading-tight drop-shadow">{activity.title}</h1>
+            <h1 className="font-brand text-[24px] text-white leading-tight drop-shadow">{activity.title}</h1>
             <p className="text-[12.5px] font-extrabold text-white/90 mt-1 flex items-center gap-1">
               <MapPin className="size-[13px]" /> {activity.location.city ?? "Ubicación a confirmar"}
             </p>
