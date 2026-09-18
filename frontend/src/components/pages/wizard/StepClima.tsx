@@ -11,7 +11,7 @@ interface StepProps {
 }
 
 const THUMB =
-  "[&_[data-slot=slider-thumb]]:size-6 [&_[data-slot=slider-thumb]]:border-4 [&_[data-slot=slider-thumb]]:border-[var(--primary)] [&_[data-slot=slider-thumb]]:bg-white [&_[data-slot=slider-thumb]]:shadow-[0_4px_10px_-2px_rgba(58,51,82,.4)]";
+  "[&_[data-slot=slider-thumb]]:size-6 [&_[data-slot=slider-thumb]]:border-4 [&_[data-slot=slider-thumb]]:border-[var(--primary)] [&_[data-slot=slider-thumb]]:bg-white [&_[data-slot=slider-thumb]]:shadow-[0_3px_0_var(--primary)]";
 const TRACK = "[&_[data-slot=slider-track]]:h-2.5";
 
 interface GradientSliderProps {
@@ -38,9 +38,9 @@ function GradientSlider({ from, to, ...props }: GradientSliderProps) {
 export function StepClima({ form, set }: StepProps) {
   return (
     <div className="pt-1">
-      <div className="rounded-2xl p-3.5 mb-6 flex gap-2.5" style={{ background: "var(--sky)", opacity: 0.7 }}>
+      <div className="rounded-2xl p-3.5 mb-6 flex gap-2.5 bg-sky">
         <span>ℹ️</span>
-        <p className="text-[11.5px] font-extrabold" style={{ color: "var(--sky-ink)" }}>
+        <p className="text-[11.5px] font-extrabold text-sky-ink">
           Si el clima real se sale de estos rangos, abrimos una votación automática.
         </p>
       </div>
@@ -53,8 +53,8 @@ export function StepClima({ form, set }: StepProps) {
           </span>
         </div>
         <GradientSlider
-          from="#BAE6FD"
-          to="#0369A1"
+          from="var(--sky)"
+          to="var(--sky-ink)"
           min={0}
           max={100}
           step={1}
@@ -71,8 +71,8 @@ export function StepClima({ form, set }: StepProps) {
           </span>
         </div>
         <GradientSlider
-          from="#A7F3D0"
-          to="#6D28D9"
+          from="var(--mint)"
+          to="var(--lav-ink)"
           min={0}
           max={100}
           step={1}

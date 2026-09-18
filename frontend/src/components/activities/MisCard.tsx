@@ -19,7 +19,7 @@ export function MisCard({ activity, onRefreshImages }: { activity: MisActivity; 
           <Scene scene={activity.scene} imageUrl={activity.imageUrl} alt={activity.title} height={84} className="w-[84px] shrink-0 rounded-2xl" onRefresh={onRefreshImages} />
           <div className="min-w-0 flex-1 py-0.5">
             <StatusBadge status={activity.status} className="mb-1.5" />
-            <h3 className="font-display font-semibold text-[15px] leading-tight truncate">{activity.title}</h3>
+            <h3 className="font-brand-title text-[15.5px] leading-tight truncate">{activity.title}</h3>
             <p className="text-[11.5px] font-bold mt-0.5" style={{ color: "var(--muted-foreground)" }}>
               {TYPE_META[activity.type].icon} {activity.when}
             </p>

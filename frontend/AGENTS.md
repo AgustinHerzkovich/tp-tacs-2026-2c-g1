@@ -34,7 +34,7 @@
 ## Styling
 
 - Design tokens (palette, fonts, radii) live in `src/app/globals.css` as CSS custom properties feeding a Tailwind v4 `@theme` block — change colors/fonts there, not per-component.
-- Fonts are loaded via `next/font/google` in `src/app/layout.tsx` (Fredoka for display/headings, Nunito for body), exposed as `--font-display`/`--font-body`.
+- Fonts: Nunito (`next/font/google`) is the body/UI face, exposed as `--font-body`; `--font-display` is aliased to it, so most UI chrome (nav, chips, badges, buttons, stat values) renders in Nunito even where it carries the `font-display`/`.font-display` class. `Beauty Smile` (`next/font/local`, `src/assets/fonts/`) is the brand face, exposed as `--font-brand` — reserve it for actual brand moments via `.font-brand` (logo, hero H1/H2, dialog titles, short avatar monograms) or `.font-brand-title` (card/activity titles: same face with extra tracking + a softened ink color, since a chunky fatface-style font needs that compensation below ~18px). Never apply `--font-brand` to small dense UI text directly — that's the legibility trap this split exists to avoid.
 - The shell is full-width on mobile and expands to `max-w-[1440px]` on desktop. Main feeds use responsive grids, desktop navigation lives in the header, and the bottom navigation is mobile-only.
 - A dynamically-interpolated Tailwind class (e.g. `` `bg-[${someVar}]` ``) will never be generated — Tailwind's JIT only scans literal strings in source. For per-instance colors (like the wizard's gradient sliders), set a CSS custom property via inline `style` and consume it from a real rule in `globals.css` instead (see `[data-slot="slider-range"]`).
 

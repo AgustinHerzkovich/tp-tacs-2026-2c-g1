@@ -95,7 +95,7 @@ export function CrearActividadPage() {
     return (
       <div className="fade-in flex-1 flex flex-col items-center justify-center px-8 text-center min-h-screen">
         <div className="text-6xl mb-5 emoji-3d floaty">🎉</div>
-        <h2 className="font-display font-semibold text-2xl mb-2">¡Actividad publicada!</h2>
+        <h2 className="font-brand text-2xl mb-2">¡Actividad publicada!</h2>
         <p className="text-[14px] font-bold mb-8" style={{ color: "var(--muted-foreground)" }}>
           Te avisamos si cambia el clima o se suma alguien nuevo.
         </p>
@@ -109,11 +109,11 @@ export function CrearActividadPage() {
   return (
     <div className="fade-in flex flex-col min-h-screen lg:min-h-0 lg:max-w-3xl lg:w-full lg:mx-auto lg:my-10 lg:bg-white lg:rounded-3xl lg:shadow-xl lg:overflow-hidden">
       <div className="flex items-center justify-between px-5 pt-6 pb-1">
-        <h2 className="font-display font-semibold text-lg">Nueva actividad</h2>
+        <h2 className="font-brand text-lg">Nueva actividad</h2>
         <button
           onClick={wizard.requestDiscard}
-          className="tap w-9 h-9 rounded-full border-2 flex items-center justify-center"
-          style={{ background: "#fff", borderColor: "var(--border)" }}
+          className="tap w-9 h-9 rounded-full flex items-center justify-center"
+          style={{ background: "#fff", boxShadow: "0 3px 0 var(--lav)" }}
           aria-label="Cerrar"
         >
           <X className="size-4" />

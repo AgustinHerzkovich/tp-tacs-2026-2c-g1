@@ -25,7 +25,7 @@ const buttonVariants = cva(
         xs: "h-6 gap-1 rounded-[min(var(--radius-md),10px)] px-2 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
         sm: "h-7 gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
         lg: "h-9 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        xl: "h-auto gap-2 rounded-2xl px-6 py-3.5 text-[15px] font-display font-semibold",
+        xl: "h-auto gap-2 rounded-2xl px-6 py-3.5 text-[15px] font-display font-bold",
         icon: "size-8",
         "icon-xs":
           "size-6 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
@@ -39,12 +39,19 @@ const buttonVariants = cva(
         variant: "default",
         size: "xl",
         class:
-          "shadow-[0_14px_28px_-12px_rgba(255,90,60,.55)] hover:shadow-[0_18px_32px_-12px_rgba(255,90,60,.65)]",
+          "shadow-[0_4px_0_var(--secondary-foreground)] hover:shadow-[0_2px_0_var(--secondary-foreground)] hover:translate-y-[2px]",
       },
       {
         variant: "outline",
         size: "xl",
-        class: "border-2",
+        class:
+          "border-2 shadow-[0_4px_0_var(--border)] hover:shadow-[0_2px_0_var(--border)] hover:translate-y-[2px]",
+      },
+      {
+        variant: "destructive",
+        size: "xl",
+        class:
+          "shadow-[0_4px_0_var(--destructive)] hover:shadow-[0_2px_0_var(--destructive)] hover:translate-y-[2px]",
       },
     ],
     defaultVariants: {

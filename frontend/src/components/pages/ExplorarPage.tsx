@@ -9,6 +9,7 @@ import { ErrorState } from "@/components/common/AsyncState";
 import { ExploreGridSkeleton } from "@/components/common/Skeletons";
 import { PageControls } from "@/components/common/PageControls";
 import { SearchBar } from "@/components/search/SearchBar";
+import { Chip } from "@/components/common/Chip";
 
 const CATEGORIES = [
   { key: "Todo", emoji: "✨", type: undefined },
@@ -66,7 +67,7 @@ export function ExplorarPage() {
     <div className="fade-in px-5 pt-2 pb-6 lg:px-10 lg:pt-8">
       <div className="hidden lg:block lg:mb-6">
         <p className="text-xs font-extrabold uppercase" style={{ color: "var(--primary)" }}>Planes disponibles</p>
-        <h2 className="font-display font-semibold text-4xl">Encontrá tu próximo plan</h2>
+        <h2 className="font-brand text-4xl">Encontrá tu próximo plan</h2>
       </div>
 
       <div className="mb-4">
@@ -90,19 +91,16 @@ export function ExplorarPage() {
         {CATEGORIES.map(({ key, emoji }) => {
           const active = category === key;
           return (
-            <button
+            <Chip
               key={key}
+              as="button"
               onClick={() => setCategory(key)}
               aria-pressed={active}
-              className="tap shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-[12.5px] font-extrabold border-2 whitespace-nowrap"
-              style={
-                active
-                  ? { background: "var(--primary)", color: "var(--primary-foreground)", borderColor: "var(--primary)" }
-                  : { background: "#fff", color: "var(--muted-foreground)", borderColor: "var(--border)" }
-              }
+              active={active}
+              className="tap shrink-0 px-4 py-2"
             >
               <span className="emoji-3d" aria-hidden="true">{emoji}</span> {key}
-            </button>
+            </Chip>
           );
         })}
       </div>

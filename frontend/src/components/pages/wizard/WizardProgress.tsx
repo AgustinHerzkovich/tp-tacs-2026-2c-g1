@@ -7,7 +7,7 @@ export function WizardProgress({ step }: { step: number }) {
         {WIZARD_STEPS.map((_, i) => (
           <div
             key={i}
-            className="h-2.5 flex-1 rounded-full transition-colors duration-300"
+            className="h-2.5 flex-1 rounded-full border-2 border-white transition-colors duration-300"
             style={{ background: i <= step ? "var(--primary)" : "var(--border)" }}
           />
         ))}

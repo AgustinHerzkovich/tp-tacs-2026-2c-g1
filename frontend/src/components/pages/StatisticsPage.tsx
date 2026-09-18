@@ -154,7 +154,7 @@ export function StatisticsPage() {
         </Button>
         <div>
           <p className="text-[11px] font-extrabold uppercase" style={{ color: "var(--primary)" }}>Panel admin</p>
-          <h1 className="font-display font-semibold text-2xl">Estadísticas</h1>
+          <h1 className="font-brand text-2xl">Estadísticas</h1>
         </div>
       </div>
 

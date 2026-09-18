@@ -33,7 +33,7 @@ export function ConfirmModal({
       <SheetContent side="bottom" showCloseButton={false} className="rounded-t-3xl border-0 px-5 pb-6">
         <div className="w-10 h-1.5 rounded-full bg-[var(--border)] mx-auto mt-1 mb-2" />
         <SheetHeader className="p-0 gap-2">
-          <SheetTitle className="font-display font-semibold text-xl">{title}</SheetTitle>
+          <SheetTitle className="font-brand text-xl">{title}</SheetTitle>
           <SheetDescription className="text-[13.5px] font-bold leading-snug">{description}</SheetDescription>
         </SheetHeader>
         <SheetFooter className="p-0 flex-row gap-3 mt-4">

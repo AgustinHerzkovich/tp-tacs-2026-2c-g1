@@ -63,7 +63,7 @@ export function StepAlertas({ form, set }: StepProps) {
       </Field>
 
       <Card className="p-4 mt-2 mb-4">
-        <p className="font-display font-semibold text-[13.5px] mb-2 px-4">Resumen</p>
+        <p className="font-brand-title text-[14px] mb-2 px-4">Resumen</p>
         <div className="space-y-1.5 text-[12.5px] font-extrabold px-4" style={{ color: "var(--muted-foreground)" }}>
           <p className="truncate">📍 {form.place || "Sin ubicación"}</p>
           <p>

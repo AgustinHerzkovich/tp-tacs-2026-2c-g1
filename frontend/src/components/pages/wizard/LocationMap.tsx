@@ -205,15 +205,15 @@ export function LocationMap({ place, latitude, longitude, onChange, onQueryChang
           placeholder="Buscar dirección o lugar…"
           className="h-auto py-3.5 rounded-2xl border-2 text-[15px]"
         />
-        <Button type="button" variant="outline" size="icon" className="size-12 rounded-2xl shrink-0" onClick={handleManualSearch} disabled={loading} aria-label="Buscar ubicación">
+        <Button type="button" variant="outline" size="icon" className="size-12 rounded-2xl shrink-0 shadow-[0_3px_0_var(--border)]" onClick={handleManualSearch} disabled={loading} aria-label="Buscar ubicación">
           {loading ? <Loader2 className="size-4 animate-spin" /> : <Search className="size-4" />}
         </Button>
-        <Button 
-          type="button" 
-          variant="outline" 
-          size="icon" 
-          className="size-12 rounded-2xl shrink-0" 
-          onClick={handleUseCurrentLocation} 
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="size-12 rounded-2xl shrink-0 shadow-[0_3px_0_var(--border)]"
+          onClick={handleUseCurrentLocation}
           disabled={locationLoading}
           aria-label="Usar mi ubicación actual"
           title="Usar mi ubicación actual"

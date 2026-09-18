@@ -16,7 +16,7 @@ export function MisActividadesPage() {
     <div className="fade-in px-5 pt-2 pb-4 lg:px-10 lg:pt-8">
       <div className="hidden lg:block mb-7">
         <p className="text-xs font-extrabold uppercase" style={{ color: "var(--primary)" }}>Tu agenda</p>
-        <h2 className="font-display font-semibold text-4xl">Mis actividades</h2>
+        <h2 className="font-brand text-4xl">Mis actividades</h2>
       </div>
       {!loading && !error && votingPending.length > 0 && (
         <>

@@ -1,4 +1,5 @@
 import { ImagePlus, X, AlertCircle, GripVertical } from "lucide-react";
+import { Chip } from "@/components/common/Chip";
 import type { WizardFormState } from "@/types/domain";
 import type { FieldSetter, FormPatchSetter } from "@/hooks/useWizardForm";
 import { useState, useCallback } from "react";
@@ -36,37 +37,41 @@ function ImagePreview({
       {/* Local object URLs are temporary previews selected by the user. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={source} alt={`Vista previa ${index + 1}`} className="size-full object-cover" />
-      <button 
-        type="button" 
-        onClick={onRemove} 
-        className="absolute top-2 right-2 size-8 rounded-full bg-black/65 text-white flex items-center justify-center lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100 transition-opacity"
+      <button
+        type="button"
+        onClick={onRemove}
+        className="absolute top-2 right-2 size-8 rounded-full bg-[var(--foreground)] ring-2 ring-white text-white flex items-center justify-center lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100 transition-opacity"
         aria-label={`Quitar ${fileName}`}
       >
         <X className="size-4" />
       </button>
-      <div className="absolute top-2 left-2 flex flex-col gap-1 lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100 transition-opacity">
-        <button 
-          type="button" 
-          onClick={onMoveUp} 
+      <div className="absolute top-2 left-2 flex flex-col gap-1.5 lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100 transition-opacity">
+        <button
+          type="button"
+          onClick={onMoveUp}
           disabled={index === 0}
-          className="size-8 rounded-full bg-black/65 text-white flex items-center justify-center disabled:opacity-30" 
+          className="size-8 rounded-full bg-[var(--foreground)] ring-2 ring-white text-white flex items-center justify-center disabled:opacity-30"
           aria-label="Mover hacia arriba"
           title="Mover hacia arriba"
         >
           <GripVertical className="size-4" />
         </button>
-        <button 
-          type="button" 
-          onClick={onMoveDown} 
+        <button
+          type="button"
+          onClick={onMoveDown}
           disabled={false}
-          className="size-8 rounded-full bg-black/65 text-white flex items-center justify-center disabled:opacity-30" 
+          className="size-8 rounded-full bg-[var(--foreground)] ring-2 ring-white text-white flex items-center justify-center disabled:opacity-30"
           aria-label="Mover hacia abajo"
           title="Mover hacia abajo"
         >
           <GripVertical className="size-4 rotate-180" />
         </button>
       </div>
-      {isCover && <span className="absolute left-2 bottom-2 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-extrabold">Portada</span>}
+      {isCover && (
+        <Chip tone="sun" sticker className="absolute left-2 bottom-2">
+          Portada
+        </Chip>
+      )}
     </div>
   );
 }
@@ -169,7 +174,7 @@ export function StepImagenes({ form, set }: StepProps) {
   return (
     <div className="pt-2">
       <div className="mb-6">
-        <h3 className="font-display font-semibold text-xl">Sumale imágenes a tu plan</h3>
+        <h3 className="font-brand text-xl">Sumale imágenes a tu plan</h3>
         <p className="mt-1 text-[13px] font-bold" style={{ color: "var(--muted-foreground)" }}>
           Son opcionales. La primera será la portada de la actividad y después podrán verse todas en la galería.
         </p>
@@ -190,10 +195,10 @@ export function StepImagenes({ form, set }: StepProps) {
       )}
 
       <label className="tap min-h-40 flex flex-col items-center justify-center gap-3 rounded-3xl border-2 border-dashed px-6 py-8 cursor-pointer text-center" style={{ borderColor: "var(--border)", background: "var(--muted)" }}>
-        <span className="size-14 rounded-2xl bg-white flex items-center justify-center shadow-sm">
+        <span className="size-14 rounded-2xl bg-white flex items-center justify-center" style={{ boxShadow: "0 3px 0 var(--lav)" }}>
           <ImagePlus className="size-6" style={{ color: "var(--primary)" }} />
         </span>
-        <span className="font-display font-semibold">Elegir imágenes</span>
+        <span className="font-brand-title">Elegir imágenes</span>
         <span className="text-[11px] font-bold" style={{ color: "var(--muted-foreground)" }}>JPEG, PNG o WebP · hasta 5 · máximo 5 MiB cada una</span>
         <input
           type="file"
