@@ -10,6 +10,7 @@ import { ExploreGridSkeleton } from "@/components/common/Skeletons";
 import { PageControls } from "@/components/common/PageControls";
 import { SearchBar } from "@/components/search/SearchBar";
 import { Chip } from "@/components/common/Chip";
+import type { Tone } from "@/lib/activityVisuals";
 
 const CATEGORIES = [
   { key: "Todo", emoji: "✨", type: undefined },
@@ -17,6 +18,13 @@ const CATEGORIES = [
   { key: "Indoor", emoji: "🏠", type: "INDOOR" as ActivityType },
   { key: "Mixto", emoji: "🎉", type: "MIXED" as ActivityType },
 ] as const;
+
+const CATEGORY_TONE: Record<(typeof CATEGORIES)[number]["key"], Tone> = {
+  Todo: "violet",
+  Outdoor: "mint",
+  Indoor: "lav",
+  Mixto: "sun",
+};
 
 export function ExplorarPage() {
   const [query, setQuery] = useState("");
@@ -90,13 +98,14 @@ export function ExplorarPage() {
       <div className="flex gap-2 overflow-x-auto pb-1 -mx-5 px-5 mb-5 lg:mx-0 lg:px-0">
         {CATEGORIES.map(({ key, emoji }) => {
           const active = category === key;
+          const tone = CATEGORY_TONE[key];
           return (
             <Chip
               key={key}
               as="button"
               onClick={() => setCategory(key)}
               aria-pressed={active}
-              active={active}
+              {...(active ? { tone, sticker: true, rotate: -2 } : { active: false })}
               className="tap shrink-0 px-4 py-2"
             >
               <span className="emoji-3d" aria-hidden="true">{emoji}</span> {key}

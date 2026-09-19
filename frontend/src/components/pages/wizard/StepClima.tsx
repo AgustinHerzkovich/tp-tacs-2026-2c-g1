@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
+import { Info } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
-import { MiniStepper } from "@/components/common/MiniStepper";
 import type { WizardFormState } from "@/types/domain";
 import type { FieldSetter, FormPatchSetter } from "@/hooks/useWizardForm";
 
@@ -11,8 +11,16 @@ interface StepProps {
 }
 
 const THUMB =
-  "[&_[data-slot=slider-thumb]]:size-6 [&_[data-slot=slider-thumb]]:border-4 [&_[data-slot=slider-thumb]]:border-[var(--primary)] [&_[data-slot=slider-thumb]]:bg-white [&_[data-slot=slider-thumb]]:shadow-[0_3px_0_var(--primary)]";
-const TRACK = "[&_[data-slot=slider-track]]:h-2.5";
+  "[&_[data-slot=slider-thumb]]:size-5 [&_[data-slot=slider-thumb]]:border-[3px] [&_[data-slot=slider-thumb]]:border-[var(--primary)] [&_[data-slot=slider-thumb]]:bg-white [&_[data-slot=slider-thumb]]:shadow-[0_2px_0_var(--primary)]";
+const TRACK = "[&_[data-slot=slider-track]]:h-3.5";
+
+/** Round-number tick marks within [min, max] at a fixed interval, e.g.
+ * roundTicks(0, 100, 20) -> [0, 20, 40, 60, 80, 100]. */
+function roundTicks(min: number, max: number, interval: number): number[] {
+  const ticks: number[] = [];
+  for (let v = Math.ceil(min / interval) * interval; v <= max; v += interval) ticks.push(v);
+  return ticks;
+}
 
 interface GradientSliderProps {
   from: string;
@@ -20,27 +28,42 @@ interface GradientSliderProps {
   min: number;
   max: number;
   step: number;
+  tickInterval: number;
   value: number[];
   onValueChange: (value: number[]) => void;
   minStepsBetweenThumbs?: number;
 }
 
-function GradientSlider({ from, to, ...props }: GradientSliderProps) {
+function GradientSlider({ from, to, min, max, tickInterval, ...props }: GradientSliderProps) {
+  const ticks = roundTicks(min, max, tickInterval);
   return (
-    <Slider
-      {...props}
-      className={`${TRACK} ${THUMB}`}
-      style={{ "--range-from": from, "--range-to": to } as CSSProperties}
-    />
+    <div className="relative py-1.5">
+      <Slider
+        {...props}
+        min={min}
+        max={max}
+        className={`${TRACK} ${THUMB}`}
+        style={{ "--range-from": from, "--range-to": to } as CSSProperties}
+      />
+      <div className="pointer-events-none absolute inset-x-0 top-1/2 z-10 -translate-y-1/2 h-3.5">
+        {ticks.map((tick) => (
+          <span
+            key={tick}
+            className="absolute top-1/2 size-1 rounded-full bg-white -translate-x-1/2 -translate-y-1/2"
+            style={{ left: `${((tick - min) / (max - min)) * 100}%` }}
+          />
+        ))}
+      </div>
+    </div>
   );
 }
 
 export function StepClima({ form, set }: StepProps) {
   return (
     <div className="pt-1">
-      <div className="rounded-2xl p-3.5 mb-6 flex gap-2.5 bg-sky">
-        <span>ℹ️</span>
-        <p className="text-[11.5px] font-extrabold text-sky-ink">
+      <div className="flex gap-2 mb-6">
+        <Info className="size-4 shrink-0 mt-0.5" style={{ color: "var(--muted-foreground)" }} aria-hidden="true" />
+        <p className="text-[11.5px] font-bold" style={{ color: "var(--muted-foreground)" }}>
           Si el clima real se sale de estos rangos, abrimos una votación automática.
         </p>
       </div>
@@ -58,6 +81,7 @@ export function StepClima({ form, set }: StepProps) {
           min={0}
           max={100}
           step={1}
+          tickInterval={20}
           value={[form.rain]}
           onValueChange={([v]) => set("rain")(v ?? form.rain)}
         />
@@ -76,6 +100,7 @@ export function StepClima({ form, set }: StepProps) {
           min={0}
           max={100}
           step={1}
+          tickInterval={20}
           value={[form.wind]}
           onValueChange={([v]) => set("wind")(v ?? form.wind)}
         />
@@ -94,6 +119,7 @@ export function StepClima({ form, set }: StepProps) {
           min={-5}
           max={45}
           step={1}
+          tickInterval={10}
           minStepsBetweenThumbs={1}
           value={[form.tMin, form.tMax]}
           onValueChange={([lo, hi]) => {
@@ -101,20 +127,6 @@ export function StepClima({ form, set }: StepProps) {
             set("tMax")(hi ?? form.tMax);
           }}
         />
-        <div className="flex items-center gap-6 mt-4">
-          <div>
-            <p className="text-[10.5px] font-extrabold mb-1.5" style={{ color: "var(--muted-foreground)" }}>
-              MÍNIMA
-            </p>
-            <MiniStepper value={form.tMin} min={-5} max={form.tMax - 1} unit="°C" onChange={set("tMin")} />
-          </div>
-          <div>
-            <p className="text-[10.5px] font-extrabold mb-1.5" style={{ color: "var(--muted-foreground)" }}>
-              MÁXIMA
-            </p>
-            <MiniStepper value={form.tMax} min={form.tMin + 1} max={45} unit="°C" onChange={set("tMax")} />
-          </div>
-        </div>
       </div>
     </div>
   );

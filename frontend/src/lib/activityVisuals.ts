@@ -41,14 +41,14 @@ export const TYPE_META: Record<MockActivityType, { label: string; icon: string; 
 /** Illustrated gradient "photo" placeholder per activity — picked
  * deterministically from the activity's real id (see pickScene in
  * activityMapping.ts), not tied to any specific activity's content. */
-export const SCENES: Record<SceneKey, { grad: [string, string]; deco: [string, string, string] }> = {
-  trekking: { grad: ["#BAE6FD", "#A7F3D0"], deco: ["🏔️", "🌲", "🥾"] },
-  voley: { grad: ["#FEF08A", "#FECDD3"], deco: ["🏐", "☀️", "🏖️"] },
-  cine: { grad: ["#DDD6FE", "#BAE6FD"], deco: ["🎬", "🍿", "🌙"] },
-  juegos: { grad: ["#FECDD3", "#EAD9FF"], deco: ["🎲", "🎉", "🃏"] },
-  asado: { grad: ["#A7F3D0", "#FEF08A"], deco: ["🍖", "🔥", "🎈"] },
-  cumple: { grad: ["#EAD9FF", "#FECDD3"], deco: ["🎂", "🎈", "✨"] },
-  picnic: { grad: ["#FECDD3", "#BAE6FD"], deco: ["🧺", "☔", "🍇"] },
+export const SCENES: Record<SceneKey, { grad: [string, string] }> = {
+  trekking: { grad: ["#BAE6FD", "#A7F3D0"] },
+  voley: { grad: ["#FEF08A", "#FECDD3"] },
+  cine: { grad: ["#DDD6FE", "#BAE6FD"] },
+  juegos: { grad: ["#FECDD3", "#EAD9FF"] },
+  asado: { grad: ["#A7F3D0", "#FEF08A"] },
+  cumple: { grad: ["#EAD9FF", "#FECDD3"] },
+  picnic: { grad: ["#FECDD3", "#BAE6FD"] },
 };
 
 export const NOTIF_META: Record<NotificationKind, { tone: Tone }> = {

@@ -12,7 +12,7 @@ export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="px-3 pb-3 pt-2 flex gap-2 border-t-2 lg:px-5" style={{ background: "var(--background)", borderColor: "var(--border)" }} aria-label="Navegación principal">
+    <nav className="px-3 pb-3 pt-2 flex gap-2 border-t-2 lg:border-t-0 lg:px-5" style={{ borderColor: "var(--border)" }} aria-label="Navegación principal">
       {TABS.map((tab) => {
         const active = pathname === tab.href;
         return (

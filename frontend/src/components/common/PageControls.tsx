@@ -1,6 +1,7 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Chip } from "@/components/common/Chip";
 
 interface PageControlsProps {
   page: number;
@@ -11,17 +12,34 @@ interface PageControlsProps {
 export function PageControls({ page, totalPages, onPageChange }: PageControlsProps) {
   if (totalPages <= 1) return null;
 
+  const atStart = page === 0;
+  const atEnd = page + 1 >= totalPages;
+
   return (
     <nav className="mt-6 flex items-center justify-center gap-3" aria-label="Paginación">
-      <Button type="button" variant="outline" disabled={page === 0} onClick={() => onPageChange(page - 1)}>
-        Anterior
-      </Button>
-      <span className="text-xs font-extrabold" style={{ color: "var(--muted-foreground)" }}>
+      <button
+        type="button"
+        disabled={atStart}
+        onClick={() => onPageChange(page - 1)}
+        aria-label="Página anterior"
+        className="tap size-9 rounded-full bg-white flex items-center justify-center disabled:opacity-30 disabled:shadow-none"
+        style={atStart ? undefined : { boxShadow: "0 3px 0 var(--border)" }}
+      >
+        <ChevronLeft className="size-4" />
+      </button>
+      <Chip as="span" active={false}>
         Página {page + 1} de {totalPages}
-      </span>
-      <Button type="button" variant="outline" disabled={page + 1 >= totalPages} onClick={() => onPageChange(page + 1)}>
-        Siguiente
-      </Button>
+      </Chip>
+      <button
+        type="button"
+        disabled={atEnd}
+        onClick={() => onPageChange(page + 1)}
+        aria-label="Página siguiente"
+        className="tap size-9 rounded-full bg-white flex items-center justify-center disabled:opacity-30 disabled:shadow-none"
+        style={atEnd ? undefined : { boxShadow: "0 3px 0 var(--border)" }}
+      >
+        <ChevronRight className="size-4" />
+      </button>
     </nav>
   );
 }
