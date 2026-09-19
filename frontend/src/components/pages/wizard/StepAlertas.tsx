@@ -1,7 +1,7 @@
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { InfoHint } from "@/components/common/InfoHint";
 import type { ReactNode } from "react";
 import type { WizardFormState } from "@/types/domain";
 import type { FieldSetter, FormPatchSetter } from "@/hooks/useWizardForm";
@@ -12,11 +12,12 @@ interface StepProps {
   patch?: FormPatchSetter;
 }
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
+function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
     <div className="mb-5">
-      <Label className="mb-2 font-extrabold text-[11.5px] uppercase tracking-wide" style={{ color: "var(--muted-foreground)" }}>
+      <Label className="mb-2 flex items-center gap-1.5 font-extrabold text-[11.5px] uppercase tracking-wide" style={{ color: "var(--muted-foreground)" }}>
         {label}
+        {hint && <InfoHint>{hint}</InfoHint>}
       </Label>
       {children}
     </div>
@@ -26,7 +27,7 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 export function StepAlertas({ form, set }: StepProps) {
   return (
     <div className="pt-1">
-      <Field label="Ventana de anticipación">
+      <Field label="Ventana de anticipación" hint="Cuánto antes de la actividad te avisamos si el pronóstico no cumple las condiciones que elegiste, para que todavía puedan reprogramar a tiempo.">
         <Select value={form.anticipation} onValueChange={set("anticipation")}>
           <SelectTrigger className="w-full h-auto py-3.5 rounded-2xl border-2 text-[14.5px] font-bold">
             <SelectValue />
@@ -48,8 +49,11 @@ export function StepAlertas({ form, set }: StepProps) {
         </Field>
       </div>
       {form.reprogramEnd <= form.reprogramStart && <p className="-mt-3 mb-4 text-xs font-extrabold" style={{ color: "var(--destructive)" }}>La hora final debe ser posterior a la inicial.</p>}
+      <p className="-mt-3 mb-4 text-[11px] font-bold" style={{ color: "var(--muted-foreground)" }}>
+        Franja horaria en la que se puede proponer una nueva fecha si hay que reprogramar.
+      </p>
 
-      <Field label="Rango de reprogramación">
+      <Field label="Rango de reprogramación" hint="Hasta cuántos días después de la fecha original se puede mover la actividad si el clima obliga a reprogramar.">
         <Select value={form.reschedule} onValueChange={set("reschedule")}>
           <SelectTrigger className="w-full h-auto py-3.5 rounded-2xl border-2 text-[14.5px] font-bold">
             <SelectValue />
@@ -61,26 +65,6 @@ export function StepAlertas({ form, set }: StepProps) {
           </SelectContent>
         </Select>
       </Field>
-
-      <Card className="p-4 mt-2 mb-4">
-        <p className="font-brand-title text-[14px] mb-2 px-4">Resumen</p>
-        <div className="space-y-1.5 text-[12.5px] font-extrabold px-4" style={{ color: "var(--muted-foreground)" }}>
-          <p className="truncate">📍 {form.place || "Sin ubicación"}</p>
-          <p>
-            🌧️ Hasta {form.rain}% · 🌡️ {form.tMin}°–{form.tMax}°C · 💨 {form.wind} km/h
-          </p>
-          <p>
-            👥 {form.min}–{form.max} participantes
-          </p>
-        </div>
-      </Card>
-
-      <div className="rounded-2xl p-3.5 flex gap-2.5" style={{ background: "var(--mint)" }}>
-        <span>✅</span>
-        <p className="text-[11.5px] font-extrabold" style={{ color: "var(--mint-ink)" }}>
-          ¡Todo listo! Revisá los datos antes de publicar.
-        </p>
-      </div>
     </div>
   );
 }

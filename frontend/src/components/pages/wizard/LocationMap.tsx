@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Search, AlertCircle, Loader2, Navigation } from "lucide-react";
+import { Search, AlertCircle, Loader2, MapPin, Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -35,6 +35,11 @@ export function LocationMap({ place, latitude, longitude, onChange, onQueryChang
   const [locationError, setLocationError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Set right before `choose()` updates `place` via `onChange`, so the
+  // debounced-search effect below skips the search it would otherwise fire
+  // for that value change (re-searching the address the user just picked
+  // just reopens the results dropdown on top of the map).
+  const justSelectedRef = useRef(false);
 
   const search = useCallback(async () => {
     if (place.trim().length < 3) {
@@ -98,6 +103,11 @@ export function LocationMap({ place, latitude, longitude, onChange, onQueryChang
       clearTimeout(debounceTimerRef.current);
     }
 
+    if (justSelectedRef.current) {
+      justSelectedRef.current = false;
+      return;
+    }
+
     if (place.trim().length >= 3) {
       debounceTimerRef.current = setTimeout(() => {
         void search();
@@ -121,6 +131,7 @@ export function LocationMap({ place, latitude, longitude, onChange, onQueryChang
   }, []);
 
   const choose = (location: LocationOption) => {
+    justSelectedRef.current = true;
     onChange(location);
     setResults([]);
     setShowNoResults(false);
@@ -150,12 +161,12 @@ export function LocationMap({ place, latitude, longitude, onChange, onQueryChang
         try {
           const response = await fetch(`/api/geocoding/reverse?lat=${lat}&lon=${lng}`);
           const body = response.ok ? ((await response.json()) as { label: string }) : null;
-          onChange({ 
-            label: body?.label ?? `${lat.toFixed(5)}, ${lng.toFixed(5)}`, 
-            latitude: lat, 
-            longitude: lng 
+          justSelectedRef.current = true;
+          onChange({
+            label: body?.label ?? `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
+            latitude: lat,
+            longitude: lng
           });
-          onQueryChange(body?.label ?? "");
           setLocationError(null);
         } catch (err) {
           setLocationError("No se pudo obtener la dirección de tu ubicación actual.");
@@ -185,88 +196,88 @@ export function LocationMap({ place, latitude, longitude, onChange, onQueryChang
 
   return (
     <div>
-      <div className="flex gap-2">
-        <Input
-          value={place}
-          onChange={(event) => {
-            abortControllerRef.current?.abort();
-            setResults([]);
-            setShowNoResults(false);
-            setError(null);
-            onQueryChange(event.target.value);
-          }}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.preventDefault();
-              void handleManualSearch();
-            }
-          }}
-          aria-invalid={invalid}
-          placeholder="Buscar dirección o lugar…"
-          className="h-auto py-3.5 rounded-2xl border-2 text-[15px]"
-        />
-        <Button type="button" variant="outline" size="icon" className="size-12 rounded-2xl shrink-0 shadow-[0_3px_0_var(--border)]" onClick={handleManualSearch} disabled={loading} aria-label="Buscar ubicación">
-          {loading ? <Loader2 className="size-4 animate-spin" /> : <Search className="size-4" />}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          className="size-12 rounded-2xl shrink-0 shadow-[0_3px_0_var(--border)]"
-          onClick={handleUseCurrentLocation}
-          disabled={locationLoading}
-          aria-label="Usar mi ubicación actual"
-          title="Usar mi ubicación actual"
-        >
-          {locationLoading ? <Loader2 className="size-4 animate-spin" /> : <Navigation className="size-4" />}
-        </Button>
+      <div className="relative">
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 pointer-events-none" style={{ color: "var(--muted-foreground)" }} />
+            <Input
+              value={place}
+              onChange={(event) => {
+                abortControllerRef.current?.abort();
+                setResults([]);
+                setShowNoResults(false);
+                setError(null);
+                onQueryChange(event.target.value);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  void handleManualSearch();
+                }
+              }}
+              aria-invalid={invalid}
+              placeholder="Buscar dirección o lugar…"
+              className="h-auto py-3.5 pl-10 rounded-2xl border-2 text-[15px]"
+            />
+          </div>
+          <Button type="button" variant="outline" size="icon" className="size-12 rounded-2xl shrink-0 shadow-[0_3px_0_var(--border)]" onClick={handleManualSearch} disabled={loading} aria-label="Buscar ubicación">
+            {loading ? <Loader2 className="size-4 animate-spin" /> : <Search className="size-4" />}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="size-12 rounded-2xl shrink-0 shadow-[0_3px_0_var(--border)]"
+            onClick={handleUseCurrentLocation}
+            disabled={locationLoading}
+            aria-label="Usar mi ubicación actual"
+            title="Usar mi ubicación actual"
+          >
+            {locationLoading ? <Loader2 className="size-4 animate-spin" /> : <Navigation className="size-4" />}
+          </Button>
+        </div>
+        {error && (
+          <div className="absolute inset-x-0 top-full z-[1001] mt-2 rounded-2xl border-2 bg-destructive/10 overflow-hidden shadow-lg" role="alert" aria-live="polite">
+            <div className="flex items-center gap-2 px-3 py-2.5 text-xs font-extrabold" style={{ color: "var(--destructive)" }}>
+              <AlertCircle className="size-4" aria-hidden="true" />
+              {error}
+            </div>
+          </div>
+        )}
+        {locationError && (
+          <div className="absolute inset-x-0 top-full z-[1001] mt-2 rounded-2xl border-2 bg-destructive/10 overflow-hidden shadow-lg" role="alert" aria-live="polite">
+            <div className="flex items-center gap-2 px-3 py-2.5 text-xs font-extrabold" style={{ color: "var(--destructive)" }}>
+              <AlertCircle className="size-4" aria-hidden="true" />
+              {locationError}
+            </div>
+          </div>
+        )}
+        {showNoResults && !loading && !error && (
+          <div className="absolute inset-x-0 top-full z-[1001] mt-2 rounded-2xl border-2 bg-muted overflow-hidden shadow-lg">
+            <div className="px-3 py-2.5 text-xs font-bold" style={{ color: "var(--muted-foreground)" }}>
+              No encontramos resultados para esa búsqueda. Probá con otra dirección o lugar.
+            </div>
+          </div>
+        )}
+        {results.length > 0 && (
+          <div className="absolute inset-x-0 top-full z-[1001] mt-2 max-h-64 overflow-y-auto rounded-2xl border-2 bg-white shadow-lg" role="listbox" aria-label="Resultados de búsqueda">
+            {results.map((result) => (
+              <button
+                key={`${result.latitude}-${result.longitude}`}
+                type="button"
+                onClick={() => choose(result)}
+                className="block w-full text-left px-3 py-2.5 text-xs font-bold border-b last:border-0 hover:bg-muted focus:bg-muted focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[var(--primary)]"
+                aria-label={`Seleccionar ${result.label}`}
+              >
+                {result.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
-      {error && (
-        <div className="relative z-[1001] mt-2 rounded-2xl border-2 bg-destructive/10 overflow-hidden shadow-lg" role="alert" aria-live="polite">
-          <div className="flex items-center gap-2 px-3 py-2.5 text-xs font-extrabold" style={{ color: "var(--destructive)" }}>
-            <AlertCircle className="size-4" aria-hidden="true" />
-            {error}
-          </div>
-        </div>
-      )}
-      {locationError && (
-        <div className="relative z-[1001] mt-2 rounded-2xl border-2 bg-destructive/10 overflow-hidden shadow-lg" role="alert" aria-live="polite">
-          <div className="flex items-center gap-2 px-3 py-2.5 text-xs font-extrabold" style={{ color: "var(--destructive)" }}>
-            <AlertCircle className="size-4" aria-hidden="true" />
-            {locationError}
-          </div>
-        </div>
-      )}
-      {showNoResults && !loading && !error && (
-        <div className="relative z-[1001] mt-2 rounded-2xl border-2 bg-muted overflow-hidden shadow-lg">
-          <div className="px-3 py-2.5 text-xs font-bold" style={{ color: "var(--muted-foreground)" }}>
-            No encontramos resultados para esa búsqueda. Probá con otra dirección o lugar.
-          </div>
-        </div>
-      )}
-      {results.length > 0 && (
-        <div className="relative z-[1001] mt-2 rounded-2xl border-2 bg-white overflow-hidden shadow-lg" role="listbox" aria-label="Resultados de búsqueda">
-          {results.map((result) => (
-            <button 
-              key={`${result.latitude}-${result.longitude}`} 
-              type="button" 
-              onClick={() => choose(result)} 
-              className="block w-full text-left px-3 py-2.5 text-xs font-bold border-b last:border-0 hover:bg-muted focus:bg-muted focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[var(--primary)]"
-              aria-label={`Seleccionar ${result.label}`}
-            >
-              {result.label}
-            </button>
-          ))}
-        </div>
-      )}
-      {latitude !== null && longitude !== null && (
-        <div className="mt-2 text-[11px] font-bold" style={{ color: "var(--muted-foreground)" }}>
-          Ubicación: {place || "Ubicación seleccionada"} · {latitude.toFixed(5)}, {longitude.toFixed(5)}
-        </div>
-      )}
-      <LeafletMap 
-        latitude={latitude} 
-        longitude={longitude} 
+      <LeafletMap
+        latitude={latitude}
+        longitude={longitude}
         onChange={choose}
       />
     </div>
