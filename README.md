@@ -56,7 +56,9 @@ Se requiere Docker con Docker Compose. Desde la raíz del proyecto, ejecutar:
 docker compose up --build --wait
 ```
 
-Este único comando construye y levanta frontend, backend, MongoDB, MinIO y Keycloak. Para detener
+Este único comando construye y levanta frontend, backend, MongoDB, MinIO, Keycloak y su PostgreSQL.
+Keycloak persiste realm, usuarios y sesiones en el volumen `keycloak-postgres-data`; el import del
+realm inicial sólo crea el realm cuando aún no existe. Para detener
 la aplicación, ejecutar `docker compose down`. `--wait` termina cuando los healthchecks confirman
 que todos los servicios están listos; puede verificarse también con `docker compose ps`.
 
@@ -99,12 +101,13 @@ Navegador
   lógica de negocio sin red.
 - **Persistencia:** MongoDB almacena actividades, usuarios, votaciones, notificaciones y eventos de
   estadísticas. MinIO implementa almacenamiento S3 local; GCS es la alternativa para nube.
-- **Identidad:** Keycloak administra usuarios, contraseñas y roles. Spring Security valida los JWT
-  mediante issuer, audience y JWKS antes de obtener la identidad desde `sub`.
+- **Identidad:** Keycloak administra usuarios, contraseñas y roles, y persiste su configuración en
+  PostgreSQL tanto localmente como en nube. Spring Security valida los JWT mediante issuer, audience
+  y JWKS antes de obtener la identidad desde `sub`.
 - **Procesamiento periódico:** schedulers configurables controlan clima, cierres de votación,
-  finalización de actividades y avisos de inicio. El estado persistido permite ejecutar varias
-  instancias, aunque una futura ejecución distribuida deberá coordinar los schedulers para evitar
-  trabajo duplicado.
+  finalización de actividades y avisos de inicio. Localmente se ejecutan mediante Spring Scheduler;
+  en GCP los timers del servicio web se desactivan y Cloud Scheduler dispara un Cloud Run Job de una
+  sola instancia, evitando trabajo duplicado entre réplicas web.
 
 ## Alcance
 

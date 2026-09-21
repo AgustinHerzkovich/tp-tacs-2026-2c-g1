@@ -1,0 +1,167 @@
+name: Deploy changed services
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - backend/**
+      - frontend/**
+      - keycloak/**
+      - keycloak-import/**
+      - keycloak-theme/**
+      - cloudbuild/**
+      - .github/workflows/deploy.yml
+  workflow_dispatch:
+    inputs:
+      component:
+        description: Component to deploy
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - backend
+          - frontend
+          - keycloak
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+env:
+  PROJECT_ID: planazo-tacs-g1-2026
+  REGION: us-central1
+  REPOSITORY: planazo-prod-containers
+  KEYCLOAK_URL: https://planazo-prod-keycloak-5zx6pudlha-uc.a.run.app
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.result.outputs.backend }}
+      frontend: ${{ steps.result.outputs.frontend }}
+      keycloak: ${{ steps.result.outputs.keycloak }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - id: filter
+        if: github.event_name == 'push'
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - 'cloudbuild/backend.yaml'
+            frontend:
+              - 'frontend/**'
+              - 'cloudbuild/frontend.yaml'
+            keycloak:
+              - 'keycloak/**'
+              - 'keycloak-import/**'
+              - 'keycloak-theme/**'
+              - 'cloudbuild/keycloak.yaml'
+
+      - id: result
+        shell: bash
+        env:
+          PUSH_BACKEND: ${{ steps.filter.outputs.backend }}
+          PUSH_FRONTEND: ${{ steps.filter.outputs.frontend }}
+          PUSH_KEYCLOAK: ${{ steps.filter.outputs.keycloak }}
+          COMPONENT: ${{ inputs.component }}
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            [[ "$COMPONENT" == "all" || "$COMPONENT" == "backend" ]] && backend=true || backend=false
+            [[ "$COMPONENT" == "all" || "$COMPONENT" == "frontend" ]] && frontend=true || frontend=false
+            [[ "$COMPONENT" == "all" || "$COMPONENT" == "keycloak" ]] && keycloak=true || keycloak=false
+          else
+            backend="$PUSH_BACKEND"
+            frontend="$PUSH_FRONTEND"
+            keycloak="$PUSH_KEYCLOAK"
+          fi
+          echo "backend=$backend" >> "$GITHUB_OUTPUT"
+          echo "frontend=$frontend" >> "$GITHUB_OUTPUT"
+          echo "keycloak=$keycloak" >> "$GITHUB_OUTPUT"
+
+  backend:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOY_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Build backend
+        run: >-
+          gcloud builds submit .
+          --project="$PROJECT_ID"
+          --config=cloudbuild/backend.yaml
+          --substitutions="COMMIT_SHA=$GITHUB_SHA,_REGION=$REGION,_REPOSITORY=$REPOSITORY"
+      - name: Deploy backend service
+        run: >-
+          gcloud run services update planazo-prod-backend
+          --project="$PROJECT_ID"
+          --region="$REGION"
+          --image="$REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/backend:$GITHUB_SHA"
+          --quiet
+
+  frontend:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOY_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Build frontend
+        run: >-
+          gcloud builds submit .
+          --project="$PROJECT_ID"
+          --config=cloudbuild/frontend.yaml
+          --substitutions="COMMIT_SHA=$GITHUB_SHA,_REGION=$REGION,_REPOSITORY=$REPOSITORY,_KEYCLOAK_URL=$KEYCLOAK_URL,_KEYCLOAK_REALM=solnotfound,_KEYCLOAK_CLIENT_ID=solnotfoundFrontend"
+      - name: Deploy frontend
+        run: >-
+          gcloud run services update planazo-prod-frontend
+          --project="$PROJECT_ID"
+          --region="$REGION"
+          --image="$REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/frontend:$GITHUB_SHA"
+          --quiet
+
+  keycloak:
+    needs: changes
+    if: needs.changes.outputs.keycloak == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOY_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Build Keycloak
+        run: >-
+          gcloud builds submit .
+          --project="$PROJECT_ID"
+          --config=cloudbuild/keycloak.yaml
+          --substitutions="COMMIT_SHA=$GITHUB_SHA,_REGION=$REGION,_REPOSITORY=$REPOSITORY"
+      - name: Deploy Keycloak
+        run: >-
+          gcloud run services update planazo-prod-keycloak
+          --project="$PROJECT_ID"
+          --region="$REGION"
+          --image="$REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/keycloak:$GITHUB_SHA"
+          --quiet

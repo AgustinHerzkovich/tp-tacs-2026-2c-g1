@@ -11,12 +11,14 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 @Component
 @Slf4j
+@ConditionalOnProperty(name = "app.scheduling.enabled", havingValue = "true", matchIfMissing = true)
 @edu.umd.cs.findbugs.annotations.SuppressFBWarnings(
     value = "EI_EXPOSE_REP2",
     justification = "Spring injects the shared in-memory repository")
@@ -43,7 +45,7 @@ public class ActivityStatusScheduler {
    * time, a notification is sent to its participants. If an activity is finished, its status is
    * updated accordingly.
    */
-  @Scheduled(fixedDelayString = "${activity.status-check-interval:5m}")
+  @Scheduled(cron = "${activity.status-check-cron:0 */5 * * * *}")
   public void finishPastActivities() {
     LocalDateTime now = LocalDateTime.now();
 

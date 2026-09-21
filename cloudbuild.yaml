@@ -1,0 +1,49 @@
+substitutions:
+  _REGION: us-central1
+  _REPOSITORY: planazo-prod-containers
+  _KEYCLOAK_URL: http://localhost:8090
+  _KEYCLOAK_REALM: solnotfound
+  _KEYCLOAK_CLIENT_ID: solnotfoundFrontend
+
+steps:
+  - id: build-backend
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --tag
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/backend:$COMMIT_SHA
+      - backend
+
+  - id: build-keycloak
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --file
+      - keycloak/Dockerfile
+      - --tag
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/keycloak:$COMMIT_SHA
+      - .
+
+  - id: build-frontend
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --build-arg
+      - NEXT_PUBLIC_KEYCLOAK_URL=${_KEYCLOAK_URL}
+      - --build-arg
+      - NEXT_PUBLIC_KEYCLOAK_REALM=${_KEYCLOAK_REALM}
+      - --build-arg
+      - NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=${_KEYCLOAK_CLIENT_ID}
+      - --tag
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/frontend:$COMMIT_SHA
+      - frontend
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/backend:$COMMIT_SHA
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/keycloak:$COMMIT_SHA
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/frontend:$COMMIT_SHA
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+timeout: 1800s

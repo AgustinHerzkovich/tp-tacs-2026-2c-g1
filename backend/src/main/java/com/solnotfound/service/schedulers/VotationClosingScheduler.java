@@ -9,11 +9,13 @@ import com.solnotfound.repository.IVotationRepository;
 import com.solnotfound.service.ActivityStatusTransitionService;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
+@ConditionalOnProperty(name = "app.scheduling.enabled", havingValue = "true", matchIfMissing = true)
 public class VotationClosingScheduler {
 
   private final IVotationRepository votationRepository;
@@ -24,7 +26,7 @@ public class VotationClosingScheduler {
    * across the whole votation; when reached, the most-voted option reschedules the activity.
    * Otherwise, the activity is cancelled. State is saved before notification publication.
    */
-  @Scheduled(fixedDelayString = "${votation.closing-check-interval:1h}")
+  @Scheduled(cron = "${votation.closing-check-cron:0 0 * * * *}")
   public void closeDueVotations() {
     LocalDateTime now = LocalDateTime.now();
     for (Votation votation : votationRepository.findActiveDueToClose(now)) {
