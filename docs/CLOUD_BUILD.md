@@ -29,6 +29,34 @@ gcloud builds submit \
 Do not use `latest` in Terraform. Copy the resulting image URIs, including the SHA tag, into
 `terraform/terraform.tfvars` and apply that root.
 
+## Automatic deployments
+
+`.github/workflows/deploy.yml` deploys changed components after a merge to `main` or `develop`:
+
+- `backend/**` builds and updates the backend Cloud Run service.
+- `frontend/**` builds the frontend with the production Keycloak URL and updates its service.
+- Keycloak, realm, or theme changes build and update the Keycloak service.
+
+Path filtering compares the files changed by each push, so components without effective source or build
+configuration changes are neither rebuilt nor deployed.
+
+The workflow authenticates through Workload Identity Federation. Configure these GitHub environment
+secrets in the `production` environment:
+
+```text
+GCP_WORKLOAD_IDENTITY_PROVIDER=projects/689432164639/locations/global/workloadIdentityPools/github-actions/providers/github
+GCP_DEPLOY_SERVICE_ACCOUNT=planazo-github-deployer@planazo-tacs-g1-2026.iam.gserviceaccount.com
+```
+
+The deploy service account needs permission to submit Cloud Build builds, update Cloud Run services
+and jobs, and act as the runtime service accounts. Terraform ignores only externally deployed container
+image fields, so subsequent Terraform applies continue managing all other service configuration without
+rolling images back.
+
+Both branches currently deploy to the same production Cloud Run services. Deployments are serialized,
+but the most recently completed `main` or `develop` workflow determines the running image. Introduce a
+separate environment and service names before using `develop` as an isolated staging environment.
+
 ## Local equivalents
 
 ```bash

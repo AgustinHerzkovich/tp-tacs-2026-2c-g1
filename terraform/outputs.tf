@@ -38,3 +38,11 @@ output "atlas_standard_connection_string" {
   description = "Connection seed without database credentials."
   value       = try(mongodbatlas_advanced_cluster.planazo.connection_strings.standard_srv, null)
 }
+
+output "github_actions_workload_identity_provider" {
+  value = google_iam_workload_identity_pool_provider.github.name
+}
+
+output "github_actions_deploy_service_account" {
+  value = google_service_account.github_deployer.email
+}

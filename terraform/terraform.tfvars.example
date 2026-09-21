@@ -1,6 +1,7 @@
 gcp_project_id = "replace-with-your-gcp-project-id"
 gcp_region     = "us-central1"
 environment    = "prod"
+github_repository = "AgustinHerzkovich/tp-tacs-2026-2c-g1"
 
 atlas_org_id       = "replace-with-your-atlas-organization-id"
 atlas_region       = "CENTRAL_US"
@@ -13,3 +14,6 @@ keycloak_image = ""
 
 # Set this after Cloud Run assigns the frontend URL, then update the Keycloak realm client.
 frontend_url = ""
+
+# Fixed OIDC audience for Cloud Scheduler calls to the backend.
+scheduler_oidc_audience = "planazo-scheduler"

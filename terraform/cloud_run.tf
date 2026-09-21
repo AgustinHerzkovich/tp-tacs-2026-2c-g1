@@ -33,9 +33,9 @@ resource "google_cloud_run_v2_service" "keycloak" {
       resources {
         limits = {
           cpu    = "1"
-          memory = "1Gi"
+          memory = "2Gi"
         }
-        cpu_idle = true
+        cpu_idle = false
       }
 
       volume_mounts {
@@ -49,7 +49,7 @@ resource "google_cloud_run_v2_service" "keycloak" {
       }
       env {
         name  = "KC_DB_URL"
-        value = "jdbc:postgresql://localhost/keycloak?host=/cloudsql/${google_sql_database_instance.keycloak.connection_name}"
+        value = "jdbc:postgresql:///keycloak?cloudSqlInstance=${google_sql_database_instance.keycloak.connection_name}&socketFactory=com.google.cloud.sql.postgres.SocketFactory"
       }
       env {
         name  = "KC_DB_USERNAME"
@@ -95,6 +95,10 @@ resource "google_cloud_run_v2_service" "keycloak" {
     google_secret_manager_secret_iam_member.keycloak_admin,
     google_secret_manager_secret_iam_member.keycloak_database,
   ]
+
+  lifecycle {
+    ignore_changes = [template[0].containers[0].image]
+  }
 }
 
 resource "google_cloud_run_v2_service" "backend" {
@@ -165,6 +169,14 @@ resource "google_cloud_run_v2_service" "backend" {
         name  = "VOTATION_CLOSING_CHECK_CRON"
         value = "-"
       }
+      env {
+        name  = "SCHEDULER_OIDC_AUDIENCE"
+        value = var.scheduler_oidc_audience
+      }
+      env {
+        name  = "SCHEDULER_OIDC_EMAIL"
+        value = google_service_account.scheduler.email
+      }
 
       env {
         name = "MONGODB_URI"
@@ -182,71 +194,10 @@ resource "google_cloud_run_v2_service" "backend" {
     google_project_service.required,
     google_secret_manager_secret_iam_member.backend_atlas,
   ]
-}
 
-resource "google_cloud_run_v2_job" "scheduled_tasks" {
-  count = var.backend_image == "" || var.keycloak_image == "" ? 0 : 1
-
-  project             = var.gcp_project_id
-  name                = "${local.name}-scheduled-tasks"
-  location            = var.gcp_region
-  deletion_protection = false
-
-  template {
-    template {
-      service_account = google_service_account.backend.email
-      max_retries     = 1
-      timeout         = "900s"
-
-      containers {
-        image   = var.backend_image
-        command = ["java"]
-        args = [
-          "-jar",
-          "app.jar",
-          "--spring.main.web-application-type=none",
-          "--app.mode=scheduled-jobs",
-          "--activity.weather-check-cron=-",
-          "--activity.status-check-cron=-",
-          "--votation.closing-check-cron=-",
-        ]
-
-        resources {
-          limits = {
-            cpu    = "1"
-            memory = "1Gi"
-          }
-        }
-
-        env {
-          name  = "WEATHER_PROVIDER"
-          value = "open-meteo"
-        }
-        env {
-          name  = "STORAGE_PROVIDER"
-          value = "gcs"
-        }
-        env {
-          name  = "STORAGE_BUCKET"
-          value = google_storage_bucket.activity_images.name
-        }
-        env {
-          name = "MONGODB_URI"
-          value_source {
-            secret_key_ref {
-              secret  = google_secret_manager_secret.application["${local.name}-atlas-uri"].secret_id
-              version = "latest"
-            }
-          }
-        }
-      }
-    }
+  lifecycle {
+    ignore_changes = [template[0].containers[0].image]
   }
-
-  depends_on = [
-    google_project_service.required,
-    google_secret_manager_secret_iam_member.backend_atlas,
-  ]
 }
 
 resource "google_cloud_run_v2_service" "frontend" {
@@ -289,6 +240,10 @@ resource "google_cloud_run_v2_service" "frontend" {
   }
 
   depends_on = [google_project_service.required]
+
+  lifecycle {
+    ignore_changes = [template[0].containers[0].image]
+  }
 }
 
 resource "google_cloud_run_v2_service_iam_member" "public_keycloak" {

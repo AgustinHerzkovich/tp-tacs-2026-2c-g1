@@ -6,12 +6,16 @@ import java.util.Map;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtDecoders;
+import org.springframework.security.oauth2.jwt.JwtIssuerValidator;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
 
@@ -20,6 +24,40 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfig {
 
   @Bean
+  @Order(1)
+  SecurityFilterChain schedulerSecurityFilterChain(
+      HttpSecurity http,
+      @org.springframework.beans.factory.annotation.Value("${scheduler.oidc.audience}")
+          String audience,
+      @org.springframework.beans.factory.annotation.Value("${scheduler.oidc.email}") String email) {
+    try {
+      JwtDecoder decoder = JwtDecoders.fromIssuerLocation("https://accounts.google.com");
+      org.springframework.security.oauth2.core.OAuth2TokenValidator<Jwt> validator =
+          new org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator<>(
+              new JwtIssuerValidator("https://accounts.google.com"),
+              token ->
+                  token.getAudience().contains(audience)
+                          && email.equals(token.getClaimAsString("email"))
+                      ? org.springframework.security.oauth2.core.OAuth2TokenValidatorResult
+                          .success()
+                      : org.springframework.security.oauth2.core.OAuth2TokenValidatorResult.failure(
+                          new org.springframework.security.oauth2.core.OAuth2Error(
+                              "invalid_token", "Invalid scheduler identity", null)));
+      ((org.springframework.security.oauth2.jwt.NimbusJwtDecoder) decoder)
+          .setJwtValidator(validator);
+
+      return http.securityMatcher("/internal/scheduled/**")
+          .csrf(csrf -> csrf.disable())
+          .authorizeHttpRequests(requests -> requests.anyRequest().authenticated())
+          .oauth2ResourceServer(resourceServer -> resourceServer.jwt(jwt -> jwt.decoder(decoder)))
+          .build();
+    } catch (Exception exception) {
+      throw new IllegalStateException("Could not configure scheduler security", exception);
+    }
+  }
+
+  @Bean
+  @Order(2)
   SecurityFilterChain securityFilterChain(HttpSecurity http) {
     try {
       return http.csrf(csrf -> csrf.disable())

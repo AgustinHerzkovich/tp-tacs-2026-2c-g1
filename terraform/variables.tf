@@ -65,6 +65,12 @@ variable "keycloak_backend_audience" {
   default = "solnotfoundBackend"
 }
 
+variable "scheduler_oidc_audience" {
+  description = "Audience claim used by Cloud Scheduler OIDC tokens for internal backend endpoints."
+  type        = string
+  default     = "planazo-scheduler"
+}
+
 variable "cloud_sql_tier" {
   description = "Small non-HA PostgreSQL instance suitable for the short-lived academic environment."
   type        = string
@@ -75,6 +81,12 @@ variable "cloud_sql_deletion_protection" {
   description = "Enable for long-lived environments. False permits terraform destroy after the delivery."
   type        = bool
   default     = false
+}
+
+variable "github_repository" {
+  description = "GitHub repository allowed to deploy through Workload Identity Federation."
+  type        = string
+  default     = "AgustinHerzkovich/tp-tacs-2026-2c-g1"
 }
 
 variable "atlas_org_id" {

@@ -27,3 +27,23 @@ resource "google_service_account" "scheduler" {
   account_id   = "${local.name}-scheduler"
   display_name = "Planazo Cloud Scheduler (${var.environment})"
 }
+
+data "google_project" "current" {
+  project_id = var.gcp_project_id
+}
+
+locals {
+  cloud_scheduler_service_agent = "service-${data.google_project.current.number}@gcp-sa-cloudscheduler.iam.gserviceaccount.com"
+}
+
+resource "google_service_account_iam_member" "scheduler_service_account_user" {
+  service_account_id = google_service_account.scheduler.name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${local.cloud_scheduler_service_agent}"
+}
+
+resource "google_service_account_iam_member" "scheduler_token_creator" {
+  service_account_id = google_service_account.scheduler.name
+  role               = "roles/iam.serviceAccountTokenCreator"
+  member             = "serviceAccount:${local.cloud_scheduler_service_agent}"
+}

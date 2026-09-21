@@ -2,31 +2,21 @@ locals {
   scheduled_jobs = {
     weather = {
       schedule = "0 * * * *"
-      argument = "weather"
+      path     = "weather"
     }
     activity-status = {
       schedule = "*/5 * * * *"
-      argument = "activity-status"
+      path     = "activity-status"
     }
     votations = {
       schedule = "0 * * * *"
-      argument = "votations"
+      path     = "votations"
     }
   }
 }
 
-resource "google_cloud_run_v2_job_iam_member" "scheduler_invoker" {
-  count = length(google_cloud_run_v2_job.scheduled_tasks)
-
-  project  = var.gcp_project_id
-  location = var.gcp_region
-  name     = google_cloud_run_v2_job.scheduled_tasks[0].name
-  role     = "roles/run.invoker"
-  member   = "serviceAccount:${google_service_account.scheduler.email}"
-}
-
 resource "google_cloud_scheduler_job" "scheduled_tasks" {
-  for_each = length(google_cloud_run_v2_job.scheduled_tasks) == 0 ? {} : local.scheduled_jobs
+  for_each = length(google_cloud_run_v2_service.backend) == 0 ? {} : local.scheduled_jobs
 
   project          = var.gcp_project_id
   region           = var.gcp_region
@@ -42,32 +32,16 @@ resource "google_cloud_scheduler_job" "scheduled_tasks" {
 
   http_target {
     http_method = "POST"
-    uri         = "https://${var.gcp_region}-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/${var.gcp_project_id}/jobs/${google_cloud_run_v2_job.scheduled_tasks[0].name}:run"
-    body = base64encode(jsonencode({
-      overrides = {
-        containerOverrides = [{
-          args = [
-            "-jar",
-            "app.jar",
-            "--spring.main.web-application-type=none",
-            "--app.mode=scheduled-jobs",
-            "--activity.weather-check-cron=-",
-            "--activity.status-check-cron=-",
-            "--votation.closing-check-cron=-",
-            each.value.argument,
-          ]
-        }]
-      }
-    }))
+    uri         = "${local.backend_url}/internal/scheduled/${each.value.path}"
 
-    headers = {
-      "Content-Type" = "application/json"
-    }
-
-    oauth_token {
+    oidc_token {
       service_account_email = google_service_account.scheduler.email
+      audience              = var.scheduler_oidc_audience
     }
   }
 
-  depends_on = [google_cloud_run_v2_job_iam_member.scheduler_invoker]
+  depends_on = [
+    google_service_account_iam_member.scheduler_service_account_user,
+    google_service_account_iam_member.scheduler_token_creator,
+  ]
 }
