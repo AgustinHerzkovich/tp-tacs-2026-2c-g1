@@ -128,13 +128,19 @@ services:
     ports:
       - "8090:8080"
     environment:
-      KC_BOOTSTRAP_ADMIN_USERNAME: admin
-      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-postgres:5432/${KEYCLOAK_DB_NAME:-keycloak}
+      KC_DB_USERNAME: ${KEYCLOAK_DB_USER:-keycloak}
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak}
     command: start-dev --import-realm
     volumes:
-      - keycloak-data:/opt/keycloak/data
       - ./keycloak-import:/opt/keycloak/data/import:ro
       - ./keycloak-theme/planazo:/opt/keycloak/themes/planazo:ro
+    depends_on:
+      keycloak-postgres:
+        condition: service_healthy
     healthcheck:
       test:
         [
@@ -147,25 +153,44 @@ services:
     networks:
       - tacs-network
 
+  keycloak-postgres:
+    image: postgres:17.6-alpine
+    environment:
+      POSTGRES_DB: ${KEYCLOAK_DB_NAME:-keycloak}
+      POSTGRES_USER: ${KEYCLOAK_DB_USER:-keycloak}
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak}
+    volumes:
+      - keycloak-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${KEYCLOAK_DB_USER:-keycloak} -d ${KEYCLOAK_DB_NAME:-keycloak}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - tacs-network
+
   keycloak-config:
     image: quay.io/keycloak/keycloak:26.7.3
+    environment:
+      KEYCLOAK_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
     depends_on:
       keycloak:
         condition: service_healthy
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - >-
-        /opt/keycloak/bin/kcadm.sh config credentials
-        --server http://keycloak:8080 --realm master --user admin --password admin &&
-        /opt/keycloak/bin/kcadm.sh update realms/solnotfound
-        -s displayName=Planazo -s displayNameHtml=Planazo -s loginTheme=planazo
+    entrypoint: ["/bin/sh", "/config/configure-local.sh"]
+    volumes:
+      - ./keycloak/configure-local.sh:/config/configure-local.sh:ro
     networks:
       - tacs-network
 
 volumes:
   mongodb-data:
   minio-data:
-  keycloak-data:
+  keycloak-postgres-data:
 
 networks:
   tacs-network:

@@ -1,0 +1,15 @@
+gcp_project_id = "replace-with-your-gcp-project-id"
+gcp_region     = "us-central1"
+environment    = "prod"
+
+atlas_org_id       = "replace-with-your-atlas-organization-id"
+atlas_region       = "CENTRAL_US"
+atlas_access_cidrs = ["0.0.0.0/0"]
+
+# Image URIs are added after the base infrastructure creates Artifact Registry.
+backend_image  = ""
+frontend_image = ""
+keycloak_image = ""
+
+# Set this after Cloud Run assigns the frontend URL, then update the Keycloak realm client.
+frontend_url = ""

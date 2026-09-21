@@ -22,12 +22,17 @@ import java.util.ArrayList;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
+@ConditionalOnProperty(
+    name = "app.scheduling.beans-enabled",
+    havingValue = "true",
+    matchIfMissing = true)
 @edu.umd.cs.findbugs.annotations.SuppressFBWarnings(
     value = "EI_EXPOSE_REP2",
     justification = "Spring injects shared application collaborators")
@@ -63,7 +68,7 @@ public class ActivityAnticipationCheckScheduler {
    * activity state are persisted before notification delivery. Weather-provider failures leave the
    * activity unchecked so a later execution can retry it.
    */
-  @Scheduled(cron = "0 0 * * * *")
+  @Scheduled(cron = "${activity.weather-check-cron:0 0 * * * *}")
   public void checkActivitiesClimate() {
 
     List<Activity> activeActivities = activityRepository.findActive();

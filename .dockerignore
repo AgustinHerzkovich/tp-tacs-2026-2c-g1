@@ -1,0 +1,13 @@
+.git
+.github
+.idea
+.vscode
+**/.terraform
+**/node_modules
+**/target
+**/.next
+**/.env
+**/.env.*
+*.docx
+graphify-out
+terraform
