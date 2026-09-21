@@ -53,9 +53,10 @@ resource "google_project_iam_member" "github_deployer_roles" {
 
 resource "google_service_account_iam_member" "github_deployer_runtime_accounts" {
   for_each = {
-    backend  = google_service_account.backend.name
-    frontend = google_service_account.frontend.name
-    keycloak = google_service_account.keycloak.name
+    backend     = google_service_account.backend.name
+    frontend    = google_service_account.frontend.name
+    keycloak    = google_service_account.keycloak.name
+    cloud_build = "projects/${var.gcp_project_id}/serviceAccounts/${data.google_project.current.number}-compute@developer.gserviceaccount.com"
   }
 
   service_account_id = each.value
