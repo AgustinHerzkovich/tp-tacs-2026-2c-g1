@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { Fredoka, Nunito } from "next/font/google";
+import { Nunito } from "next/font/google";
+import localFont from "next/font/local";
 import { StoreProvider } from "@/store/StoreProvider";
 import { TopProgressBar } from "@/components/layout/TopProgressBar";
 import { ToastProvider } from "@/components/common/ToastProvider";
 import "./globals.css";
 
-const fredoka = Fredoka({
-  variable: "--font-display",
-  weight: ["500", "600", "700"],
-  subsets: ["latin"],
+const beautySmile = localFont({
+  src: "../assets/fonts/beauty-smile.otf",
+  variable: "--font-brand",
+  display: "swap",
 });
 
 const nunito = Nunito({
@@ -26,11 +27,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="es" className={`${fredoka.variable} ${nunito.variable} h-full antialiased`}>
-      <body className="min-h-screen" style={{ background: "#f3ece3" }}>
+    <html lang="es" className={`${beautySmile.variable} ${nunito.variable} h-full antialiased`}>
+      <body className="min-h-screen">
         <StoreProvider>
           <ToastProvider>
-            <div className="w-full min-h-screen flex flex-col lg:max-w-[1440px] lg:mx-auto lg:shadow-2xl" style={{ background: "var(--background)" }}>
+            <div className="w-full min-h-screen flex flex-col">
               <TopProgressBar />
               {children}
             </div>

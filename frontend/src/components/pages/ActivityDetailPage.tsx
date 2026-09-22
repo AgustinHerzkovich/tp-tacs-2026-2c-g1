@@ -6,7 +6,7 @@ import { ArrowLeft, MapPin, Clock, LogOut } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ActivityGallery } from "@/components/activities/ActivityGallery";
-import { PillBadge, TypeBadge } from "@/components/common/PillBadge";
+import { StatusBadge, TypeBadge } from "@/components/common/PillBadge";
 import { AvatarStack } from "@/components/common/AvatarStack";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { WeatherWidget } from "@/components/activities/WeatherWidget";
@@ -16,7 +16,6 @@ import { useActivityWeather } from "@/hooks/useActivityWeather";
 import { useVoting } from "@/hooks/useVoting";
 import { useJoinActivity } from "@/hooks/useJoinActivity";
 import { useAuth } from "@/hooks/useAuth";
-import { STATUS_META } from "@/lib/activityVisuals";
 import { mapActivityStatus, mapActivityType, pickScene } from "@/lib/activityMapping";
 import { formatActivityWhen } from "@/lib/formatDate";
 import { participantDisplayName } from "@/lib/initials";
@@ -78,7 +77,6 @@ export function ActivityDetailPage({ id }: { id: string }) {
   const scene = pickScene(activity.id);
   const type = mapActivityType(activity.type);
   const status = mapActivityStatus(activity.status);
-  const statusMeta = STATUS_META[status];
   const hasVoting = voting.votation !== null;
   const participantNames = activity.participants.map((p) => p.name ?? participantDisplayName(p.userId, user));
   const maxRain = activity.weatherConditions.maxRainProbability;
@@ -99,11 +97,9 @@ export function ActivityDetailPage({ id }: { id: string }) {
           <div className="absolute left-5 right-5 bottom-4">
             <div className="flex gap-2 mb-2">
               <TypeBadge type={type} />
-              <PillBadge bg={statusMeta.bg} ink={statusMeta.ink}>
-                {statusMeta.label}
-              </PillBadge>
+              <StatusBadge status={status} />
             </div>
-            <h1 className="font-display font-semibold text-[22px] text-white leading-tight drop-shadow">{activity.title}</h1>
+            <h1 className="font-brand text-[24px] text-white leading-tight drop-shadow">{activity.title}</h1>
             <p className="text-[12.5px] font-extrabold text-white/90 mt-1 flex items-center gap-1">
               <MapPin className="size-[13px]" /> {activity.location.city ?? "Ubicación a confirmar"}
             </p>
@@ -118,7 +114,7 @@ export function ActivityDetailPage({ id }: { id: string }) {
               {activity.description ?? "Sin descripción."}
             </p>
             <div className="grid grid-cols-2 gap-3">
-              <Card className="p-3.5 rounded-2xl">
+              <Card className="p-3.5">
                 <p className="text-[10px] font-extrabold uppercase mb-1 px-4" style={{ color: "var(--muted-foreground)" }}>
                   Fecha y hora
                 </p>
@@ -126,7 +122,7 @@ export function ActivityDetailPage({ id }: { id: string }) {
                   <Clock className="size-[13px]" /> {formatActivityWhen(activity.dateTime)}
                 </p>
               </Card>
-              <Card className="p-3.5 rounded-2xl">
+              <Card className="p-3.5">
                 <p className="text-[10px] font-extrabold uppercase mb-1 px-4" style={{ color: "var(--muted-foreground)" }}>
                   Participantes
                 </p>
@@ -135,7 +131,7 @@ export function ActivityDetailPage({ id }: { id: string }) {
                 </p>
               </Card>
             </div>
-            <Card className="p-4 rounded-2xl mt-3">
+            <Card className="p-4 mt-3">
               <p className="font-display font-semibold text-sm px-4 mb-2">Condiciones y planificación</p>
               <div className="grid grid-cols-2 gap-2 px-4 text-xs font-bold" style={{ color: "var(--muted-foreground)" }}>
                 <span>Mínimo: {activity.minParticipants}</span>
@@ -178,7 +174,8 @@ export function ActivityDetailPage({ id }: { id: string }) {
           </p>
         ) : join.joined ? (
           <Button
-            className="flex-1 h-auto py-3.5 rounded-2xl font-display font-semibold"
+            size="xl"
+            className="flex-1"
             disabled={join.pending}
             style={{ background: "var(--destructive)", color: "var(--primary-foreground)" }}
             onClick={join.requestLeave}
@@ -187,7 +184,8 @@ export function ActivityDetailPage({ id }: { id: string }) {
           </Button>
         ) : (
           <Button
-            className="flex-1 h-auto py-3.5 rounded-2xl font-display font-semibold"
+            size="xl"
+            className="flex-1"
             disabled={join.pending || !activity.availability}
             onClick={join.requestJoin}
           >

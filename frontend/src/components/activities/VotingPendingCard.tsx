@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
-import { PillBadge } from "@/components/common/PillBadge";
+import { Chip } from "@/components/common/Chip";
 import type { Activity } from "@/types/domain";
 
 export function VotingPendingCard({ activity }: { activity: Activity }) {
@@ -11,9 +11,9 @@ export function VotingPendingCard({ activity }: { activity: Activity }) {
         style={{ borderColor: "#FFC9A8" }}
       >
         <div className="p-4" style={{ background: "linear-gradient(160deg, #FFF6D6, #FEF08A)" }}>
-          <PillBadge bg="var(--rose-ink)" ink="#fff" className="mb-3">
+          <Chip className="mb-3 bg-[var(--rose-ink)] text-white" sticker>
             ⚡ Acción requerida: ¡Votá ahora!
-          </PillBadge>
+          </Chip>
           <div className="flex items-center gap-3">
             <div className="text-4xl emoji-3d floaty">🗳️</div>
             <div className="min-w-0 flex-1">

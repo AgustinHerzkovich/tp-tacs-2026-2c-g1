@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Scene } from "@/components/common/Scene";
 import { TypeBadge, StatusBadge } from "@/components/common/PillBadge";
 import { AvatarStack } from "@/components/common/AvatarStack";
+import { CardGoLink } from "@/components/common/CardGoLink";
 import { useAuth } from "@/hooks/useAuth";
 import type { ExploreActivity } from "@/types/domain";
 
@@ -13,14 +14,14 @@ export function ExploreCard({ activity, onRefreshImages }: { activity: ExploreAc
   const names = activity.participantNames.slice(0, 3);
   return (
     <Link href={`/actividades/${activity.id}`}>
-      <Card className="tap mb-5 flex flex-col overflow-hidden gap-0 py-0 rounded-2xl transition-shadow lg:mb-0 lg:h-full lg:hover:shadow-lg lg:hover:shadow-[rgba(58,51,82,0.12)]">
+      <Card className="tap mb-5 flex flex-col overflow-hidden gap-0 py-0 transition-shadow lg:mb-0 lg:h-full lg:hover:shadow-lg lg:hover:shadow-[rgba(58,51,82,0.12)]">
         <div className="relative">
           <Scene scene={activity.scene} imageUrl={activity.imageUrl} alt={activity.title} height={180} onRefresh={onRefreshImages} />
           <TypeBadge type={activity.type} className="absolute top-3 left-3" />
           <StatusBadge status={activity.status} className="absolute top-3 right-3" />
         </div>
         <div className="flex flex-1 flex-col p-4">
-          <h3 className="font-display font-semibold text-[16.5px] leading-snug">{activity.title}</h3>
+          <h3 className="font-brand-title text-[17px] leading-snug">{activity.title}</h3>
           <p className="text-[12.5px] font-bold mt-1 line-clamp-1" style={{ color: "var(--muted-foreground)" }}>
             🗓️ {activity.when}
           </p>
@@ -29,9 +30,7 @@ export function ExploreCard({ activity, onRefreshImages }: { activity: ExploreAc
           </p>
           <div className="flex items-center justify-between mt-auto pt-3">
             <AvatarStack names={names} extra={Math.max(0, activity.people - names.length)} size="sm" />
-            <span className="font-display font-semibold text-[13px]" style={{ color: "var(--primary)" }}>
-              Ver actividad →
-            </span>
+            <CardGoLink />
           </div>
         </div>
       </Card>

@@ -32,17 +32,20 @@ export function LoginPage() {
   return (
     <div className="fade-in min-h-screen flex flex-col justify-center px-6 py-10 lg:max-w-xl lg:mx-auto lg:w-full">
       <div className="text-center mb-8">
-        <h1 className="font-display font-semibold text-4xl" style={{ color: "var(--primary)" }}>
+        <h1
+          className="font-brand sticker-outline text-5xl"
+          style={{ color: "var(--primary)", transform: "rotate(-3deg)", filter: "drop-shadow(2px 3px 0 rgba(46,42,69,.18))" }}
+        >
           Planazo
         </h1>
-        <p className="font-display font-semibold text-lg mt-2">Organizá tu próximo plan</p>
+        <p className="font-brand text-lg mt-3">Organizá tu próximo plan</p>
         <p className="text-[13px] font-bold mt-1" style={{ color: "var(--muted-foreground)" }}>
           Iniciá sesión o creá tu cuenta de forma segura con Keycloak.
         </p>
       </div>
 
       <Button
-        className="h-auto py-3.5 rounded-2xl font-display font-semibold"
+        size="xl"
         disabled={!ready || isAuthenticated}
         onClick={() => void login()}
       >

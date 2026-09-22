@@ -154,11 +154,11 @@ export function StatisticsPage() {
         </Button>
         <div>
           <p className="text-[11px] font-extrabold uppercase" style={{ color: "var(--primary)" }}>Panel admin</p>
-          <h1 className="font-display font-semibold text-2xl">Estadísticas</h1>
+          <h1 className="font-brand text-2xl">Estadísticas</h1>
         </div>
       </div>
 
-      <Card className="p-4 rounded-2xl mb-5">
+      <Card className="p-4 mb-5">
         <div className="grid grid-cols-2 gap-3 px-4">
           <div>
             <Label htmlFor="statistics-from" className="mb-2 text-[11px] font-extrabold uppercase" style={{ color: "var(--muted-foreground)" }}>Desde</Label>
@@ -216,7 +216,7 @@ export function StatisticsPage() {
                     1,
                   );
                   return (
-                    <Card key={key} className="p-4 rounded-2xl">
+                    <Card key={key} className="p-4">
                       <p className="text-2xl lg:text-3xl font-display font-semibold">{value}</p>
                       <p className="text-[11px] font-extrabold uppercase mt-0.5" style={{ color: "var(--muted-foreground)" }}>{label}</p>
                       <div
@@ -235,13 +235,13 @@ export function StatisticsPage() {
               </section>
             </>
           ) : (
-            <Card className="p-5 rounded-2xl mb-4">
+            <Card className="p-5 mb-4">
               <p className="text-center text-[13px] font-bold py-6" style={{ color: "var(--muted-foreground)" }}>
                 No hay eventos de actividades en el período seleccionado.
               </p>
             </Card>
           )}
-          <Card className="p-5 rounded-2xl">
+          <Card className="p-5">
             <div className="flex items-center gap-2 px-4">
               <CloudSun className="size-5" style={{ color: "var(--primary)" }} />
               <h2 className="font-display font-semibold text-lg">Open-Meteo</h2>

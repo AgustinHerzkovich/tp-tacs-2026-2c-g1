@@ -13,8 +13,8 @@ export function MiniStepper({ value, onChange, min, max, unit = "" }: MiniSteppe
     <div className="flex items-center gap-2.5">
       <button
         type="button"
-        className="tap w-8 h-8 rounded-lg border-2 flex items-center justify-center"
-        style={{ background: "var(--background)", borderColor: "var(--border)" }}
+        className="tap w-8 h-8 rounded-full flex items-center justify-center"
+        style={{ background: "#fff", boxShadow: "0 3px 0 var(--border)" }}
         onClick={() => onChange(Math.max(min, value - 1))}
       >
         <Minus className="size-3.5" />
@@ -25,8 +25,8 @@ export function MiniStepper({ value, onChange, min, max, unit = "" }: MiniSteppe
       </span>
       <button
         type="button"
-        className="tap w-8 h-8 rounded-lg flex items-center justify-center"
-        style={{ background: "var(--primary)", color: "var(--primary-foreground)" }}
+        className="tap w-8 h-8 rounded-full flex items-center justify-center"
+        style={{ background: "var(--primary)", color: "var(--primary-foreground)", boxShadow: "0 3px 0 var(--secondary-foreground)" }}
         onClick={() => onChange(Math.min(max, value + 1))}
       >
         <Plus className="size-3.5" />
