@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { formatActivityWhen } from "@/lib/formatDate";
-import type { VotationDTO } from "@/types/backend";
+import type { UserDTO, VotationDTO } from "@/types/backend";
 
 export interface VoteOptionView {
   /** The option's raw ISO LocalDateTime — also what the backend expects as
@@ -35,8 +35,13 @@ export interface UseVoting {
 /** Finds and drives the reprogramming vote for one activity. GET /votations
  * only returns votations the current identity organizes or joined, so this
  * activity's votation may not appear if it's not "mine" — `votation` stays
- * null in that case. */
-export function useVoting(activityId: string): UseVoting {
+ * null in that case.
+ *
+ * `currentUser`, when given, lets `votedId` be reconstructed from the
+ * votation's own data (matching the identity against each option's
+ * `voterNames`) so a previously-cast vote still shows as selected after a
+ * page reload — the API has no other "did I already vote" signal. */
+export function useVoting(activityId: string, currentUser?: Pick<UserDTO, "id" | "name"> | null): UseVoting {
   const [votation, setVotation] = useState<VotationDTO | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -71,6 +76,15 @@ export function useVoting(activityId: string): UseVoting {
   );
   const total = options.reduce((sum, option) => sum + option.votes, 0);
   const selectedOption = options.find((option) => option.id === selectedId);
+
+  const persistedVotedId = useMemo(() => {
+    if (!votation || !currentUser) return null;
+    const voted = votation.options.find(
+      (option) => option.voterNames.includes(currentUser.name) || option.voterNames.includes(currentUser.id),
+    );
+    return voted?.dateTime ?? null;
+  }, [votation, currentUser]);
+  const effectiveVotedId = persistedVotedId ?? votedId;
 
   const select = (id: string) => {
     setSelectedId(id);
@@ -110,7 +124,7 @@ export function useVoting(activityId: string): UseVoting {
     options,
     total,
     selectedId,
-    votedId,
+    votedId: effectiveVotedId,
     selectedOption,
     confirmOpen,
     pending,

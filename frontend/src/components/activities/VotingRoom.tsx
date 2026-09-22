@@ -2,8 +2,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
-import { AlertTriangle, Plus, Settings2, X } from "lucide-react";
+import { useState, type CSSProperties } from "react";
+import { Plus, Settings2, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import type { UseVoting } from "@/hooks/useVoting";
 
@@ -11,9 +11,15 @@ interface VotingRoomProps {
   voting: UseVoting;
   warningText?: string;
   organizer?: boolean;
+  /** Caps the card's height to match the sibling info column, measured via
+   * ResizeObserver in the parent — keeps the header and vote button always
+   * visible on desktop, with only the options list scrolling. Below `lg`
+   * (where the columns stack instead of sitting side by side) a fixed
+   * viewport-relative cap applies instead, see the `max-h-[75vh]` fallback. */
+  maxHeightPx?: number;
 }
 
-export function VotingRoom({ voting, warningText, organizer = false }: VotingRoomProps) {
+export function VotingRoom({ voting, warningText, organizer = false, maxHeightPx }: VotingRoomProps) {
   const { options, total, selectedId, votedId, select, requestVote, pending } = voting;
   const [editing, setEditing] = useState(false);
   const [dates, setDates] = useState<string[]>([]);
@@ -22,20 +28,29 @@ export function VotingRoom({ voting, warningText, organizer = false }: VotingRoo
   const [adminError, setAdminError] = useState<string | null>(null);
 
   return (
-    <Card className="p-4 mb-4 border-2" style={{ borderColor: "#F7DE6B" }}>
-      <div className="flex gap-2.5 rounded-xl p-3 mb-4 mx-4" style={{ background: "var(--sun)" }}>
-        <AlertTriangle className="size-[18px] shrink-0 mt-0.5" style={{ color: "var(--sun-ink)" }} />
-        <p className="text-[11.5px] font-extrabold leading-snug" style={{ color: "var(--sun-ink)" }}>
-          {warningText ?? "El clima pronosticado no cumple las condiciones esperadas. Elegí una fecha alternativa para reprogramar."}
-        </p>
+    <Card
+      className="p-[18px] mb-6 flex flex-col border-2 border-dashed rounded-[24px] shadow-[0_8px_20px_-12px_rgba(58,51,82,.25)] max-h-[75vh] lg:max-h-[var(--voting-max-h,75vh)]"
+      style={
+        {
+          borderColor: "var(--border)",
+          ...(maxHeightPx ? { "--voting-max-h": `${maxHeightPx}px` } : {}),
+        } as CSSProperties
+      }
+    >
+      <div className="flex items-center justify-between gap-2 mb-2 px-4 shrink-0">
+        <span
+          className="inline-flex items-center rounded-tl-[10px] rounded-tr-[10px] rounded-br-[10px] rounded-bl-[2px] border-2 border-white px-3 py-1.5 text-[10.5px] font-black uppercase tracking-wide"
+          style={{ background: "var(--sun)", color: "var(--sun-ink)", boxShadow: "0 3px 0 var(--sun-ink)" }}
+        >
+          🗳️ Votación de reprogramación
+        </span>
+        <Badge variant="secondary" className="shrink-0">{total} votos</Badge>
       </div>
+      <p className="text-[11.5px] font-bold leading-snug mb-4 px-4 shrink-0" style={{ color: "var(--muted-foreground)" }}>
+        {warningText ?? "El clima no acompaña — elegí la fecha alternativa que más te sirva."}
+      </p>
 
-      <div className="flex items-center justify-between mb-3 px-4">
-        <p className="font-display font-semibold text-[14.5px]">Sala de Votación</p>
-        <Badge variant="secondary">{total} votos</Badge>
-      </div>
-
-      <div className="space-y-3 mb-4 px-4">
+      <div className="flex-1 min-h-0 overflow-y-auto space-y-3 mb-4 px-4">
         {options.map((option) => {
           const pct = total ? Math.round((option.votes / total) * 100) : 0;
           const isSelected = selectedId === option.id;
@@ -67,14 +82,14 @@ export function VotingRoom({ voting, warningText, organizer = false }: VotingRoo
         })}
       </div>
 
-      <div className="px-4">
+      <div className="px-4 shrink-0">
         <Button size="xl" className="w-full" disabled={pending || !selectedId || selectedId === votedId} onClick={requestVote}>
           {pending ? "Guardando voto..." : votedId ? "Cambiar voto" : "Votar fecha alternativa"}
         </Button>
       </div>
 
       {organizer && (
-        <div className="mx-4 mt-4 pt-4 border-t-2" style={{ borderColor: "var(--border)" }}>
+        <div className="mx-4 mt-4 pt-4 border-t-2 shrink-0" style={{ borderColor: "var(--border)" }}>
           <Button type="button" variant="outline" className="w-full rounded-xl" onClick={() => setEditing((value) => !value)}><Settings2 className="size-4" /> Administrar votación</Button>
           {editing && (
             <div className="mt-4 space-y-4">
