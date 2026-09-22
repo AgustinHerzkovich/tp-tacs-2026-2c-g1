@@ -27,24 +27,22 @@ public class NotificationService {
   }
 
   /**
-   * Returns unread notifications for a user, ordered according to the repository contract.
+   * Returns all notifications for a user, with unread notifications first.
    *
    * @param currentUserId authenticated receiver identifier
-   * @return unread notifications belonging to the user
+   * @return notifications belonging to the user
    */
   public List<NotificationResponse> getNotificationsByUser(String currentUserId) {
-    return notificationRepository.findByReadAndReceiverUserId(false, currentUserId).stream()
+    return notificationRepository.findByReceiverUserId(currentUserId).stream()
         .map(this::toDto)
         .toList();
   }
 
-  /** Returns one page of unread notifications for the authenticated receiver, newest first. */
+  /** Returns one page of notifications for the authenticated receiver, with unread first. */
   public PageResponse<NotificationResponse> getNotificationsByUser(
       String currentUserId, Pageable pageable) {
     return PageResponse.from(
-        notificationRepository
-            .findByReadAndReceiverUserId(false, currentUserId, pageable)
-            .map(this::toDto));
+        notificationRepository.findByReceiverUserId(currentUserId, pageable).map(this::toDto));
   }
 
   /**
@@ -102,6 +100,7 @@ public class NotificationService {
         notification.getType().code(),
         notification.getTitle(),
         notification.getMessage(),
-        notification.getCreatedAt());
+        notification.getCreatedAt(),
+        notification.isRead());
   }
 }

@@ -140,6 +140,7 @@ export interface NotificationResponse {
   title: string;
   message: string;
   createdAt: string;
+  read: boolean;
 }
 
 export interface UserDTO {
