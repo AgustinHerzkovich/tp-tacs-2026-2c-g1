@@ -18,4 +18,8 @@ public interface INotificationRepository {
 
   Page<Notification> findByReadAndReceiverUserId(
       Boolean read, String receiverUser, Pageable pageable);
+
+  List<Notification> findByReceiverUserId(String receiverUser);
+
+  Page<Notification> findByReceiverUserId(String receiverUser, Pageable pageable);
 }

@@ -14,14 +14,11 @@ export interface NotificationView {
   title: string;
   body: string;
   time: string;
+  read: boolean;
 }
 
 interface UseNotifications {
-  /** GET /notifications only ever returns the user's UNREAD notifications
-   * (see backend's NotificationService.getNotificationsByUser) — there is no
-   * "history" of already-read ones, so every item here is unread by
-   * definition and markRead removes it from this list rather than flagging
-   * it, matching what a refetch would return. */
+  /** GET /notifications returns all notifications, with unread ones first. */
   notifications: NotificationView[];
   unreadCount: number;
   loading: boolean;
@@ -56,11 +53,12 @@ export function useNotifications(): UseNotifications {
               title: n.title,
               body: n.message,
               time: formatRelativeTime(n.createdAt),
+              read: n.read,
             };
           }),
         );
         setTotalPages(all.totalPages);
-        setUnreadCount(all.totalElements);
+        setUnreadCount(all.content.filter((notification) => !notification.read).length);
         setError(null);
       })
       .catch((err: unknown) => setError(err instanceof Error ? err.message : "No pudimos cargar las notificaciones."))
