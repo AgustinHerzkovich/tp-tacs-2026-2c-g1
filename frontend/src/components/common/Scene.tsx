@@ -29,6 +29,11 @@ export function Scene({ scene, imageUrl, alt = "", height = 150, className, onRe
       style={{ height, background: imageUrl ? "var(--muted)" : `linear-gradient(135deg, ${grad[0]}, ${grad[1]})` }}
       data-scene={scene}
     >
+      {!imageUrl && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-[10px] font-extrabold uppercase tracking-wide text-white/80">Sin imagen</span>
+        </div>
+      )}
       {imageUrl && status !== "error" && (
         // Presigned image hosts are configured at runtime, so next/image cannot whitelist them statically.
         // eslint-disable-next-line @next/next/no-img-element

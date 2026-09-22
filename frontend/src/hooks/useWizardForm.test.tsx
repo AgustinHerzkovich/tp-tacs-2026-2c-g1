@@ -64,8 +64,8 @@ describe("useWizardForm", () => {
     expect(result.current.step).toBe(2);
     expect(result.current.direction).toBe(1);
 
-    act(() => result.current.goTo(4));
-    expect(result.current.step).toBe(4);
+    act(() => result.current.goTo(5));
+    expect(result.current.step).toBe(5);
     expect(result.current.isLastStep).toBe(true);
   });
 
