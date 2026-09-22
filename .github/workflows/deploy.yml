@@ -105,6 +105,7 @@ jobs:
           gcloud builds submit .
           --project="$PROJECT_ID"
           --config=cloudbuild/backend.yaml
+          --polling-interval=10
           --substitutions="COMMIT_SHA=$GITHUB_SHA,_REGION=$REGION,_REPOSITORY=$REPOSITORY"
       - name: Deploy backend service
         run: >-
@@ -131,6 +132,7 @@ jobs:
           gcloud builds submit .
           --project="$PROJECT_ID"
           --config=cloudbuild/frontend.yaml
+          --polling-interval=10
           --substitutions="COMMIT_SHA=$GITHUB_SHA,_REGION=$REGION,_REPOSITORY=$REPOSITORY,_KEYCLOAK_URL=$KEYCLOAK_URL,_KEYCLOAK_REALM=solnotfound,_KEYCLOAK_CLIENT_ID=solnotfoundFrontend"
       - name: Deploy frontend
         run: >-
@@ -157,6 +159,7 @@ jobs:
           gcloud builds submit .
           --project="$PROJECT_ID"
           --config=cloudbuild/keycloak.yaml
+          --polling-interval=10
           --substitutions="COMMIT_SHA=$GITHUB_SHA,_REGION=$REGION,_REPOSITORY=$REPOSITORY"
       - name: Deploy Keycloak
         run: >-
