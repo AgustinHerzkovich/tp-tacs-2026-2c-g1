@@ -253,6 +253,10 @@ public class ActivityService {
       return false;
     }
 
+    if (!filter.statuses().isEmpty() && !filter.statuses().contains(activity.getStatus())) {
+      return false;
+    }
+
     if (filter.city() != null
         && !filter.city().isBlank()
         && (activity.getLocation().city() == null

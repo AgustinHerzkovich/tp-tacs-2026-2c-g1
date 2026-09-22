@@ -31,6 +31,7 @@ export function useActivities(filters?: ActivityFilterParams): UseActivities {
   const dateFrom = filters?.dateFrom;
   const dateTo = filters?.dateTo;
   const availability = filters?.availability;
+  const status = filters?.status;
   const [exploreFeed, setExploreFeed] = useState<ExploreActivity[]>([]);
   const [misFeed, setMisFeed] = useState<MisActivity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,7 +42,7 @@ export function useActivities(filters?: ActivityFilterParams): UseActivities {
   const [misPage, setMisPage] = useState(0);
   const [exploreTotalPages, setExploreTotalPages] = useState(0);
   const [misTotalPages, setMisTotalPages] = useState(0);
-  const requestKey = [type, city, dateFrom, dateTo, availability, explorePage, misPage, reloadKey]
+  const requestKey = [type, city, dateFrom, dateTo, availability, status, explorePage, misPage, reloadKey]
     .map((value) => String(value ?? ""))
     .join("|");
   const requestPending = loading || loadedRequest !== requestKey;
@@ -50,7 +51,7 @@ export function useActivities(filters?: ActivityFilterParams): UseActivities {
     let cancelled = false;
 
     Promise.all([
-      api.activities.list({ type, city, dateFrom, dateTo, availability, page: explorePage, size: 12 }),
+      api.activities.list({ type, city, dateFrom, dateTo, availability, status, page: explorePage, size: 12 }),
       api.activities.organized(misPage, 12),
       api.activities.mine(misPage, 12),
     ])

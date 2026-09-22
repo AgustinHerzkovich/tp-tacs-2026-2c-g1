@@ -76,6 +76,8 @@ export interface ActivityFilterParams {
   /** ISO LocalDateTime */
   dateTo?: string;
   availability?: boolean;
+  /** One or more activity statuses; matching any supplied status. */
+  status?: ActivityStatus | ActivityStatus[];
   page?: number;
   size?: number;
 }

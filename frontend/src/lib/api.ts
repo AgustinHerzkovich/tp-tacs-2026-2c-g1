@@ -50,7 +50,9 @@ function json(method: string, body: unknown): RequestInit {
   return { method, headers: { "content-type": "application/json" }, body: JSON.stringify(body) };
 }
 
-function queryString(params?: Record<string, string | number | boolean | undefined>): string {
+function queryString(
+  params?: Record<string, string | number | boolean | string[] | undefined>,
+): string {
   if (!params) return "";
   const entries = Object.entries(params).filter(([, value]) => value !== undefined && value !== "");
   if (entries.length === 0) return "";
