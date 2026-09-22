@@ -175,6 +175,28 @@ Los datos meteorológicos provienen de Open-Meteo y están sujetos a su licencia
 [CC BY 4.0](https://open-meteo.com/en/licence). Los pronósticos son estimaciones y no deben usarse
 como única fuente para decisiones de seguridad.
 
+## Rate limiting y bloqueo de IPs
+
+No se implementa un rate limiter HTTP ni un bloqueo de IPs dentro del backend. El bloqueo por IP en
+memoria no resulta confiable en Cloud Run porque las requests pueden distribuirse entre varias
+instancias efímeras, y una IP puede representar a múltiples usuarios detrás de NAT o proxies.
+
+La protección vigente se basa en:
+
+- autenticación JWT para las rutas de negocio y autorización por rol para estadísticas;
+- autenticación OIDC para los endpoints internos invocados por Cloud Scheduler;
+- límites de tamaño para requests multipart y archivos;
+- cachés acotadas para evitar consultas meteorológicas repetidas;
+- timeouts, reintentos limitados y circuit breaker para Open-Meteo;
+- manejo explícito de indisponibilidad del proveedor sin interpretar datos faltantes como clima
+  favorable.
+
+Si en el futuro se necesitara limitar tráfico externo por cliente, la opción adecuada sería una
+capa distribuida o de infraestructura, como Cloud Armor delante de un HTTPS Load Balancer, API
+Gateway o un almacenamiento compartido para los contadores. No se agrega esa complejidad para este
+TP porque el enunciado no exige bloqueo de IPs y la arquitectura actual ya cubre el uso responsable
+del proveedor meteorológico.
+
 ## Calidad de código
 
 El proyecto incluye Maven Wrapper. Desde la carpeta `backend/`, para aplicar el formato,
