@@ -5,6 +5,7 @@ import com.solnotfound.dto.ActivityResponse;
 import com.solnotfound.dto.ActivityWeatherResponse;
 import com.solnotfound.dto.CreateActivityRequest;
 import com.solnotfound.dto.PageResponse;
+import com.solnotfound.entity.activity.ActivityStatus;
 import com.solnotfound.entity.activity.ActivityType;
 import com.solnotfound.service.ActivityService;
 import com.solnotfound.storage.MultipartImageFile;
@@ -93,6 +94,7 @@ public class ActivityController {
   @GetMapping
   public ResponseEntity<PageResponse<ActivityResponse>> getAll(
       @RequestParam(required = false) ActivityType type,
+      @RequestParam(required = false) List<ActivityStatus> status,
       @RequestParam(required = false) String city,
       @RequestParam(required = false) Boolean availability,
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
@@ -103,7 +105,8 @@ public class ActivityController {
       @RequestParam(defaultValue = "12") int size) {
     PageResponse<ActivityResponse> activities =
         activityService.search(
-            new ActivityFilterDTO(type, city, dateFrom, dateTo, availability),
+            new ActivityFilterDTO(
+                type, city, dateFrom, dateTo, availability, status == null ? List.of() : status),
             pageRequest(page, size, "dateTime"));
     return ResponseEntity.ok(activities);
   }

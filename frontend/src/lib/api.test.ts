@@ -76,14 +76,18 @@ describe("api client", () => {
     };
     authFetch
       .mockResolvedValueOnce(jsonResponse(200, emptyPage))
+      .mockResolvedValueOnce(jsonResponse(200, emptyPage))
       .mockResolvedValueOnce(jsonResponse(200, emptyPage));
 
     await api.activities.list({ type: "OUTDOOR", city: "CABA", availability: true, dateFrom: "2026-01-01T00:00:00" });
     const [url] = requestArgs(0);
     expect(url).toBe("/api/activities?type=OUTDOOR&city=CABA&availability=true&dateFrom=2026-01-01T00%3A00%3A00");
 
+    await api.activities.list({ status: ["CONFIRMED", "FINISHED"] });
+    expect(requestArgs(1)[0]).toBe("/api/activities?status=CONFIRMED%2CFINISHED");
+
     await api.activities.list({ city: "" });
-    expect(requestArgs(1)[0]).toBe("/api/activities");
+    expect(requestArgs(2)[0]).toBe("/api/activities");
   });
 
   it.each([
