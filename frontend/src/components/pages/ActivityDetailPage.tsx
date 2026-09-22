@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, MapPin, Clock, LogOut } from "lucide-react";
-import { Card } from "@/components/ui/card";
+import { ArrowLeft, MapPin, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ActivityGallery } from "@/components/activities/ActivityGallery";
 import { StatusBadge, TypeBadge } from "@/components/common/PillBadge";
 import { AvatarStack } from "@/components/common/AvatarStack";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { WeatherWidget } from "@/components/activities/WeatherWidget";
+import { ActivityAboutCard } from "@/components/activities/ActivityAboutCard";
+import { ActivityRequirementsCard } from "@/components/activities/ActivityRequirementsCard";
 import { VotingRoom } from "@/components/activities/VotingRoom";
 import { useActivity } from "@/hooks/useActivity";
 import { useActivityWeather } from "@/hooks/useActivityWeather";
@@ -17,7 +18,6 @@ import { useVoting } from "@/hooks/useVoting";
 import { useJoinActivity } from "@/hooks/useJoinActivity";
 import { useAuth } from "@/hooks/useAuth";
 import { mapActivityStatus, mapActivityType, pickScene } from "@/lib/activityMapping";
-import { formatActivityWhen } from "@/lib/formatDate";
 import { participantDisplayName } from "@/lib/initials";
 import { api } from "@/lib/api";
 import { ErrorState } from "@/components/common/AsyncState";
@@ -30,8 +30,10 @@ export function ActivityDetailPage({ id }: { id: string }) {
   const toast = useToast();
   const { activity, loading, notFound, error, refresh } = useActivity(id);
   const weather = useActivityWeather(id);
-  const voting = useVoting(id);
+  const voting = useVoting(id, user);
   const [isOrganizer, setIsOrganizer] = useState(false);
+  const infoColumnRef = useRef<HTMLDivElement>(null);
+  const [votingMaxHeight, setVotingMaxHeight] = useState<number>();
 
   const initialJoined = activity?.participants.some((p) => p.userId === user?.id) ?? false;
   const join = useJoinActivity(id, initialJoined, refresh);
@@ -47,6 +49,20 @@ export function ActivityDetailPage({ id }: { id: string }) {
     }).catch(() => undefined);
     return () => { cancelled = true; };
   }, [id]);
+
+  // Keeps the voting sidebar's max-height in sync with the info column next
+  // to it (desktop only — see VotingRoom's `lg:max-h-[var(--voting-max-h)]`)
+  // so its header and vote button stay visible while only the options list
+  // scrolls, instead of the sidebar growing taller than its sibling column.
+  useEffect(() => {
+    const el = infoColumnRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry) setVotingMaxHeight(entry.contentRect.height);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   if (loading) return <ActivityDetailSkeleton />;
 
@@ -89,11 +105,22 @@ export function ActivityDetailPage({ id }: { id: string }) {
           <div className="absolute inset-x-0 bottom-0 h-28" style={{ background: "linear-gradient(to top, rgba(58,51,82,.75), transparent)" }} />
           <button
             onClick={() => router.back()}
-            className="tap absolute top-6 left-5 w-10 h-10 rounded-full bg-white/90 backdrop-blur flex items-center justify-center"
+            className="tap absolute top-6 left-5 w-10 h-10 rounded-full bg-white/90 backdrop-blur shadow-[0_3px_0_var(--lav)] flex items-center justify-center"
             aria-label="Volver"
           >
             <ArrowLeft className="size-[18px]" />
           </button>
+          <div
+            className="absolute top-6 right-5 flex w-[58px] h-[58px] flex-col items-center justify-center rounded-full border-[3px] border-white shadow-[0_4px_10px_-4px_rgba(58,51,82,.35)]"
+            style={{ background: "var(--lav)", transform: "rotate(6deg)" }}
+          >
+            <span className="text-[13.5px] font-black leading-none" style={{ color: "var(--lav-ink)" }}>
+              {activity.participantCount}/{activity.maxParticipants}
+            </span>
+            <span className="mt-0.5 text-[6.5px] font-extrabold uppercase leading-none" style={{ color: "var(--lav-ink)" }}>
+              anotados
+            </span>
+          </div>
           <div className="absolute left-5 right-5 bottom-4">
             <div className="flex gap-2 mb-2">
               <TypeBadge type={type} />
@@ -107,42 +134,21 @@ export function ActivityDetailPage({ id }: { id: string }) {
         </div>
 
         <div className={`px-5 pt-5 lg:px-0 lg:grid lg:gap-5 lg:items-start ${hasVoting ? "lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.7fr)]" : "lg:grid-cols-1"}`}>
-          <div className="min-w-0">
-            <WeatherWidget loading={weather.loading} unavailable={weather.unavailable} forecast={weather.weather?.activityForecast ?? null} current={weather.weather?.currentWeather ?? null} />
-            <h3 className="font-display font-semibold text-[15px] mb-2">Sobre la actividad</h3>
-            <p className="text-[13px] font-semibold leading-relaxed mb-3" style={{ color: "var(--muted-foreground)" }}>
-              {activity.description ?? "Sin descripción."}
-            </p>
-            <div className="grid grid-cols-2 gap-3">
-              <Card className="p-3.5">
-                <p className="text-[10px] font-extrabold uppercase mb-1 px-4" style={{ color: "var(--muted-foreground)" }}>
-                  Fecha y hora
-                </p>
-                <p className="font-display font-semibold text-[13px] px-4 flex items-center gap-1">
-                  <Clock className="size-[13px]" /> {formatActivityWhen(activity.dateTime)}
-                </p>
-              </Card>
-              <Card className="p-3.5">
-                <p className="text-[10px] font-extrabold uppercase mb-1 px-4" style={{ color: "var(--muted-foreground)" }}>
-                  Participantes
-                </p>
-                <p className="font-display font-semibold text-[13px] px-4">
-                  👥 {activity.participantCount}/{activity.maxParticipants}
-                </p>
-              </Card>
-            </div>
-            <Card className="p-4 mt-3">
-              <p className="font-display font-semibold text-sm px-4 mb-2">Condiciones y planificación</p>
-              <div className="grid grid-cols-2 gap-2 px-4 text-xs font-bold" style={{ color: "var(--muted-foreground)" }}>
-                <span>Mínimo: {activity.minParticipants}</span>
-                <span>Aviso: {activity.anticipationWindow} h antes</span>
-                <span>Lluvia máx.: {activity.weatherConditions.maxRainProbability ?? "-"}%</span>
-                <span>Viento máx.: {activity.weatherConditions.maxWindSpeed ?? "-"} km/h</span>
-                <span>Temp.: {activity.weatherConditions.minTemperature ?? "-"}° a {activity.weatherConditions.maxTemperature ?? "-"}°</span>
-                <span>Reprogramación: {activity.reprogramationRange.maxDays} días</span>
-                <span className="col-span-2">Horario: {activity.reprogramationRange.initialHour.slice(0, 5)} a {activity.reprogramationRange.finalHour.slice(0, 5)}</span>
-              </div>
-            </Card>
+          <div className="min-w-0" ref={infoColumnRef}>
+            <ActivityAboutCard description={activity.description} dateTime={activity.dateTime} />
+            <WeatherWidget
+              loading={weather.loading}
+              unavailable={weather.unavailable}
+              forecast={weather.weather?.activityForecast ?? null}
+              current={weather.weather?.currentWeather ?? null}
+              conditions={activity.weatherConditions}
+              forcedExceeded={hasVoting}
+            />
+            <ActivityRequirementsCard
+              minParticipants={activity.minParticipants}
+              anticipationWindow={activity.anticipationWindow}
+              reprogramationMaxDays={activity.reprogramationRange.maxDays}
+            />
           </div>
           {hasVoting && (
             <VotingRoom
@@ -152,6 +158,7 @@ export function ActivityDetailPage({ id }: { id: string }) {
                   ? `Se superó el máximo de lluvia permitido (${maxRain}%). Elegí una fecha alternativa para reprogramar.`
                   : undefined
               }
+              maxHeightPx={votingMaxHeight}
             />
           )}
         </div>
@@ -168,20 +175,25 @@ export function ActivityDetailPage({ id }: { id: string }) {
           <p className="flex-1 text-center text-[12.5px] font-bold" style={{ color: "var(--destructive)" }}>
             {activity.status === "CANCELLED" ? "Esta actividad fue cancelada" : "Esta actividad finalizó"}
           </p>
-        ) : hasVoting ? (
-          <p className="flex-1 text-center text-[12.5px] font-bold" style={{ color: "var(--muted-foreground)" }}>
-            Votá en la sala de votación arriba ↑
-          </p>
         ) : join.joined ? (
-          <Button
-            size="xl"
-            className="flex-1"
-            disabled={join.pending}
-            style={{ background: "var(--destructive)", color: "var(--primary-foreground)" }}
-            onClick={join.requestLeave}
-          >
-            <LogOut className="size-4" /> Bajarme de la actividad
-          </Button>
+          <>
+            <div
+              className="flex min-h-[52px] flex-1 items-center justify-center rounded-[18px] border-2 border-white px-3.5 text-[12px] font-black"
+              style={{ background: "var(--mint)", color: "var(--mint-ink)", boxShadow: "0 4px 0 var(--mint-ink)", transform: "rotate(-0.6deg)" }}
+            >
+              Ya estás sumado
+            </div>
+            <Button
+              variant="destructive"
+              size="icon-lg"
+              className="size-[52px] rounded-[18px]"
+              disabled={join.pending}
+              onClick={join.requestLeave}
+              aria-label="Bajarme de la actividad"
+            >
+              <LogOut className="size-4" />
+            </Button>
+          </>
         ) : (
           <Button
             size="xl"

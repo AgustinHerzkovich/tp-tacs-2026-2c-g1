@@ -153,6 +153,24 @@
   line-height: 1;
 }
 
+/* Static sticker counterpart to .emoji-3d: stacked drop-shadows trace the
+   glyph's own alpha silhouette to fake a white die-cut halo, instead of a
+   plain shape stuck behind it. No animation. */
+.emoji-sticker {
+  display: inline-block;
+  line-height: 1;
+  filter:
+    drop-shadow(1.5px 0 0 #fff)
+    drop-shadow(-1.5px 0 0 #fff)
+    drop-shadow(0 1.5px 0 #fff)
+    drop-shadow(0 -1.5px 0 #fff)
+    drop-shadow(1.1px 1.1px 0 #fff)
+    drop-shadow(-1.1px -1.1px 0 #fff)
+    drop-shadow(1.1px -1.1px 0 #fff)
+    drop-shadow(-1.1px 1.1px 0 #fff)
+    drop-shadow(0 3px 5px rgba(58, 51, 82, 0.28));
+}
+
 .tap {
   transition:
     transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1),
