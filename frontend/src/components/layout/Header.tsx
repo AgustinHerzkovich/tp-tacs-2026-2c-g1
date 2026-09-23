@@ -60,11 +60,12 @@ export function Header({ onBellClick, unread = 0, centerSlot }: HeaderProps) {
           className="tap relative hidden lg:flex w-10 h-10 rounded-full bg-white shadow-[0_3px_0_var(--lav)] items-center justify-center"
           aria-label="Notificaciones"
         >
-          <Bell className="size-[18px]" style={{ color: "var(--foreground)" }} />
+          <Bell className="size-[18px]" style={{ color: "var(--sun-ink)" }} />
           {unread > 0 && (
             <span
-              className="absolute top-1.5 right-2 w-2.5 h-2.5 rounded-full border-2 border-white"
-              style={{ background: "var(--rose-ink)" }}
+              aria-hidden="true"
+              className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white"
+              style={{ background: "var(--primary)" }}
             />
           )}
         </button>
@@ -73,13 +74,20 @@ export function Header({ onBellClick, unread = 0, centerSlot }: HeaderProps) {
             onClick={() => setProfileOpen((open) => !open)}
             aria-label="Abrir menú de perfil"
             aria-expanded={profileOpen}
-            className="tap rounded-full shadow-[0_3px_0_var(--lav-ink)] focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+            className="tap relative rounded-full shadow-[0_3px_0_var(--lav-ink)] focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
           >
             <Avatar>
               <AvatarFallback className="font-brand text-[13px]" style={{ background: "var(--lav)", color: "var(--lav-ink)" }}>
                 {user ? getInitials(user.name) : "?"}
               </AvatarFallback>
             </Avatar>
+            {unread > 0 && (
+              <span
+                aria-hidden="true"
+                className="lg:hidden absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white"
+                style={{ background: "var(--primary)" }}
+              />
+            )}
           </button>
           {profileOpen && (
             <div className="absolute right-0 top-12 z-50 w-64 rounded-2xl border-2 bg-white p-3 shadow-xl" role="menu">

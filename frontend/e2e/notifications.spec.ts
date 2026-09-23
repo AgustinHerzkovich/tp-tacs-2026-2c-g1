@@ -6,7 +6,7 @@ test.describe("notificaciones", () => {
     await loginAs(page, USER);
 
     await page.getByRole("button", { name: "Notificaciones" }).click();
-    await expect(page.getByText("TUS ALERTAS RECIENTES")).toBeVisible();
+    await expect(page.getByRole("dialog").getByText("Notificaciones", { exact: true })).toBeVisible();
 
     // Cada notificación muestra su antigüedad ("hace 12 min", "recién", ...);
     // si no hay ninguna, el drawer muestra el estado vacío.

@@ -21,6 +21,9 @@ interface UseNotifications {
   /** GET /notifications returns all notifications, with unread ones first. */
   notifications: NotificationView[];
   unreadCount: number;
+  /** Total notifications across all pages (`totalElements`), for the
+   * drawer's "X sin leer · Y en total" header — distinct from `page.length`. */
+  total: number;
   loading: boolean;
   error: string | null;
   markRead: (id: string) => Promise<void>;
@@ -37,6 +40,7 @@ export function useNotifications(): UseNotifications {
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [total, setTotal] = useState(0);
 
   const load = useCallback(() => {
     api.notifications
@@ -58,6 +62,7 @@ export function useNotifications(): UseNotifications {
           }),
         );
         setTotalPages(all.totalPages);
+        setTotal(all.totalElements);
         setUnreadCount(all.content.filter((notification) => !notification.read).length);
         setError(null);
       })
@@ -77,5 +82,5 @@ export function useNotifications(): UseNotifications {
     else load();
   };
 
-  return { notifications, unreadCount, loading, error, markRead, page, totalPages, setPage };
+  return { notifications, unreadCount, total, loading, error, markRead, page, totalPages, setPage };
 }

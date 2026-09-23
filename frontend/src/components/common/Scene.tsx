@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { RefreshCw } from "lucide-react";
-import type { SceneKey } from "@/types/domain";
-import { SCENES } from "@/lib/activityVisuals";
+import type { PatternKey, SceneKey } from "@/types/domain";
+import { PATTERN_OVERLAYS, SCENES } from "@/lib/activityVisuals";
 import { cn } from "cn";
 
 interface SceneProps {
   scene: SceneKey;
+  pattern?: PatternKey;
   imageUrl?: string | null;
   alt?: string;
   height?: number;
@@ -16,24 +17,33 @@ interface SceneProps {
 }
 
 /** Gradient "photo" placeholder for an activity with no real image — the
- * gradient is picked deterministically per activity (see `pickScene`). */
-export function Scene({ scene, imageUrl, alt = "", height = 150, className, onRefresh }: SceneProps) {
+ * gradient is picked deterministically per activity (see `pickScene`), and
+ * a decorative overlay (dots, diagonal stripes, grid...) picked the same way
+ * (see `pickPattern`) gives two activities sharing a gradient a different
+ * look instead of an identical flat card. */
+export function Scene({ scene, pattern = "plain", imageUrl, alt = "", height = 150, className, onRefresh }: SceneProps) {
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const [loadedUrl, setLoadedUrl] = useState<string | null>(null);
   const status = !imageUrl || loadedUrl === imageUrl ? "loaded" : failedUrl === imageUrl ? "error" : "loading";
   const { grad } = SCENES[scene];
+  const overlay = PATTERN_OVERLAYS[pattern];
+  const gradient = `linear-gradient(135deg, ${grad[0]}, ${grad[1]})`;
 
   return (
     <div
       className={cn("relative overflow-hidden", className)}
-      style={{ height, background: imageUrl ? "var(--muted)" : `linear-gradient(135deg, ${grad[0]}, ${grad[1]})` }}
+      style={
+        imageUrl
+          ? { height, background: "var(--muted)" }
+          : {
+              height,
+              backgroundImage: overlay ? `${overlay.image}, ${gradient}` : gradient,
+              backgroundSize: overlay?.size ? `${overlay.size}, auto` : undefined,
+            }
+      }
       data-scene={scene}
+      data-pattern={imageUrl ? undefined : pattern}
     >
-      {!imageUrl && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-[10px] font-extrabold uppercase tracking-wide text-white/80">Sin imagen</span>
-        </div>
-      )}
       {imageUrl && status !== "error" && (
         // Presigned image hosts are configured at runtime, so next/image cannot whitelist them statically.
         // eslint-disable-next-line @next/next/no-img-element

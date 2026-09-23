@@ -6,7 +6,7 @@ test.describe("login y logout", () => {
     await loginAs(page, USER);
 
     await expect(page).toHaveURL(/\/mis-actividades/);
-    await expect(page.getByText("Tus actividades")).toBeVisible();
+    await expect(page.getByText("Creadas por mí")).toBeVisible();
   });
 
   test("cierra sesión desde el avatar y el token deja de valer", async ({ page }) => {

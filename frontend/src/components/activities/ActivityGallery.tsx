@@ -3,11 +3,12 @@
 import { useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, AlertCircle, RefreshCw } from "lucide-react";
 import { Scene } from "@/components/common/Scene";
-import type { SceneKey } from "@/types/domain";
+import type { PatternKey, SceneKey } from "@/types/domain";
 
 interface ActivityGalleryProps {
   images: string[];
   scene: SceneKey;
+  pattern: PatternKey;
   title: string;
   onRefresh?: () => void;
 }
@@ -17,13 +18,13 @@ interface ImageState {
   error: boolean;
 }
 
-export function ActivityGallery({ images, scene, title, onRefresh }: ActivityGalleryProps) {
+export function ActivityGallery({ images, scene, pattern, title, onRefresh }: ActivityGalleryProps) {
   const scroller = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [imageStates, setImageStates] = useState<Record<number, ImageState>>({});
 
   if (images.length === 0) {
-    return <Scene scene={scene} alt={title} height={300} className="lg:h-[420px]!" />;
+    return <Scene scene={scene} pattern={pattern} alt={title} height={300} className="lg:h-[420px]!" />;
   }
 
   const goTo = (index: number) => {
