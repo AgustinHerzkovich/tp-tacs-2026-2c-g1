@@ -41,7 +41,7 @@ public class NotificationController {
   @PatchMapping("/{id}/read")
   public ResponseEntity<Void> markAsRead(@PathVariable String id, Authentication authentication) {
     notificationService.markAsRead(id, jwt(authentication).getSubject());
-    return ResponseEntity.ok().build();
+    return ResponseEntity.noContent().build();
   }
 
   private Jwt jwt(Authentication authentication) {

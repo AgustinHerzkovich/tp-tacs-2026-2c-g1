@@ -90,7 +90,7 @@ export const api = {
   notifications: {
     list: (page = 0, size = 10) =>
       request<PageResponse<NotificationResponse>>(`/notifications${queryString({ page, size })}`),
-    markRead: (id: string) => request<NotificationResponse>(`/notifications/${id}/read`, { method: "PATCH" }),
+    markRead: (id: string) => request<void>(`/notifications/${id}/read`, { method: "PATCH" }),
   },
   statistics: {
     get: (params?: { from?: string; to?: string }) =>

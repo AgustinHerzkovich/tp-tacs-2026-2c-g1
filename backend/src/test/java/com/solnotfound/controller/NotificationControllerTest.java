@@ -40,7 +40,7 @@ class NotificationControllerTest {
 
     var response = controller.markAsRead("notif-1", authentication("user-auth-123"));
 
-    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
     verify(service).markAsRead("notif-1", "user-auth-123");
   }
 
