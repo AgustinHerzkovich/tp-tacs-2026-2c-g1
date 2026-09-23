@@ -22,7 +22,6 @@ const nunito = Nunito({
 export const metadata: Metadata = {
   title: { default: "Planazo", template: "%s | Planazo" },
   description: "Planificá actividades grupales con reglas climáticas y votación de fechas.",
-  icons: { icon: "/favicon.ico" },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
