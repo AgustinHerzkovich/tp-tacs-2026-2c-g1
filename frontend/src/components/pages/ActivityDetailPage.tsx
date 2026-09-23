@@ -93,7 +93,12 @@ export function ActivityDetailPage({ id }: { id: string }) {
   const scene = pickScene(activity.id);
   const type = mapActivityType(activity.type);
   const status = mapActivityStatus(activity.status);
-  const hasVoting = voting.votation !== null;
+  // A RESCHEDULED/CANCELLED activity keeps its last votation record around
+  // (closed, not deleted — see VotationClosingScheduler), so gating on
+  // `votation !== null` alone kept showing the voting room after the
+  // activity had already been resolved. Only an ACTIVE votation means
+  // voting is actually still open.
+  const hasVoting = voting.votation !== null && voting.votation.status === "ACTIVE";
   const participantNames = activity.participants.map((p) => p.name ?? participantDisplayName(p.userId, user));
   const maxRain = activity.weatherConditions.maxRainProbability;
 
