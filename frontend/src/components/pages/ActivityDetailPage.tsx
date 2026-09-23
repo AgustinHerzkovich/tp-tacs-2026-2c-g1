@@ -17,7 +17,7 @@ import { useActivityWeather } from "@/hooks/useActivityWeather";
 import { useVoting } from "@/hooks/useVoting";
 import { useJoinActivity } from "@/hooks/useJoinActivity";
 import { useAuth } from "@/hooks/useAuth";
-import { mapActivityStatus, mapActivityType, pickScene } from "@/lib/activityMapping";
+import { mapActivityStatus, mapActivityType, pickPattern, pickScene } from "@/lib/activityMapping";
 import { participantDisplayName } from "@/lib/initials";
 import { api } from "@/lib/api";
 import { ErrorState } from "@/components/common/AsyncState";
@@ -91,6 +91,7 @@ export function ActivityDetailPage({ id }: { id: string }) {
   }
 
   const scene = pickScene(activity.id);
+  const pattern = pickPattern(activity.id);
   const type = mapActivityType(activity.type);
   const status = mapActivityStatus(activity.status);
   // A RESCHEDULED/CANCELLED activity keeps its last votation record around
@@ -106,7 +107,7 @@ export function ActivityDetailPage({ id }: { id: string }) {
     <div className="fade-in lg:max-w-5xl lg:mx-auto lg:py-8 lg:px-8 lg:pb-24">
       <div>
         <div className="relative lg:rounded-3xl lg:overflow-hidden">
-          <ActivityGallery images={activity.imageUrls} scene={scene} title={activity.title} onRefresh={handleRefreshImages} />
+          <ActivityGallery images={activity.imageUrls} scene={scene} pattern={pattern} title={activity.title} onRefresh={handleRefreshImages} />
           <div className="absolute inset-x-0 bottom-0 h-28" style={{ background: "linear-gradient(to top, rgba(58,51,82,.75), transparent)" }} />
           <button
             onClick={() => router.back()}

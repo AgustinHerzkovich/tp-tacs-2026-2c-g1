@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   mapActivityStatus,
   mapActivityType,
+  pickPattern,
   pickScene,
   toBackendActivityType,
   toExploreActivity,
@@ -39,6 +40,19 @@ function makeActivity(overrides: Partial<ActivityResponse> = {}): ActivityRespon
 describe("pickScene", () => {
   it("is deterministic for the same id", () => {
     expect(pickScene("act-1")).toBe(pickScene("act-1"));
+  });
+});
+
+describe("pickPattern", () => {
+  it("is deterministic for the same id", () => {
+    expect(pickPattern("act-1")).toBe(pickPattern("act-1"));
+  });
+
+  it("can differ from another activity that shares a scene", () => {
+    // act-1 and act-8 both hash to the same scene (verified below); the
+    // pattern should still be free to vary independently of it.
+    expect(pickScene("act-1")).toBe(pickScene("act-8"));
+    expect(pickPattern("act-1")).not.toBe(pickPattern("act-8"));
   });
 });
 

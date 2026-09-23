@@ -7,7 +7,12 @@
 
 import type { UserDTO } from "@/types/backend";
 
-export type SceneKey = "trekking" | "voley" | "cine" | "juegos" | "asado" | "cumple" | "picnic";
+export type SceneKey = "skyMint" | "sunRose" | "lavSky" | "roseViolet" | "mintSun" | "violetRose" | "roseSky";
+
+/** Decorative overlay drawn on top of an imageless activity's gradient (see
+ * `pickPattern` in activityMapping.ts) — varies independently from `scene`
+ * so two activities sharing a gradient don't look identical. */
+export type PatternKey = "plain" | "dots" | "diagonal" | "grid";
 
 export type MockActivityType = "outdoor" | "indoor" | "mixed";
 
@@ -22,6 +27,7 @@ export type MockStatusKey =
 interface ActivityBase {
   id: string;
   scene: SceneKey;
+  pattern: PatternKey;
   imageUrl: string | null;
   title: string;
   type: MockActivityType;

@@ -14,14 +14,16 @@ const IMAGES = [
 ];
 
 describe("ActivityGallery", () => {
-  it("renders the scene placeholder when there are no images", () => {
-    render(<ActivityGallery images={[]} scene="trekking" title="Sin fotos" />);
-    expect(screen.getByText("Sin imagen")).toBeInTheDocument();
-    expect(document.querySelector('[data-scene="trekking"]')).toBeInTheDocument();
+  it("renders the scene placeholder (gradient + pattern overlay, no image) when there are no images", () => {
+    render(<ActivityGallery images={[]} scene="skyMint" pattern="dots" title="Sin fotos" />);
+    const placeholder = document.querySelector('[data-scene="skyMint"]');
+    expect(placeholder).toBeInTheDocument();
+    expect(placeholder).toHaveAttribute("data-pattern", "dots");
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
   });
 
   it("renders every image with an accessible label", () => {
-    render(<ActivityGallery images={IMAGES} scene="voley" title="Partido de vóley" />);
+    render(<ActivityGallery images={IMAGES} scene="sunRose" pattern="plain" title="Partido de vóley" />);
     const pictures = screen.getAllByRole("img");
     expect(pictures).toHaveLength(3);
     expect(pictures[0]).toHaveAttribute("src", IMAGES[0]);
@@ -30,7 +32,7 @@ describe("ActivityGallery", () => {
 
   it("reports the active slide and allows navigating with the dots", async () => {
     const user = userEvent.setup();
-    render(<ActivityGallery images={IMAGES} scene="voley" title="Partido" />);
+    render(<ActivityGallery images={IMAGES} scene="sunRose" pattern="plain" title="Partido" />);
 
     expect(screen.getByLabelText(/Imagen 1 de 3/)).toBeInTheDocument();
     const prevButton = screen.getByRole("button", { name: "Imagen anterior" });
@@ -42,7 +44,7 @@ describe("ActivityGallery", () => {
   });
 
   it("hides navigation controls when only one image exists", () => {
-    render(<ActivityGallery images={[IMAGES[0]!]} scene="cine" title="Cine" />);
+    render(<ActivityGallery images={[IMAGES[0]!]} scene="lavSky" pattern="plain" title="Cine" />);
     expect(screen.queryByRole("button", { name: "Imagen anterior" })).not.toBeInTheDocument();
   });
 });

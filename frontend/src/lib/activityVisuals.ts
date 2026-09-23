@@ -4,7 +4,7 @@
 // to draw a given status/type/notification kind. Real activity data comes
 // exclusively from the backend (see src/lib/api.ts).
 
-import type { MockActivityType, MockStatusKey, NotificationKind, SceneKey } from "@/types/domain";
+import type { MockActivityType, MockStatusKey, NotificationKind, PatternKey, SceneKey } from "@/types/domain";
 
 /** The six pastel tones used across the whole app (chips, badges,
  * notifications, avatar fallbacks) — one canonical table so a color only
@@ -42,13 +42,30 @@ export const TYPE_META: Record<MockActivityType, { label: string; icon: string; 
  * deterministically from the activity's real id (see pickScene in
  * activityMapping.ts), not tied to any specific activity's content. */
 export const SCENES: Record<SceneKey, { grad: [string, string] }> = {
-  trekking: { grad: ["#BAE6FD", "#A7F3D0"] },
-  voley: { grad: ["#FEF08A", "#FECDD3"] },
-  cine: { grad: ["#DDD6FE", "#BAE6FD"] },
-  juegos: { grad: ["#FECDD3", "#EAD9FF"] },
-  asado: { grad: ["#A7F3D0", "#FEF08A"] },
-  cumple: { grad: ["#EAD9FF", "#FECDD3"] },
-  picnic: { grad: ["#FECDD3", "#BAE6FD"] },
+  skyMint: { grad: ["#BAE6FD", "#A7F3D0"] },
+  sunRose: { grad: ["#FEF08A", "#FECDD3"] },
+  lavSky: { grad: ["#DDD6FE", "#BAE6FD"] },
+  roseViolet: { grad: ["#FECDD3", "#EAD9FF"] },
+  mintSun: { grad: ["#A7F3D0", "#FEF08A"] },
+  violetRose: { grad: ["#EAD9FF", "#FECDD3"] },
+  roseSky: { grad: ["#FECDD3", "#BAE6FD"] },
+};
+
+/** Decorative overlay drawn over an imageless activity's gradient (see
+ * `pickPattern` in activityMapping.ts) — `image` is one or more CSS
+ * `background-image` layers (white-on-transparent so the gradient still
+ * shows through), `size` is the matching `background-size` for those layers
+ * only (the base gradient layer this gets combined with in `Scene.tsx`
+ * always gets `auto`). `plain` has no overlay: the gradient alone. */
+export const PATTERN_OVERLAYS: Record<PatternKey, { image: string; size?: string } | null> = {
+  plain: null,
+  dots: { image: "radial-gradient(rgba(255,255,255,.55) 1.6px, transparent 1.6px)", size: "14px 14px" },
+  diagonal: { image: "repeating-linear-gradient(45deg, rgba(255,255,255,.4) 0 6px, transparent 6px 14px)" },
+  grid: {
+    image:
+      "repeating-linear-gradient(0deg, rgba(255,255,255,.35) 0 1px, transparent 1px 14px), " +
+      "repeating-linear-gradient(90deg, rgba(255,255,255,.35) 0 1px, transparent 1px 14px)",
+  },
 };
 
 export const NOTIF_META: Record<NotificationKind, { tone: Tone }> = {

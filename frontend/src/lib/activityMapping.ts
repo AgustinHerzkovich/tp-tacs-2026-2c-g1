@@ -5,10 +5,11 @@
 // useActivity) since it needs fields that don't survive this mapping.
 
 import type { ActivityResponse, ActivityStatus, ActivityType } from "@/types/backend";
-import type { ExploreActivity, MisActivity, MockActivityType, MockStatusKey, SceneKey } from "@/types/domain";
+import type { ExploreActivity, MisActivity, MockActivityType, MockStatusKey, PatternKey, SceneKey } from "@/types/domain";
 import { formatActivityWhen } from "@/lib/formatDate";
 
-const SCENE_KEYS: SceneKey[] = ["trekking", "voley", "cine", "juegos", "asado", "cumple", "picnic"];
+const SCENE_KEYS: SceneKey[] = ["skyMint", "sunRose", "lavSky", "roseViolet", "mintSun", "violetRose", "roseSky"];
+const PATTERN_KEYS: PatternKey[] = ["plain", "dots", "diagonal", "grid"];
 
 function hashString(value: string): number {
   let hash = 0;
@@ -21,7 +22,16 @@ function hashString(value: string): number {
 /** Picks a deterministic — but otherwise arbitrary — illustration for an
  * activity id, so the same activity always renders the same scene. */
 export function pickScene(activityId: string): SceneKey {
-  return SCENE_KEYS[hashString(activityId) % SCENE_KEYS.length] ?? "trekking";
+  return SCENE_KEYS[hashString(activityId) % SCENE_KEYS.length] ?? "skyMint";
+}
+
+/** Picks a deterministic overlay pattern for an imageless activity's
+ * gradient card. Divides the hash down first so this doesn't just track
+ * `pickScene`'s `% SCENE_KEYS.length` remainder — two activities sharing a
+ * scene/gradient can still land on different patterns. */
+export function pickPattern(activityId: string): PatternKey {
+  const shifted = Math.floor(hashString(activityId) / SCENE_KEYS.length);
+  return PATTERN_KEYS[shifted % PATTERN_KEYS.length] ?? "plain";
 }
 
 export function mapActivityType(type: ActivityType): MockActivityType {
@@ -73,6 +83,7 @@ function toBase(dto: ActivityResponse) {
   return {
     id: dto.id,
     scene: pickScene(dto.id),
+    pattern: pickPattern(dto.id),
     imageUrl: dto.imageUrls[0] ?? null,
     title: dto.title,
     type: mapActivityType(dto.type),
