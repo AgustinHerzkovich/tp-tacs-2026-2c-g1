@@ -2,11 +2,11 @@ import { expect, test } from "@playwright/test";
 import { loginAs, USER } from "./helpers";
 
 test.describe("login y logout", () => {
-  test("inicia sesión con Keycloak y aterriza en Mis Actividades", async ({ page }) => {
+  test("inicia sesión con Keycloak y aterriza en Explorar", async ({ page }) => {
     await loginAs(page, USER);
 
-    await expect(page).toHaveURL(/\/mis-actividades/);
-    await expect(page.getByText("Creadas por mí")).toBeVisible();
+    await expect(page).toHaveURL(/\/explorar/);
+    await expect(page.getByPlaceholder("Buscar actividades")).toBeVisible();
   });
 
   test("cierra sesión desde el avatar y el token deja de valer", async ({ page }) => {
