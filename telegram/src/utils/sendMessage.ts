@@ -9,6 +9,9 @@ export default async function sendMessage(chatId: number, text: string, replyMar
   });
 
   if (!response.ok) {
-    console.error("sendMessage failed:", await response.text());
+    const errorBody = await response.text();
+    console.error(`[sendMessage] fallo enviando mensaje a chat ${chatId} (HTTP ${response.status}): ${errorBody}`);
+  } else {
+    console.log(`[sendMessage] mensaje enviado a chat ${chatId}`);
   }
 }
