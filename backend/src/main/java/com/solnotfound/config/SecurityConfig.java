@@ -56,8 +56,41 @@ public class SecurityConfig {
     }
   }
 
+  /**
+   * Protects the Telegram bot endpoints with a static API token sent in the {@value
+   * ApiTokenAuthenticationFilter#HEADER} header instead of a Keycloak JWT. Requests without a valid
+   * token receive 401. When no token is configured, every request to these endpoints is rejected.
+   */
   @Bean
   @Order(2)
+  SecurityFilterChain telegramSecurityFilterChain(
+      HttpSecurity http,
+      @org.springframework.beans.factory.annotation.Value("${telegram.api-token}")
+          String apiToken) {
+    try {
+      return http.securityMatcher("/users/telegram/**")
+          .csrf(csrf -> csrf.disable())
+          .sessionManagement(
+              session ->
+                  session.sessionCreationPolicy(
+                      org.springframework.security.config.http.SessionCreationPolicy.STATELESS))
+          .addFilterBefore(
+              new ApiTokenAuthenticationFilter(apiToken, "telegram-bot", "TELEGRAM_BOT"),
+              org.springframework.security.web.authentication.AnonymousAuthenticationFilter.class)
+          .authorizeHttpRequests(requests -> requests.anyRequest().hasRole("TELEGRAM_BOT"))
+          .exceptionHandling(
+              exceptions ->
+                  exceptions.authenticationEntryPoint(
+                      new org.springframework.security.web.authentication.HttpStatusEntryPoint(
+                          org.springframework.http.HttpStatus.UNAUTHORIZED)))
+          .build();
+    } catch (Exception exception) {
+      throw new IllegalStateException("Could not configure Telegram security", exception);
+    }
+  }
+
+  @Bean
+  @Order(3)
   SecurityFilterChain securityFilterChain(HttpSecurity http) {
     try {
       return http.csrf(csrf -> csrf.disable())

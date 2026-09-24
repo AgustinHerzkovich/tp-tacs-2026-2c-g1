@@ -1,6 +1,7 @@
 package com.solnotfound.repository;
 
 import com.solnotfound.entity.user.User;
+import java.util.Optional;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -32,5 +33,10 @@ public class UserRepository implements IUserRepository {
       return repository.findById(user.getId()).orElseGet(() -> repository.save(user));
     }
     return repository.save(user);
+  }
+
+  @Override
+  public Optional<User> findByTelegramChatId(Long telegramChatId) {
+    return repository.findByTelegramChatId(telegramChatId);
   }
 }

@@ -4,3 +4,5 @@ target/
 *.iml
 *.docx
 graphify-out/
+.env
+.env.*
