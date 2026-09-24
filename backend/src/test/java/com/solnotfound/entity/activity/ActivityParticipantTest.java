@@ -66,7 +66,9 @@ public class ActivityParticipantTest {
 
     assertThatThrownBy(() -> activity.addParticipant("user-4"))
         .isInstanceOf(IllegalStateActivityException.class)
-        .hasMessage("Activity has no available spots.");
+        .hasMessage("Activity has no available spots.")
+        .extracting("code")
+        .isEqualTo(com.solnotfound.exception.ErrorCode.ACTIVITY_FULL);
   }
 
   @Test

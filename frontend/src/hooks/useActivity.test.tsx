@@ -39,6 +39,7 @@ const ACTIVITY: ActivityResponse = {
   reprogramationRange: { maxDays: 3, initialHour: "09:00:00", finalHour: "21:00:00" },
   status: "CONFIRMED",
   imageUrls: [],
+  organizerId: "organizer-1",
 };
 
 describe("useActivity", () => {

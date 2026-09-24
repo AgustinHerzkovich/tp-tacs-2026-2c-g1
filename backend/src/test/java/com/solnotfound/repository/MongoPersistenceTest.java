@@ -3,6 +3,7 @@ package com.solnotfound.repository;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.solnotfound.dto.ActivityFilterDTO;
+import com.solnotfound.dto.VotationFilterDTO;
 import com.solnotfound.entity.activity.Activity;
 import com.solnotfound.entity.activity.ActivityType;
 import com.solnotfound.entity.activity.City;
@@ -53,7 +54,7 @@ class MongoPersistenceTest {
   void setUp() {
     mongoTemplate.getDb().drop();
     activityRepository = new ActivityRepository(mongoActivityRepository, mongoTemplate);
-    votationRepository = new VotationRepository(mongoVotationRepository);
+    votationRepository = new VotationRepository(mongoVotationRepository, mongoTemplate);
     notificationRepository = new NotificationRepository(mongoNotificationRepository);
     userRepository = new UserRepository(mongoUserRepository);
   }
@@ -136,6 +137,65 @@ class MongoPersistenceTest {
                 .getContent())
         .extracting(Activity::getId)
         .containsExactly("activity-1");
+  }
+
+  @Test
+  void searchesActivitiesByTitleIgnoringCase() {
+    User organizer = userRepository.findOrCreate("organizer");
+    User participant = userRepository.findOrCreate("participant");
+    activityRepository.save(activity(organizer, participant));
+    Activity other = activity(organizer, participant);
+    other.setId("activity-2");
+    other.setTitle("Asado en la plaza");
+    activityRepository.save(other);
+
+    assertThat(
+            activityRepository
+                .search(
+                    new ActivityFilterDTO(null, null, null, null, null, List.of(), "  ASADO "),
+                    PageRequest.of(0, 10))
+                .getContent())
+        .extracting(Activity::getId)
+        .containsExactly("activity-2");
+  }
+
+  @Test
+  void searchesVotationsByStatusAndOwnVoteUsingStoredReferences() {
+    User organizer = userRepository.findOrCreate("organizer");
+    User participant = userRepository.findOrCreate("participant");
+    Activity activity = activity(organizer, participant);
+    activityRepository.save(activity);
+    LocalDateTime closingDate = LocalDateTime.of(2026, 9, 5, 20, 0);
+    Votation active = votation(activity, participant, closingDate);
+    votationRepository.save(active);
+    Votation closed = votation(activity, participant, closingDate);
+    closed.setStatus(VotationStatus.CLOSED);
+    closed.setCreationDate(closingDate.minusDays(2));
+    votationRepository.save(closed);
+    List<String> activityIds = List.of("activity-1");
+    PageRequest page = PageRequest.of(0, 10);
+
+    assertThat(
+            votationRepository
+                .search(
+                    activityIds,
+                    new VotationFilterDTO(VotationStatus.ACTIVE, null, true),
+                    "participant",
+                    page)
+                .getContent())
+        .extracting(Votation::getId)
+        .containsExactly(active.getId());
+    assertThat(
+            votationRepository
+                .search(activityIds, new VotationFilterDTO(null, null, false), "organizer", page)
+                .getContent())
+        .extracting(Votation::getId)
+        .containsExactly(active.getId(), closed.getId());
+    assertThat(
+            votationRepository
+                .search(activityIds, new VotationFilterDTO(null, null, false), "participant", page)
+                .getContent())
+        .isEmpty();
   }
 
   private Activity activity(User organizer, User participant) {

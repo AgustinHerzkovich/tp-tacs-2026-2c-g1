@@ -96,6 +96,7 @@ public class ActivityController {
       @RequestParam(required = false) ActivityType type,
       @RequestParam(required = false) List<ActivityStatus> status,
       @RequestParam(required = false) String city,
+      @RequestParam(required = false) String title,
       @RequestParam(required = false) Boolean availability,
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
           LocalDateTime dateFrom,
@@ -106,7 +107,13 @@ public class ActivityController {
     PageResponse<ActivityResponse> activities =
         activityService.search(
             new ActivityFilterDTO(
-                type, city, dateFrom, dateTo, availability, status == null ? List.of() : status),
+                type,
+                city,
+                dateFrom,
+                dateTo,
+                availability,
+                status == null ? List.of() : status,
+                title),
             pageRequest(page, size, "dateTime"));
     return ResponseEntity.ok(activities);
   }

@@ -41,6 +41,7 @@ const ACTIVITY: ActivityResponse = {
   reprogramationRange: { maxDays: 3, initialHour: "09:00:00", finalHour: "21:00:00" },
   status: "CONFIRMED",
   imageUrls: [],
+  organizerId: "organizer-1",
 };
 
 describe("api client", () => {
@@ -91,20 +92,39 @@ describe("api client", () => {
   });
 
   it.each([
-    [400, "Bad request"],
-    [401, "No estás autorizado"],
-    [403, "Prohibido"],
-    [404, "No existe"],
-    [409, "Conflicto"],
-    [413, "Demasiado grande"],
-    [500, "Error interno"],
-    [503, "Servicio no disponible"],
-  ])("rejects with an ApiError carrying status %i and the backend message", async (status, message) => {
-    authFetch.mockResolvedValue(jsonResponse(status, { message }));
+    [409, "ACTIVITY_FULL", "La actividad ya no tiene lugares disponibles."],
+    [403, "NOT_ORGANIZER", "Solo el organizador puede hacer esto."],
+    [404, "VOTATION_NOT_FOUND", "No encontramos esta votación."],
+    [503, "WEATHER_UNAVAILABLE", "No pudimos consultar el pronóstico. Probá de nuevo en unos minutos."],
+  ])("maps the backend error code %i/%s to a Spanish message", async (status, code, message) => {
+    authFetch.mockResolvedValue(
+      jsonResponse(status, { code, detail: "Activity has no available spots. id=65f0", title: "Conflict" }),
+    );
     const promise = api.activities.get("a1");
     await expect(promise).rejects.toSatisfy(
-      (err: unknown) => err instanceof ApiError && err.status === status && err.message === message,
+      (err: unknown) =>
+        err instanceof ApiError && err.status === status && err.code === code && err.message === message,
     );
+  });
+
+  it.each([
+    [400, "Revisá los datos ingresados."],
+    [401, "Tu sesión expiró. Iniciá sesión de nuevo."],
+    [403, "No tenés permiso para hacer esto."],
+    [404, "No encontramos lo que buscabas."],
+    [409, "No pudimos completar la operación. Probá de nuevo más tarde."],
+    [500, "No pudimos completar la operación. Probá de nuevo más tarde."],
+  ])("never shows the backend detail and falls back to a message for status %i", async (status, message) => {
+    authFetch.mockResolvedValue(jsonResponse(status, { detail: "Provider returned an incomplete forecast range" }));
+    await expect(api.activities.get("a1")).rejects.toMatchObject({ status, code: null, message });
+  });
+
+  it("falls back to the status message for an unknown error code", async () => {
+    authFetch.mockResolvedValue(jsonResponse(404, { code: "SOMETHING_NEW" }));
+    await expect(api.activities.get("a1")).rejects.toMatchObject({
+      code: "SOMETHING_NEW",
+      message: "No encontramos lo que buscabas.",
+    });
   });
 
   it("falls back to a generic message when the error body is not JSON", async () => {

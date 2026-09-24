@@ -46,6 +46,7 @@ class ActivitySearchControllerTest {
                 .param("dateTo", "2026-09-01T00:00:00"))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.title").value("Invalid activity"))
+        .andExpect(jsonPath("$.code").value("INVALID_DATE_RANGE"))
         .andExpect(jsonPath("$.detail").value("Search start date cannot be after end date"));
   }
 
@@ -55,6 +56,7 @@ class ActivitySearchControllerTest {
         .perform(get("/activities").param("type", "INVALID"))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.title").value("Invalid request parameter"))
+        .andExpect(jsonPath("$.code").value("INVALID_PARAMETER"))
         .andExpect(jsonPath("$.detail").value("Invalid value for parameter 'type'"))
         .andExpect(jsonPath("$.parameter").value("type"));
   }

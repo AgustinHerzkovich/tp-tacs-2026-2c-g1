@@ -23,6 +23,7 @@ import com.solnotfound.entity.weather.WeatherCondition;
 import com.solnotfound.entity.weather.WeatherForecast;
 import com.solnotfound.exception.ActivityAccessDeniedException;
 import com.solnotfound.exception.ActivityNotFoundException;
+import com.solnotfound.exception.ErrorCode;
 import com.solnotfound.exception.InvalidActivityException;
 import com.solnotfound.repository.IActivityRepository;
 import com.solnotfound.repository.IUserRepository;
@@ -173,19 +174,22 @@ public class ActivityService {
 
   private void validateImages(List<? extends ImageFile> images) {
     if (images.size() > MAX_IMAGES) {
-      throw new InvalidActivityException("An activity can have at most 5 images");
+      throw new InvalidActivityException(
+          ErrorCode.TOO_MANY_IMAGES, "An activity can have at most 5 images");
     }
     for (ImageFile image : images) {
       String contentType = image.contentType();
       if (image.size() <= 0) {
-        throw new InvalidActivityException("Images cannot be empty");
+        throw new InvalidActivityException(ErrorCode.INVALID_IMAGE, "Images cannot be empty");
       }
       if (image.size() > MAX_IMAGE_SIZE) {
-        throw new InvalidActivityException("Each image must be at most 5 MiB");
+        throw new InvalidActivityException(
+            ErrorCode.IMAGE_TOO_LARGE, "Each image must be at most 5 MiB");
       }
       if (contentType == null
           || !ALLOWED_IMAGE_TYPES.contains(contentType.toLowerCase(Locale.ROOT))) {
-        throw new InvalidActivityException("Images must be JPEG, PNG, or WebP");
+        throw new InvalidActivityException(
+            ErrorCode.INVALID_IMAGE, "Images must be JPEG, PNG, or WebP");
       }
     }
   }
@@ -196,7 +200,8 @@ public class ActivityService {
           case "image/jpeg" -> ".jpg";
           case "image/png" -> ".png";
           case "image/webp" -> ".webp";
-          default -> throw new InvalidActivityException("Unsupported image type");
+          default ->
+              throw new InvalidActivityException(ErrorCode.INVALID_IMAGE, "Unsupported image type");
         };
     return "activities/" + activityId + "/" + UUID.randomUUID() + extension;
   }
@@ -224,7 +229,8 @@ public class ActivityService {
     if (filter.dateFrom() != null
         && filter.dateTo() != null
         && filter.dateFrom().isAfter(filter.dateTo())) {
-      throw new InvalidActivityException("Search start date cannot be after end date");
+      throw new InvalidActivityException(
+          ErrorCode.INVALID_DATE_RANGE, "Search start date cannot be after end date");
     }
 
     return activityRepository.findAll().stream()
@@ -244,12 +250,23 @@ public class ActivityService {
     if (filter.dateFrom() != null
         && filter.dateTo() != null
         && filter.dateFrom().isAfter(filter.dateTo())) {
-      throw new InvalidActivityException("Search start date cannot be after end date");
+      throw new InvalidActivityException(
+          ErrorCode.INVALID_DATE_RANGE, "Search start date cannot be after end date");
     }
   }
 
   private boolean matches(Activity activity, ActivityFilterDTO filter) {
     if (filter.type() != null && filter.type() != activity.getType()) {
+      return false;
+    }
+
+    if (filter.title() != null
+        && !filter.title().isBlank()
+        && (activity.getTitle() == null
+            || !activity
+                .getTitle()
+                .toLowerCase(java.util.Locale.ROOT)
+                .contains(filter.title().trim().toLowerCase(java.util.Locale.ROOT)))) {
       return false;
     }
 
@@ -379,7 +396,8 @@ public class ActivityService {
 
   private void validateFutureDateTime(LocalDateTime dateTime, String timeZoneId) {
     if (!dateTime.atZone(resolveZone(timeZoneId)).toInstant().isAfter(Instant.now())) {
-      throw new InvalidActivityException("Activity date and time must be in the future");
+      throw new InvalidActivityException(
+          ErrorCode.ACTIVITY_DATE_IN_PAST, "Activity date and time must be in the future");
     }
   }
 
@@ -497,7 +515,8 @@ public class ActivityService {
         activity.getStatus(),
         activity.getImageKeys().stream()
             .map(key -> imageStorage.signedReadUrl(key, IMAGE_URL_VALIDITY).toString())
-            .toList());
+            .toList(),
+        activity.getOrganizer() == null ? null : activity.getOrganizer().getId());
   }
 
   private LocationDTO toLocationDTO(Location location) {

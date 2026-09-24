@@ -33,6 +33,7 @@ function makeActivity(overrides: Partial<ActivityResponse> = {}): ActivityRespon
     reprogramationRange: { maxDays: 3, initialHour: "09:00:00", finalHour: "21:00:00" },
     status: "CONFIRMED",
     imageUrls: ["https://cdn.example.com/a.jpg", "https://cdn.example.com/b.jpg"],
+    organizerId: "organizer-1",
     ...overrides,
   };
 }

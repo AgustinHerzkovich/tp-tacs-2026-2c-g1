@@ -13,63 +13,51 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
+/**
+ * Translates exceptions into RFC 7807 {@link ProblemDetail} responses.
+ *
+ * <p>Every response includes a {@code code} property with an {@link ErrorCode}. Clients must use
+ * that code to decide what to show the user; {@code detail} is a developer-facing message.
+ */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
   @ExceptionHandler(InvalidActivityException.class)
   public ResponseEntity<ProblemDetail> handleInvalidActivity(InvalidActivityException exception) {
-    ProblemDetail problem =
-        ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, exception.getMessage());
-    problem.setTitle("Invalid activity");
-    return ResponseEntity.badRequest().body(problem);
+    return respond(HttpStatus.BAD_REQUEST, "Invalid activity", exception);
   }
 
   @ExceptionHandler(ActivityNotFoundException.class)
   public ResponseEntity<ProblemDetail> handleActivityNotFound(ActivityNotFoundException exception) {
-
-    ProblemDetail problem =
-        ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, exception.getMessage());
-
-    problem.setTitle("Activity not found");
-
-    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problem);
+    return respond(HttpStatus.NOT_FOUND, "Activity not found", exception);
   }
 
   @ExceptionHandler(ActivityAccessDeniedException.class)
   public ResponseEntity<ProblemDetail> handleActivityAccessDenied(
       ActivityAccessDeniedException exception) {
-    ProblemDetail problem =
-        ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, exception.getMessage());
-    problem.setTitle("Activity access denied");
-    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(problem);
+    return respond(HttpStatus.FORBIDDEN, "Activity access denied", exception);
   }
 
   @ExceptionHandler(IllegalStateActivityException.class)
   public ResponseEntity<ProblemDetail> handleIllegalStateActivityException(
       IllegalStateActivityException exception) {
-    ProblemDetail problem =
-        ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
-    problem.setTitle("Activity state conflict");
-    return ResponseEntity.status(HttpStatus.CONFLICT).body(problem);
+    return respond(HttpStatus.CONFLICT, "Activity state conflict", exception);
   }
 
   @ExceptionHandler(InvalidVotationOptionsException.class)
   public ResponseEntity<ProblemDetail> handleInvalidVotationOptions(
       InvalidVotationOptionsException exception) {
-    ProblemDetail problem =
-        ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, exception.getMessage());
-    problem.setTitle("Invalid votation options");
-    problem.setProperty("invalidOptionDates", exception.getInvalidOptionDates());
-    return ResponseEntity.badRequest().body(problem);
+    ResponseEntity<ProblemDetail> response =
+        respond(HttpStatus.BAD_REQUEST, "Invalid votation options", exception);
+    Objects.requireNonNull(response.getBody())
+        .setProperty("invalidOptionDates", exception.getInvalidOptionDates());
+    return response;
   }
 
   @ExceptionHandler(InvalidVotationSettingsException.class)
   public ResponseEntity<ProblemDetail> handleInvalidVotationSettings(
       InvalidVotationSettingsException exception) {
-    ProblemDetail problem =
-        ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, exception.getMessage());
-    problem.setTitle("Invalid votation settings");
-    return ResponseEntity.badRequest().body(problem);
+    return respond(HttpStatus.BAD_REQUEST, "Invalid votation settings", exception);
   }
 
   @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -82,6 +70,7 @@ public class GlobalExceptionHandler {
 
     ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
     problem.setTitle("Request validation failed");
+    problem.setProperty("code", ErrorCode.VALIDATION_FAILED);
     problem.setProperty("errors", errors);
     return ResponseEntity.badRequest().body(problem);
   }
@@ -93,6 +82,7 @@ public class GlobalExceptionHandler {
         ProblemDetail.forStatusAndDetail(
             HttpStatus.BAD_REQUEST, "Invalid value for parameter '" + exception.getName() + "'");
     problem.setTitle("Invalid request parameter");
+    problem.setProperty("code", ErrorCode.INVALID_PARAMETER);
     problem.setProperty("parameter", exception.getName());
     return ResponseEntity.badRequest().body(problem);
   }
@@ -100,57 +90,51 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(InvalidStatisticsRangeException.class)
   public ResponseEntity<ProblemDetail> handleInvalidStatisticsRange(
       InvalidStatisticsRangeException exception) {
-    ProblemDetail problem =
-        ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, exception.getMessage());
-    problem.setTitle("Invalid statistics range");
-    return ResponseEntity.badRequest().body(problem);
+    return respond(HttpStatus.BAD_REQUEST, "Invalid statistics range", exception);
   }
 
   @ExceptionHandler(CouldNotRetrieveStatisticsException.class)
-  public ProblemDetail handleStatisticsServiceUnavailable(CouldNotRetrieveStatisticsException ex) {
-    ProblemDetail problemDetail =
-        ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage());
-    problemDetail.setTitle("Servicio No Disponible");
-
-    // Es buena práctica indicarle al cliente si vale la pena reintentar
-    problemDetail.setProperty("retryable", true);
-    problemDetail.setProperty("timestamp", Instant.now());
-
-    return problemDetail;
+  public ResponseEntity<ProblemDetail> handleStatisticsServiceUnavailable(
+      CouldNotRetrieveStatisticsException exception) {
+    ResponseEntity<ProblemDetail> response =
+        respond(HttpStatus.SERVICE_UNAVAILABLE, "Statistics unavailable", exception);
+    ProblemDetail problem = Objects.requireNonNull(response.getBody());
+    // Tells the client that retrying later may succeed.
+    problem.setProperty("retryable", true);
+    problem.setProperty("timestamp", Instant.now());
+    return response;
   }
 
   @ExceptionHandler(InvaildActivityStatusException.class)
-  public ProblemDetail handleInvalidActivityStatus(InvaildActivityStatusException ex) {
-    ProblemDetail problemDetail =
-        ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
-    problemDetail.setTitle("Invalid Activity Status");
-    problemDetail.setProperty("timestamp", Instant.now());
-
-    return problemDetail;
+  public ResponseEntity<ProblemDetail> handleInvalidActivityStatus(
+      InvaildActivityStatusException exception) {
+    ResponseEntity<ProblemDetail> response =
+        respond(HttpStatus.BAD_REQUEST, "Invalid activity status", exception);
+    Objects.requireNonNull(response.getBody()).setProperty("timestamp", Instant.now());
+    return response;
   }
 
   @ExceptionHandler(ResourceNotFoundException.class)
   public ResponseEntity<ProblemDetail> handleResourceNotFound(ResourceNotFoundException exception) {
-    ProblemDetail problem =
-        ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, exception.getMessage());
-    problem.setTitle("Resource not found");
-    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problem);
+    return respond(HttpStatus.NOT_FOUND, "Resource not found", exception);
   }
 
   @ExceptionHandler(AccessDeniedException.class)
   public ResponseEntity<ProblemDetail> handleAccessDenied(AccessDeniedException exception) {
-    ProblemDetail problem =
-        ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, exception.getMessage());
-    problem.setTitle("Access denied");
-    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(problem);
+    return respond(HttpStatus.FORBIDDEN, "Access denied", exception);
   }
 
   @ExceptionHandler(WeatherUnavailableException.class)
   public ResponseEntity<ProblemDetail> handleWeatherUnavailable(
       WeatherUnavailableException exception) {
-    ProblemDetail problem =
-        ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, exception.getMessage());
-    problem.setTitle("Weather service unavailable");
-    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(problem);
+    return respond(HttpStatus.SERVICE_UNAVAILABLE, "Weather service unavailable", exception);
+  }
+
+  private ResponseEntity<ProblemDetail> respond(
+      HttpStatus status, String title, CodedException exception) {
+    ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, exception.getMessage());
+    problem.setTitle(title);
+    problem.setProperty("code", exception.getCode());
+    return ResponseEntity.status(status).body(problem);
   }
 }

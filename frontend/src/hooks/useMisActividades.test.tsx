@@ -3,9 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMisActividades } from "@/hooks/useMisActividades";
 import type { ActivityResponse, PageResponse, VotationDTO } from "@/types/backend";
 
-const { organized, mine, votationsMine } = vi.hoisted(() => ({
+const { organized, mine, get, votationsMine } = vi.hoisted(() => ({
   organized: vi.fn(),
   mine: vi.fn(),
+  get: vi.fn(),
   votationsMine: vi.fn(),
 }));
 
@@ -13,7 +14,7 @@ const { useAuthMock } = vi.hoisted(() => ({ useAuthMock: vi.fn() }));
 
 vi.mock("@/lib/api", () => ({
   api: {
-    activities: { organized, mine },
+    activities: { organized, mine, get },
     votations: { mine: votationsMine },
   },
 }));
@@ -21,6 +22,8 @@ vi.mock("@/lib/api", () => ({
 vi.mock("@/hooks/useAuth", () => ({
   useAuth: useAuthMock,
 }));
+
+const ME = "me-id";
 
 function makeActivity(id: string, overrides: Partial<ActivityResponse> = {}): ActivityResponse {
   return {
@@ -40,42 +43,44 @@ function makeActivity(id: string, overrides: Partial<ActivityResponse> = {}): Ac
     reprogramationRange: { maxDays: 3, initialHour: "09:00:00", finalHour: "21:00:00" },
     status: "CONFIRMED",
     imageUrls: [],
+    organizerId: "someone-else",
     ...overrides,
   };
 }
 
-function pageOf(...activities: ActivityResponse[]): PageResponse<ActivityResponse> {
+function pageOf<T>(...items: T[]): PageResponse<T> {
   return {
-    content: activities,
+    content: items,
     page: 0,
     size: 12,
-    totalElements: activities.length,
+    totalElements: items.length,
     totalPages: 1,
     first: true,
     last: true,
   };
 }
 
-function makeVotation(overrides: Partial<VotationDTO> = {}): VotationDTO {
+function makeVotation(activityId: string): VotationDTO {
   return {
-    id: "v1",
-    activityId: "a1",
+    id: `v-${activityId}`,
+    activityId,
     creationDate: "2026-09-01T00:00:00",
     status: "ACTIVE",
-    options: [{ dateTime: "2026-09-21T10:00:00", voteCount: 1, voterNames: [] }],
-    ...overrides,
+    options: [{ dateTime: "2026-09-21T10:00:00", voteCount: 0, voterNames: [] }],
+    votedOption: null,
   };
 }
 
 describe("useMisActividades", () => {
   beforeEach(() => {
-    useAuthMock.mockReturnValue({ user: { id: "me-id", name: "Yo" } });
+    vi.clearAllMocks();
+    useAuthMock.mockReturnValue({ user: { id: ME, name: "Yo" } });
+    votationsMine.mockResolvedValue(pageOf<VotationDTO>());
   });
 
   it("splits organized and joined into separate feeds", async () => {
-    organized.mockResolvedValueOnce(pageOf(makeActivity("b1")));
+    organized.mockResolvedValueOnce(pageOf(makeActivity("b1", { organizerId: ME })));
     mine.mockResolvedValueOnce(pageOf(makeActivity("c1")));
-    votationsMine.mockResolvedValueOnce([]);
 
     const { result } = renderHook(() => useMisActividades());
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -84,90 +89,72 @@ describe("useMisActividades", () => {
     expect(result.current.joinedFeed.map((a) => a.id)).toEqual(["c1"]);
   });
 
-  it("joinedTotal reflects the deduped count, not the raw totalElements", async () => {
-    organized.mockResolvedValueOnce(pageOf(makeActivity("b1")));
-    // Both "joined" activities are also organized by the same user — the
-    // dedup drops them from joinedFeed, and joinedTotal must follow suit
-    // instead of showing the backend's raw count for /participants/me.
-    mine.mockResolvedValueOnce({ ...pageOf(makeActivity("b1")), totalElements: 2 });
-    votationsMine.mockResolvedValueOnce([]);
+  it("keeps an activity the user organizes and also joined only in the organized feed", async () => {
+    organized.mockResolvedValueOnce(pageOf<ActivityResponse>());
+    // b1 is organized by the user but not on the organized page loaded now:
+    // organizerId still identifies it, no matter which pages are loaded.
+    mine.mockResolvedValueOnce({
+      ...pageOf(makeActivity("b1", { organizerId: ME }), makeActivity("c1")),
+      totalElements: 2,
+    });
 
     const { result } = renderHook(() => useMisActividades());
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-    expect(result.current.joinedFeed).toEqual([]);
+    expect(result.current.joinedFeed.map((a) => a.id)).toEqual(["c1"]);
     expect(result.current.joinedTotal).toBe(1);
   });
 
-  it("counts an activity the user both organizes and joined as organized only", async () => {
-    organized.mockResolvedValueOnce(pageOf(makeActivity("b1")));
-    mine.mockResolvedValueOnce(pageOf(makeActivity("b1"), makeActivity("c1")));
-    votationsMine.mockResolvedValueOnce([]);
+  it("asks the backend for active votations the user has not voted in", async () => {
+    organized.mockResolvedValueOnce(pageOf<ActivityResponse>());
+    mine.mockResolvedValueOnce(pageOf<ActivityResponse>());
 
     const { result } = renderHook(() => useMisActividades());
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-    expect(result.current.organizedFeed.map((a) => a.id)).toEqual(["b1"]);
-    expect(result.current.joinedFeed.map((a) => a.id)).toEqual(["c1"]);
+    expect(votationsMine).toHaveBeenCalledWith({ status: "ACTIVE", votedByMe: false, size: 20 });
   });
 
-  it("includes a PROPOSED activity in votingPending only while its votation is ACTIVE and unvoted", async () => {
-    organized.mockResolvedValueOnce(
-      pageOf(
-        makeActivity("a1", { status: "PROPOSED" }),
-        makeActivity("a2", { status: "PROPOSED" }),
-        makeActivity("a3", { status: "PROPOSED" }),
-      ),
+  it("shows a pending vote even when its activity is not on the loaded pages", async () => {
+    organized.mockResolvedValueOnce(pageOf<ActivityResponse>());
+    mine.mockResolvedValueOnce(pageOf<ActivityResponse>());
+    votationsMine.mockResolvedValueOnce(pageOf(makeVotation("a1"), makeVotation("a2")));
+    get.mockImplementation((id: string) =>
+      Promise.resolve(makeActivity(id, { status: "PROPOSED", organizerId: id === "a1" ? ME : "someone-else" })),
     );
-    mine.mockResolvedValueOnce(pageOf());
-    votationsMine.mockResolvedValueOnce([
-      makeVotation({ activityId: "a1", status: "ACTIVE" }),
-      makeVotation({ activityId: "a2", status: "CLOSED" }),
-      makeVotation({
-        activityId: "a3",
-        status: "ACTIVE",
-        options: [{ dateTime: "2026-09-21T10:00:00", voteCount: 1, voterNames: ["Yo"] }],
-      }),
+
+    const { result } = renderHook(() => useMisActividades());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(get).toHaveBeenCalledWith("a1");
+    expect(result.current.votingPending.map((a) => [a.id, a.isOrganizer])).toEqual([
+      ["a1", true],
+      ["a2", false],
     ]);
-
-    const { result } = renderHook(() => useMisActividades());
-    await waitFor(() => expect(result.current.loading).toBe(false));
-
-    // a2's votation is CLOSED and a3's is ACTIVE but the user already voted
-    // ("Yo" is in voterNames) — only a1 should surface as pending.
-    expect(result.current.votingPending.map((a) => a.id)).toEqual(["a1"]);
-    expect(result.current.votingPending[0]?.isOrganizer).toBe(true);
   });
 
-  it("marks a pending vote as not-organizer when it's a joined activity", async () => {
-    organized.mockResolvedValueOnce(pageOf());
-    mine.mockResolvedValueOnce(pageOf(makeActivity("a1", { status: "PROPOSED" })));
-    votationsMine.mockResolvedValueOnce([makeVotation({ activityId: "a1", status: "ACTIVE" })]);
+  it("skips pending votes whose activity is no longer PROPOSED or can't be loaded", async () => {
+    organized.mockResolvedValueOnce(pageOf<ActivityResponse>());
+    mine.mockResolvedValueOnce(pageOf<ActivityResponse>());
+    votationsMine.mockResolvedValueOnce(pageOf(makeVotation("a1"), makeVotation("a2"), makeVotation("a3")));
+    get.mockImplementation((id: string) => {
+      if (id === "a2") return Promise.resolve(makeActivity(id, { status: "RESCHEDULED" }));
+      if (id === "a3") return Promise.reject(new Error("No encontramos esta actividad."));
+      return Promise.resolve(makeActivity(id, { status: "PROPOSED" }));
+    });
 
     const { result } = renderHook(() => useMisActividades());
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(result.current.votingPending.map((a) => a.id)).toEqual(["a1"]);
-    expect(result.current.votingPending[0]?.isOrganizer).toBe(false);
-  });
-
-  it("excludes a PROPOSED activity with no matching votation", async () => {
-    organized.mockResolvedValueOnce(pageOf(makeActivity("a1", { status: "PROPOSED" })));
-    mine.mockResolvedValueOnce(pageOf());
-    votationsMine.mockResolvedValueOnce([]);
-
-    const { result } = renderHook(() => useMisActividades());
-    await waitFor(() => expect(result.current.loading).toBe(false));
-
-    expect(result.current.votingPending).toEqual([]);
+    expect(result.current.error).toBeNull();
   });
 
   it("paginates organized and joined feeds independently", async () => {
-    organized.mockResolvedValue(pageOf(makeActivity("b1")));
+    organized.mockResolvedValue(pageOf(makeActivity("b1", { organizerId: ME })));
     mine
       .mockResolvedValueOnce(pageOf(makeActivity("c1")))
       .mockResolvedValueOnce({ ...pageOf(makeActivity("c2")), page: 1 });
-    votationsMine.mockResolvedValue([]);
 
     const { result } = renderHook(() => useMisActividades());
     await waitFor(() => expect(result.current.joinedFeed.map((a) => a.id)).toEqual(["c1"]));
@@ -182,8 +169,7 @@ describe("useMisActividades", () => {
 
   it("surfaces load errors", async () => {
     organized.mockRejectedValueOnce(new Error("No pudimos cargar tus actividades."));
-    mine.mockResolvedValueOnce(pageOf());
-    votationsMine.mockResolvedValueOnce([]);
+    mine.mockResolvedValueOnce(pageOf<ActivityResponse>());
 
     const { result } = renderHook(() => useMisActividades());
     await waitFor(() => expect(result.current.loading).toBe(false));

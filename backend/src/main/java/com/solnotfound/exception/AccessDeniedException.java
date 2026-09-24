@@ -1,7 +1,12 @@
 package com.solnotfound.exception;
 
-public class AccessDeniedException extends RuntimeException {
+public class AccessDeniedException extends CodedException {
+
   public AccessDeniedException(String message) {
-    super(message);
+    super(ErrorCode.ACCESS_DENIED, message);
+  }
+
+  public AccessDeniedException(ErrorCode code, String message) {
+    super(code, message);
   }
 }

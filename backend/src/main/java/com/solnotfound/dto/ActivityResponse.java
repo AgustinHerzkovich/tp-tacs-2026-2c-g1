@@ -21,7 +21,8 @@ public record ActivityResponse(
     Integer anticipationWindow,
     ReprogramationRangeDTO reprogramationRange,
     ActivityStatus status,
-    List<String> imageUrls) {
+    List<String> imageUrls,
+    String organizerId) {
 
   public ActivityResponse {
     participants = List.copyOf(participants);

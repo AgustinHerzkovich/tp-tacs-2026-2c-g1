@@ -8,7 +8,7 @@ public final class VotationMapper {
 
   private VotationMapper() {}
 
-  public static VotationDTO toDTO(Votation votation) {
+  public static VotationDTO toDTO(Votation votation, String currentUserId) {
     if (votation == null) {
       return null;
     }
@@ -18,7 +18,8 @@ public final class VotationMapper {
         votation.getActivity().getId(),
         votation.getCreationDate(),
         votation.getStatus(),
-        toOptionDTOs(votation));
+        toOptionDTOs(votation),
+        currentUserId == null ? null : votation.getVoteByUserId(currentUserId).orElse(null));
   }
 
   private static List<com.solnotfound.dto.VotationOptionDTO> toOptionDTOs(Votation votation) {
