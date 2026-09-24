@@ -1,19 +1,41 @@
 name: Backend CI
 
 on:
+  # Sin filtro de paths en PRs: el check "Formato, estilo, análisis estático y
+  # tests" es obligatorio, y si el workflow no arranca GitHub lo espera para
+  # siempre. El job `changes` decide si hay algo que verificar; si no, `checks`
+  # queda "skipped", que cuenta como aprobado.
   pull_request:
-    paths:
-      - "backend/**"
-      - ".github/workflows/backend-ci.yml"
   push:
     branches: [main, develop]
     paths:
       - "backend/**"
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
+  changes:
+    name: Detectar cambios en el backend
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ github.event_name != 'pull_request' || steps.filter.outputs.backend == 'true' }}
+    steps:
+      - id: filter
+        if: github.event_name == 'pull_request'
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - '.github/workflows/backend-ci.yml'
+
   checks:
     name: Formato, estilo, análisis estático y tests
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
