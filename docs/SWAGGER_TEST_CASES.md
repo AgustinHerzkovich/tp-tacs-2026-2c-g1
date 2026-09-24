@@ -55,6 +55,8 @@ Seleccionar `multipart/form-data`, pegar el siguiente JSON en la parte `activity
 - `GET /activities?type=OUTDOOR&city=Buenos Aires&availability=true`
 - `GET /activities?dateFrom=2026-09-01T00:00:00&dateTo=2026-09-30T23:59:59`
 - `GET /activities?title=asado` (busca en el titulo, sin distinguir mayusculas)
+- `GET /activities?ids={activityId},{otroActivityId}&status=PROPOSED` (varias actividades por ID en
+  un solo request)
 
 **Esperado:** `200` y la actividad creada.
 

@@ -3,10 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMisActividades } from "@/hooks/useMisActividades";
 import type { ActivityResponse, PageResponse, VotationDTO } from "@/types/backend";
 
-const { organized, mine, get, votationsMine } = vi.hoisted(() => ({
+const { organized, mine, list, votationsMine } = vi.hoisted(() => ({
   organized: vi.fn(),
   mine: vi.fn(),
-  get: vi.fn(),
+  list: vi.fn(),
   votationsMine: vi.fn(),
 }));
 
@@ -14,7 +14,7 @@ const { useAuthMock } = vi.hoisted(() => ({ useAuthMock: vi.fn() }));
 
 vi.mock("@/lib/api", () => ({
   api: {
-    activities: { organized, mine, get },
+    activities: { organized, mine, list },
     votations: { mine: votationsMine },
   },
 }));
@@ -115,39 +115,37 @@ describe("useMisActividades", () => {
     expect(votationsMine).toHaveBeenCalledWith({ status: "ACTIVE", votedByMe: false, size: 20 });
   });
 
-  it("shows a pending vote even when its activity is not on the loaded pages", async () => {
+  it("loads all pending activities in one request, even if they are on other pages", async () => {
     organized.mockResolvedValueOnce(pageOf<ActivityResponse>());
     mine.mockResolvedValueOnce(pageOf<ActivityResponse>());
     votationsMine.mockResolvedValueOnce(pageOf(makeVotation("a1"), makeVotation("a2")));
-    get.mockImplementation((id: string) =>
-      Promise.resolve(makeActivity(id, { status: "PROPOSED", organizerId: id === "a1" ? ME : "someone-else" })),
+    list.mockResolvedValueOnce(
+      pageOf(
+        makeActivity("a1", { status: "PROPOSED", organizerId: ME }),
+        makeActivity("a2", { status: "PROPOSED" }),
+      ),
     );
 
     const { result } = renderHook(() => useMisActividades());
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-    expect(get).toHaveBeenCalledWith("a1");
+    expect(list).toHaveBeenCalledTimes(1);
+    expect(list).toHaveBeenCalledWith({ ids: ["a1", "a2"], status: "PROPOSED", size: 20 });
     expect(result.current.votingPending.map((a) => [a.id, a.isOrganizer])).toEqual([
       ["a1", true],
       ["a2", false],
     ]);
   });
 
-  it("skips pending votes whose activity is no longer PROPOSED or can't be loaded", async () => {
+  it("does not search activities when there are no pending votes", async () => {
     organized.mockResolvedValueOnce(pageOf<ActivityResponse>());
     mine.mockResolvedValueOnce(pageOf<ActivityResponse>());
-    votationsMine.mockResolvedValueOnce(pageOf(makeVotation("a1"), makeVotation("a2"), makeVotation("a3")));
-    get.mockImplementation((id: string) => {
-      if (id === "a2") return Promise.resolve(makeActivity(id, { status: "RESCHEDULED" }));
-      if (id === "a3") return Promise.reject(new Error("No encontramos esta actividad."));
-      return Promise.resolve(makeActivity(id, { status: "PROPOSED" }));
-    });
 
     const { result } = renderHook(() => useMisActividades());
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-    expect(result.current.votingPending.map((a) => a.id)).toEqual(["a1"]);
-    expect(result.current.error).toBeNull();
+    expect(list).not.toHaveBeenCalled();
+    expect(result.current.votingPending).toEqual([]);
   });
 
   it("paginates organized and joined feeds independently", async () => {

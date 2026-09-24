@@ -256,6 +256,10 @@ public class ActivityService {
   }
 
   private boolean matches(Activity activity, ActivityFilterDTO filter) {
+    if (!filter.ids().isEmpty() && !filter.ids().contains(activity.getId())) {
+      return false;
+    }
+
     if (filter.type() != null && filter.type() != activity.getType()) {
       return false;
     }

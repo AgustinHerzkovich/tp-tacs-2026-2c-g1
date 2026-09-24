@@ -6,6 +6,7 @@ import com.solnotfound.dto.UpdateVotationSettingsRequest;
 import com.solnotfound.dto.VotationDTO;
 import com.solnotfound.dto.VotationFilterDTO;
 import com.solnotfound.entity.votation.VotationStatus;
+import com.solnotfound.exception.InvalidPageRequestException;
 import com.solnotfound.service.VotationService;
 import jakarta.validation.Valid;
 import java.time.LocalDateTime;
@@ -60,7 +61,7 @@ public class VotationController {
       @RequestParam(defaultValue = "20") int size,
       Authentication authentication) {
     if (page < 0 || size < 1 || size > 100) {
-      throw new IllegalArgumentException(
+      throw new InvalidPageRequestException(
           "Page must be non-negative and size must be between 1 and 100");
     }
     return ResponseEntity.ok(

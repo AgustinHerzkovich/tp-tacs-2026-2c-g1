@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.solnotfound.dto.ActivityFilterDTO;
 import com.solnotfound.dto.VotationFilterDTO;
 import com.solnotfound.entity.activity.Activity;
+import com.solnotfound.entity.activity.ActivityStatus;
 import com.solnotfound.entity.activity.ActivityType;
 import com.solnotfound.entity.activity.City;
 import com.solnotfound.entity.activity.Location;
@@ -152,7 +153,36 @@ class MongoPersistenceTest {
     assertThat(
             activityRepository
                 .search(
-                    new ActivityFilterDTO(null, null, null, null, null, List.of(), "  ASADO "),
+                    new ActivityFilterDTO(
+                        null, null, null, null, null, List.of(), "  ASADO ", List.of()),
+                    PageRequest.of(0, 10))
+                .getContent())
+        .extracting(Activity::getId)
+        .containsExactly("activity-2");
+  }
+
+  @Test
+  void searchesActivitiesByIdsAndStatus() {
+    User organizer = userRepository.findOrCreate("organizer");
+    User participant = userRepository.findOrCreate("participant");
+    activityRepository.save(activity(organizer, participant));
+    Activity proposed = activity(organizer, participant);
+    proposed.setId("activity-2");
+    proposed.setStatus(ActivityStatus.PROPOSED);
+    activityRepository.save(proposed);
+
+    assertThat(
+            activityRepository
+                .search(
+                    new ActivityFilterDTO(
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        List.of(ActivityStatus.PROPOSED),
+                        null,
+                        List.of("activity-1", "activity-2")),
                     PageRequest.of(0, 10))
                 .getContent())
         .extracting(Activity::getId)

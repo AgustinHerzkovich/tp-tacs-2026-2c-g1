@@ -84,6 +84,14 @@ class VotationControllerTest {
   }
 
   @Test
+  void rejectsOutOfRangePageSizeWithCodedBadRequest() throws Exception {
+    mockMvc
+        .perform(get("/votations").param("size", "101").principal(authentication("user-1")))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("INVALID_PARAMETER"));
+  }
+
+  @Test
   void organizerUpdatesVotationOptions() throws Exception {
     when(service.updateVotationOptions(eq("v-1"), any(), eq("organizer")))
         .thenReturn(

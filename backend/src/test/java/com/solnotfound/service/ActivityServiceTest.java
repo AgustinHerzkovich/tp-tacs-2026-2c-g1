@@ -368,9 +368,25 @@ class ActivityServiceTest {
 
     List<ActivityResponse> results =
         activityService.search(
-            new ActivityFilterDTO(null, null, null, null, null, List.of(), "  ASADO "));
+            new ActivityFilterDTO(null, null, null, null, null, List.of(), "  ASADO ", List.of()));
 
     assertThat(results).extracting(ActivityResponse::title).containsExactly("Asado en la plaza");
+  }
+
+  @Test
+  void searchFiltersByIds() {
+    ActivityResponse first =
+        activityService.create(
+            requestWith(ActivityType.OUTDOOR, "Buenos Aires", LocalDateTime.now().plusDays(1)));
+    activityService.create(
+        requestWith(ActivityType.OUTDOOR, "Cordoba", LocalDateTime.now().plusDays(1)));
+
+    List<ActivityResponse> results =
+        activityService.search(
+            new ActivityFilterDTO(
+                null, null, null, null, null, List.of(), null, List.of(first.id(), "missing")));
+
+    assertThat(results).extracting(ActivityResponse::id).containsExactly(first.id());
   }
 
   @Test

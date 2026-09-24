@@ -7,6 +7,7 @@ import com.solnotfound.dto.CreateActivityRequest;
 import com.solnotfound.dto.PageResponse;
 import com.solnotfound.entity.activity.ActivityStatus;
 import com.solnotfound.entity.activity.ActivityType;
+import com.solnotfound.exception.InvalidPageRequestException;
 import com.solnotfound.service.ActivityService;
 import com.solnotfound.storage.MultipartImageFile;
 import io.swagger.v3.oas.annotations.Operation;
@@ -97,6 +98,7 @@ public class ActivityController {
       @RequestParam(required = false) List<ActivityStatus> status,
       @RequestParam(required = false) String city,
       @RequestParam(required = false) String title,
+      @RequestParam(required = false) List<String> ids,
       @RequestParam(required = false) Boolean availability,
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
           LocalDateTime dateFrom,
@@ -113,7 +115,8 @@ public class ActivityController {
                 dateTo,
                 availability,
                 status == null ? List.of() : status,
-                title),
+                title,
+                ids),
             pageRequest(page, size, "dateTime"));
     return ResponseEntity.ok(activities);
   }
@@ -167,7 +170,7 @@ public class ActivityController {
 
   private PageRequest pageRequest(int page, int size, String sortProperty) {
     if (page < 0 || size < 1 || size > 100) {
-      throw new IllegalArgumentException(
+      throw new InvalidPageRequestException(
           "Page must be non-negative and size must be between 1 and 100");
     }
     return PageRequest.of(page, size, Sort.by(sortProperty).ascending());

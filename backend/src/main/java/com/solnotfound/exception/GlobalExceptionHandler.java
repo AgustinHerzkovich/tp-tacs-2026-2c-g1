@@ -16,8 +16,10 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 /**
  * Translates exceptions into RFC 7807 {@link ProblemDetail} responses.
  *
- * <p>Every response includes a {@code code} property with an {@link ErrorCode}. Clients must use
- * that code to decide what to show the user; {@code detail} is a developer-facing message.
+ * <p>Every response built here includes a {@code code} property with an {@link ErrorCode}. Clients
+ * must use that code to decide what to show the user; {@code detail} is a developer-facing message.
+ * Errors produced by Spring itself (unknown route, unsupported method, unreadable body) keep
+ * Spring's default problem response without {@code code}, so clients fall back to the HTTP status.
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -128,6 +130,23 @@ public class GlobalExceptionHandler {
   public ResponseEntity<ProblemDetail> handleWeatherUnavailable(
       WeatherUnavailableException exception) {
     return respond(HttpStatus.SERVICE_UNAVAILABLE, "Weather service unavailable", exception);
+  }
+
+  @ExceptionHandler(InvalidPageRequestException.class)
+  public ResponseEntity<ProblemDetail> handleInvalidPageRequest(
+      InvalidPageRequestException exception) {
+    return respond(HttpStatus.BAD_REQUEST, "Invalid page request", exception);
+  }
+
+  @ExceptionHandler(ImageStorageException.class)
+  public ResponseEntity<ProblemDetail> handleImageStorage(ImageStorageException exception) {
+    return respond(HttpStatus.SERVICE_UNAVAILABLE, "Image storage unavailable", exception);
+  }
+
+  @ExceptionHandler(InvalidActivityStatusTransitionException.class)
+  public ResponseEntity<ProblemDetail> handleInvalidStatusTransition(
+      InvalidActivityStatusTransitionException exception) {
+    return respond(HttpStatus.CONFLICT, "Invalid activity status transition", exception);
   }
 
   private ResponseEntity<ProblemDetail> respond(

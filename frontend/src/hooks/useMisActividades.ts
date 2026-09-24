@@ -48,8 +48,9 @@ const PENDING_VOTES_SIZE = 20;
  *
  * `votingPending` does not depend on those pages: it asks the backend for
  * the user's ACTIVE votations they have not voted in yet
- * (GET /votations?status=ACTIVE&votedByMe=false) and loads each activity by
- * id, so a pending vote shows up even if its activity is on another page. */
+ * (GET /votations?status=ACTIVE&votedByMe=false) and loads their PROPOSED
+ * activities in a single GET /activities?ids=…, so a pending vote shows up
+ * even if its activity is on another page. */
 export function useMisActividades(): UseMisActividades {
   const { user } = useAuth();
   const [organizedFeed, setOrganizedFeed] = useState<MisActivity[]>([]);
@@ -74,9 +75,13 @@ export function useMisActividades(): UseMisActividades {
 
     const pendingVotes = api.votations
       .mine({ status: "ACTIVE", votedByMe: false, size: PENDING_VOTES_SIZE })
-      .then((page) =>
-        Promise.all(page.content.map((votation) => api.activities.get(votation.activityId).catch(() => null))),
-      );
+      .then(async (page) => {
+        const ids = page.content.map((votation) => votation.activityId);
+        // An empty `ids` filter would match every activity, so skip the call.
+        if (ids.length === 0) return [];
+        const activities = await api.activities.list({ ids, status: "PROPOSED", size: PENDING_VOTES_SIZE });
+        return activities.content;
+      });
 
     Promise.all([
       api.activities.organized(organizedPage, PAGE_SIZE),
@@ -98,7 +103,7 @@ export function useMisActividades(): UseMisActividades {
         setJoinedFeed(joinedOnly.map(toMisActivity));
         setJoinedTotal(Math.max(0, joined.totalElements - dedupedOnThisPage));
         setJoinedTotalPages(joined.totalPages);
-        setPendingActivities(pending.filter((activity): activity is ActivityResponse => activity !== null));
+        setPendingActivities(pending);
         setError(null);
       })
       .catch((err: unknown) => {
@@ -116,9 +121,10 @@ export function useMisActividades(): UseMisActividades {
     };
   }, [organizedPage, joinedPage, reloadKey, requestKey, userId]);
 
-  const votingPending: PendingVote[] = pendingActivities
-    .filter((activity) => activity.status === "PROPOSED")
-    .map((activity) => ({ ...toMisActivity(activity), isOrganizer: activity.organizerId === userId }));
+  const votingPending: PendingVote[] = pendingActivities.map((activity) => ({
+    ...toMisActivity(activity),
+    isOrganizer: activity.organizerId === userId,
+  }));
 
   const refresh = useCallback(() => setReloadKey((k) => k + 1), []);
 

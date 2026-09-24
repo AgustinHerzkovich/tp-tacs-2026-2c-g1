@@ -76,6 +76,8 @@ export interface ActivityFilterParams {
   city?: string;
   /** Case-insensitive text the activity title must contain. */
   title?: string;
+  /** Only activities with one of these ids. */
+  ids?: string[];
   /** ISO LocalDateTime */
   dateFrom?: string;
   /** ISO LocalDateTime */
