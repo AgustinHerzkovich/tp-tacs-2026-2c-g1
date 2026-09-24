@@ -109,7 +109,10 @@ describe("api client", () => {
 
   it("falls back to a generic message when the error body is not JSON", async () => {
     authFetch.mockResolvedValue(new Response("<html>oops</html>", { status: 500 }));
-    await expect(api.activities.get("a1")).rejects.toMatchObject({ status: 500 });
+    await expect(api.activities.get("a1")).rejects.toMatchObject({
+      status: 500,
+      message: "No pudimos completar la operación. Probá de nuevo más tarde.",
+    });
   });
 
   it("still releases the loading signal when the request fails", async () => {

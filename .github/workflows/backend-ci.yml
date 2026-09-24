@@ -1,0 +1,54 @@
+name: Backend CI
+
+on:
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-ci.yml"
+  push:
+    branches: [main, develop]
+    paths:
+      - "backend/**"
+  workflow_dispatch:
+
+jobs:
+  checks:
+    name: Formato, estilo, análisis estático y tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+
+      # Los checks van de más rápido a más lento para fallar cuanto antes. Se
+      # invocan los goals explícitamente porque `verify` corre los tests antes
+      # que Spotless, Checkstyle y SpotBugs (todos están atados a esa fase).
+      - name: Formato (Spotless)
+        run: ./mvnw -B spotless:check
+
+      - name: Estilo (Checkstyle)
+        run: ./mvnw -B checkstyle:check
+
+      - name: Análisis estático (SpotBugs)
+        run: ./mvnw -B compile spotbugs:check
+
+      # Incluye los tests de persistencia con Testcontainers: el runner de
+      # GitHub trae Docker, así que levantan un MongoDB real.
+      - name: Tests
+        run: ./mvnw -B test
+
+      - name: Subir reportes de tests
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: backend/target/surefire-reports/
+          retention-days: 7
