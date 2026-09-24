@@ -40,7 +40,7 @@ export function LoginPage() {
         </h1>
         <p className="font-brand text-lg mt-3">Organizá tu próximo plan</p>
         <p className="text-[13px] font-bold mt-1" style={{ color: "var(--muted-foreground)" }}>
-          Iniciá sesión o creá tu cuenta de forma segura con Keycloak.
+          Iniciá sesión o creá tu cuenta para empezar.
         </p>
       </div>
 

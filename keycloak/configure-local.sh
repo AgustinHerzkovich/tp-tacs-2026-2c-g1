@@ -15,7 +15,10 @@ REALM=solnotfound
 "$KCADM" update "realms/$REALM" \
   -s displayName=Planazo \
   -s displayNameHtml=Planazo \
-  -s loginTheme=planazo
+  -s loginTheme=planazo \
+  -s internationalizationEnabled=true \
+  -s 'supportedLocales=["es"]' \
+  -s defaultLocale=es
 
 ensure_user() {
   username="$1"

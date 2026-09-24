@@ -36,7 +36,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       const message =
         body && typeof body === "object" && "message" in body && typeof body.message === "string"
           ? body.message
-          : `Error ${res.status} llamando a ${path}`;
+          : "No pudimos completar la operación. Probá de nuevo más tarde.";
       throw new ApiError(res.status, message);
     }
     if (res.status === 204) return undefined as T;
