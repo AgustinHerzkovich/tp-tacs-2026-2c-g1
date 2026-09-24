@@ -76,6 +76,12 @@ public class ActivityRepository implements IActivityRepository {
       query.addCriteria(
           Criteria.where("location.city.name").regex(Pattern.quote(filter.city().trim()), "i"));
     }
+    if (filter.title() != null && !filter.title().isBlank()) {
+      query.addCriteria(Criteria.where("title").regex(Pattern.quote(filter.title().trim()), "i"));
+    }
+    if (!filter.ids().isEmpty()) {
+      query.addCriteria(Criteria.where("_id").in(filter.ids()));
+    }
     if (filter.availability() != null) {
       query.addCriteria(availabilityCriteria(filter.availability()));
     }

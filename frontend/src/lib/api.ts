@@ -4,6 +4,7 @@
 // token — never call fetch("/api/...") directly from a hook/component.
 
 import { authFetch } from "@/lib/authFetch";
+import { errorCodeOf, userMessageFor } from "@/lib/errorMessages";
 import { beginRequest, endRequest } from "@/lib/loading";
 import type {
   ActivityFilterParams,
@@ -15,15 +16,21 @@ import type {
   UpdateVotationOptionsRequest,
   UpdateVotationSettingsRequest,
   VotationDTO,
+  VotationFilterParams,
 } from "@/types/backend";
 
+/** A failed API call. `message` is always a user-facing Spanish text (see
+ * errorMessages.ts); `code` is the backend's machine-readable error code,
+ * for callers that need to branch on the exact reason. */
 export class ApiError extends Error {
   status: number;
+  code: string | null;
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, code: string | null = null) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.code = code;
   }
 }
 
@@ -33,11 +40,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     const res = await authFetch(`/api${path}`, init);
     if (!res.ok) {
       const body: unknown = await res.json().catch(() => null);
-      const message =
-        body && typeof body === "object" && "message" in body && typeof body.message === "string"
-          ? body.message
-          : "No pudimos completar la operación. Probá de nuevo más tarde.";
-      throw new ApiError(res.status, message);
+      const code = errorCodeOf(body);
+      throw new ApiError(res.status, userMessageFor(res.status, code), code);
     }
     if (res.status === 204) return undefined as T;
     return (await res.json()) as T;
@@ -77,8 +81,10 @@ export const api = {
     create: (body: FormData) => request<ActivityResponse>("/activities", { method: "POST", body }),
   },
   votations: {
-    /** Votations for activities the current user organizes or joined. */
-    mine: () => request<VotationDTO[]>("/votations"),
+    /** One page of the votations of activities the current user organizes or
+     * joined, newest first. */
+    mine: (filters?: VotationFilterParams) =>
+      request<PageResponse<VotationDTO>>(`/votations${queryString({ ...filters })}`),
     /** `dateTime` is the chosen option's raw ISO LocalDateTime string. */
     vote: (votationId: string, dateTime: string) =>
       request<VotationDTO>(`/votations/${votationId}/votes/me`, json("PUT", dateTime)),

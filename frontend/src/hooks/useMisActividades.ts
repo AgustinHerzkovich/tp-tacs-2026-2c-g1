@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { toMisActivity } from "@/lib/activityMapping";
 import { useAuth } from "@/hooks/useAuth";
-import type { VotationDTO } from "@/types/backend";
+import type { ActivityResponse } from "@/types/backend";
 import type { MisActivity } from "@/types/domain";
 
 const PAGE_SIZE = 12;
@@ -37,31 +37,20 @@ interface UseMisActividades {
   refresh: () => void;
 }
 
-function hasVoted(votation: VotationDTO, user: { id: string; name: string } | null): boolean {
-  if (!user) return false;
-  return votation.options.some(
-    (option) => option.voterNames.includes(user.name) || option.voterNames.includes(user.id),
-  );
-}
+/** How many pending votes "Te toca votar" shows at most. */
+const PENDING_VOTES_SIZE = 20;
 
 /** "Mis actividades" data, split by role instead of merged: activities the
  * user organizes (GET /activities/organizers/me) vs. activities they only
  * joined as a participant (GET /activities/participants/me), each with its
- * own page. `ActivityResponse` carries no organizer id of its own, so an
- * activity that shows up in BOTH pages (the organizer also joined their own
- * activity) is kept only in `organizedFeed` — the same "am I the organizer"
- * signal ActivityDetailPage.tsx uses. This dedup only looks at whichever
- * page of each feed is currently loaded, same as the pagination itself.
+ * own page. An activity the organizer also joined is kept only in
+ * `organizedFeed`, using the activity's `organizerId`.
  *
- * `votingPending` cross-references those loaded activities against
- * GET /votations (api.votations.mine(), which is NOT paginated — it always
- * returns every votation the user organizes or joined) to keep only
- * activities whose reprogramming vote is still `ACTIVE` and that the
- * current user hasn't voted in yet, via the same voterNames match
- * useVoting.ts uses on the detail page. A CLOSED votation (see
- * VotationClosingScheduler on the backend) or one the user already voted in
- * is excluded — that's the fix over the old behavior, which only checked
- * the activity's status and kept showing it after the user voted. */
+ * `votingPending` does not depend on those pages: it asks the backend for
+ * the user's ACTIVE votations they have not voted in yet
+ * (GET /votations?status=ACTIVE&votedByMe=false) and loads their PROPOSED
+ * activities in a single GET /activities?ids=…, so a pending vote shows up
+ * even if its activity is on another page. */
 export function useMisActividades(): UseMisActividades {
   const { user } = useAuth();
   const [organizedFeed, setOrganizedFeed] = useState<MisActivity[]>([]);
@@ -72,26 +61,36 @@ export function useMisActividades(): UseMisActividades {
   const [joinedTotal, setJoinedTotal] = useState(0);
   const [joinedPage, setJoinedPage] = useState(0);
   const [joinedTotalPages, setJoinedTotalPages] = useState(0);
-  const [votations, setVotations] = useState<VotationDTO[]>([]);
+  const [pendingActivities, setPendingActivities] = useState<ActivityResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadedRequest, setLoadedRequest] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-  const requestKey = [organizedPage, joinedPage, reloadKey].join("|");
+  const userId = user?.id ?? null;
+  const requestKey = [organizedPage, joinedPage, reloadKey, userId].join("|");
   const requestPending = loading || loadedRequest !== requestKey;
 
   useEffect(() => {
     let cancelled = false;
 
+    const pendingVotes = api.votations
+      .mine({ status: "ACTIVE", votedByMe: false, size: PENDING_VOTES_SIZE })
+      .then(async (page) => {
+        const ids = page.content.map((votation) => votation.activityId);
+        // An empty `ids` filter would match every activity, so skip the call.
+        if (ids.length === 0) return [];
+        const activities = await api.activities.list({ ids, status: "PROPOSED", size: PENDING_VOTES_SIZE });
+        return activities.content;
+      });
+
     Promise.all([
       api.activities.organized(organizedPage, PAGE_SIZE),
       api.activities.mine(joinedPage, PAGE_SIZE),
-      api.votations.mine(),
+      pendingVotes,
     ])
-      .then(([organized, joined, myVotations]) => {
+      .then(([organized, joined, pending]) => {
         if (cancelled) return;
-        const organizedIds = new Set(organized.content.map((a) => a.id));
-        const joinedOnly = joined.content.filter((a) => !organizedIds.has(a.id));
+        const joinedOnly = joined.content.filter((a) => a.organizerId !== userId);
         // totalElements comes from the raw, un-deduped /participants/me page — subtract
         // however many of this page's items got folded into "organized" so the count
         // badge doesn't contradict what's actually on screen (still an approximation
@@ -104,7 +103,7 @@ export function useMisActividades(): UseMisActividades {
         setJoinedFeed(joinedOnly.map(toMisActivity));
         setJoinedTotal(Math.max(0, joined.totalElements - dedupedOnThisPage));
         setJoinedTotalPages(joined.totalPages);
-        setVotations(myVotations);
+        setPendingActivities(pending);
         setError(null);
       })
       .catch((err: unknown) => {
@@ -120,15 +119,12 @@ export function useMisActividades(): UseMisActividades {
     return () => {
       cancelled = true;
     };
-  }, [organizedPage, joinedPage, reloadKey, requestKey]);
+  }, [organizedPage, joinedPage, reloadKey, requestKey, userId]);
 
-  const organizedIds = new Set(organizedFeed.map((a) => a.id));
-  const votingPending: PendingVote[] = [...organizedFeed, ...joinedFeed].flatMap((activity) => {
-    if (activity.status !== "propuesta") return [];
-    const votation = votations.find((v) => v.activityId === activity.id);
-    if (!votation || votation.status !== "ACTIVE" || hasVoted(votation, user)) return [];
-    return [{ ...activity, isOrganizer: organizedIds.has(activity.id) }];
-  });
+  const votingPending: PendingVote[] = pendingActivities.map((activity) => ({
+    ...toMisActivity(activity),
+    isOrganizer: activity.organizerId === userId,
+  }));
 
   const refresh = useCallback(() => setReloadKey((k) => k + 1), []);
 

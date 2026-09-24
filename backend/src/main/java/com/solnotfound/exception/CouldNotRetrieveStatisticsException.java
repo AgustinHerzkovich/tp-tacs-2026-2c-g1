@@ -1,11 +1,16 @@
 package com.solnotfound.exception;
 
-public class CouldNotRetrieveStatisticsException extends RuntimeException {
-  public CouldNotRetrieveStatisticsException(String message, Exception e) {
-    super(message, e);
-  }
+public class CouldNotRetrieveStatisticsException extends CodedException {
 
   public CouldNotRetrieveStatisticsException(String message) {
-    super(message);
+    super(ErrorCode.STATISTICS_UNAVAILABLE, message);
+  }
+
+  public CouldNotRetrieveStatisticsException(ErrorCode code, String message) {
+    super(code, message);
+  }
+
+  public CouldNotRetrieveStatisticsException(String message, Exception e) {
+    super(ErrorCode.STATISTICS_UNAVAILABLE, message, e);
   }
 }
