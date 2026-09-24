@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { formatActivityWhen } from "@/lib/formatDate";
-import type { UserDTO, VotationDTO } from "@/types/backend";
+import type { VotationDTO } from "@/types/backend";
 
 export interface VoteOptionView {
   /** The option's raw ISO LocalDateTime — also what the backend expects as
@@ -32,29 +32,27 @@ export interface UseVoting {
   updateSettings: (minQuorum: number, durationHours: number) => Promise<void>;
 }
 
-/** Finds and drives the reprogramming vote for one activity. GET /votations
- * only returns votations the current identity organizes or joined, so this
- * activity's votation may not appear if it's not "mine" — `votation` stays
- * null in that case.
+/** Finds and drives the reprogramming vote for one activity: the most recent
+ * votation of that activity (GET /votations?activityId=…, newest first). The
+ * backend only returns votations of activities the current user organizes or
+ * joined, so `votation` stays null for anyone else.
  *
- * `currentUser`, when given, lets `votedId` be reconstructed from the
- * votation's own data (matching the identity against each option's
- * `voterNames`) so a previously-cast vote still shows as selected after a
- * page reload — the API has no other "did I already vote" signal. */
-export function useVoting(activityId: string, currentUser?: Pick<UserDTO, "id" | "name"> | null): UseVoting {
+ * `votedId` comes from the backend's `votedOption`, computed from the
+ * authenticated user's id, so it survives reloads and never confuses two
+ * users that share a display name. */
+export function useVoting(activityId: string): UseVoting {
   const [votation, setVotation] = useState<VotationDTO | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [votedId, setVotedId] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pending, setPending] = useState(false);
 
   const load = useCallback(() => {
     api.votations
-      .mine()
-      .then((all) => {
-        setVotation(all.find((v) => v.activityId === activityId) ?? null);
+      .mine({ activityId, size: 1 })
+      .then((page) => {
+        setVotation(page.content[0] ?? null);
         setError(null);
       })
       .catch((err: unknown) => setError(err instanceof Error ? err.message : "No pudimos cargar la votación."))
@@ -77,14 +75,7 @@ export function useVoting(activityId: string, currentUser?: Pick<UserDTO, "id" |
   const total = options.reduce((sum, option) => sum + option.votes, 0);
   const selectedOption = options.find((option) => option.id === selectedId);
 
-  const persistedVotedId = useMemo(() => {
-    if (!votation || !currentUser) return null;
-    const voted = votation.options.find(
-      (option) => option.voterNames.includes(currentUser.name) || option.voterNames.includes(currentUser.id),
-    );
-    return voted?.dateTime ?? null;
-  }, [votation, currentUser]);
-  const effectiveVotedId = persistedVotedId ?? votedId;
+  const votedId = votation?.votedOption ?? null;
 
   const select = (id: string) => {
     setSelectedId(id);
@@ -100,7 +91,6 @@ export function useVoting(activityId: string, currentUser?: Pick<UserDTO, "id" |
     try {
       const updated = await api.votations.vote(votation.id, selectedId);
       setVotation(updated);
-      setVotedId(selectedId);
       setConfirmOpen(false);
     } finally {
       setPending(false);
@@ -124,7 +114,7 @@ export function useVoting(activityId: string, currentUser?: Pick<UserDTO, "id" |
     options,
     total,
     selectedId,
-    votedId: effectiveVotedId,
+    votedId,
     selectedOption,
     confirmOpen,
     pending,

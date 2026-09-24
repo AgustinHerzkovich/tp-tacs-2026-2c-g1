@@ -34,11 +34,17 @@ export function ExplorarPage() {
   const [dateTo, setDateTo] = useState("");
   const [onlyAvailable, setOnlyAvailable] = useState(false);
   const [debouncedCity, setDebouncedCity] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedCity(city), 400);
     return () => window.clearTimeout(timer);
   }, [city]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedQuery(query), 400);
+    return () => window.clearTimeout(timer);
+  }, [query]);
 
   const type = CATEGORIES.find((c) => c.key === category)?.type;
   const invalidDates = Boolean(dateFrom && dateTo && dateFrom > dateTo);
@@ -46,12 +52,13 @@ export function ExplorarPage() {
   const applied = useMemo<ActivityFilterParams>(
     () => ({
       type,
+      title: debouncedQuery.trim() || undefined,
       city: debouncedCity.trim() || undefined,
       dateFrom: invalidDates || !dateFrom ? undefined : `${dateFrom}T00:00:00`,
       dateTo: invalidDates || !dateTo ? undefined : `${dateTo}T23:59:59`,
       availability: onlyAvailable || undefined,
     }),
-    [debouncedCity, dateFrom, dateTo, invalidDates, onlyAvailable, type],
+    [debouncedCity, debouncedQuery, dateFrom, dateTo, invalidDates, onlyAvailable, type],
   );
 
   const { exploreFeed, loading, error, refresh, explorePage, exploreTotalPages, setExplorePage } = useActivities(applied);
@@ -59,8 +66,6 @@ export function ExplorarPage() {
   useEffect(() => {
     setExplorePage(0);
   }, [applied, setExplorePage]);
-
-  const results = exploreFeed.filter((a) => a.title.toLowerCase().includes(query.toLowerCase()));
 
   const clearFilters = () => {
     setQuery("");
@@ -121,12 +126,12 @@ export function ExplorarPage() {
       {!loading && !error && (
         <>
           <div className="lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-5">
-            {results.map((a) => <ExploreCard key={a.id} activity={a} onRefreshImages={refresh} />)}
+            {exploreFeed.map((a) => <ExploreCard key={a.id} activity={a} onRefreshImages={refresh} />)}
           </div>
           <PageControls page={explorePage} totalPages={exploreTotalPages} onPageChange={setExplorePage} />
         </>
       )}
-      {!loading && !error && results.length === 0 && (
+      {!loading && !error && exploreFeed.length === 0 && (
         <div className="text-center py-10">
           <p className="text-[13px] font-bold" style={{ color: "var(--muted-foreground)" }}>
             No encontramos actividades con esos filtros.

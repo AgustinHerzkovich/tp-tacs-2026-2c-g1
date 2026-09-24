@@ -54,12 +54,17 @@ Seleccionar `multipart/form-data`, pegar el siguiente JSON en la parte `activity
 
 - `GET /activities?type=OUTDOOR&city=Buenos Aires&availability=true`
 - `GET /activities?dateFrom=2026-09-01T00:00:00&dateTo=2026-09-30T23:59:59`
+- `GET /activities?title=asado` (busca en el titulo, sin distinguir mayusculas)
+- `GET /activities?ids={activityId},{otroActivityId}&status=PROPOSED` (varias actividades por ID en
+  un solo request)
 
 **Esperado:** `200` y la actividad creada.
 
 **Caso negativo:** enviar `dateFrom` posterior a `dateTo`.
 
-**Esperado:** `400 ProblemDetail`.
+**Esperado:** `400 ProblemDetail` con `code` = `INVALID_DATE_RANGE`. Todos los errores incluyen un
+`code` estable (ver `ErrorCode`); el frontend muestra un mensaje segun ese codigo y nunca el
+`detail`.
 
 ## US6 - Participacion
 
@@ -119,10 +124,10 @@ Con un `{votationId}` activo y autenticado como organizador, ejecutar
 "2026-09-11T18:00:00"
 ```
 
-2. Ejecutar `GET /votations`.
+2. Ejecutar `GET /votations?activityId={activityId}`.
 
-**Esperado:** `200`; la opcion refleja el voto. Cambiar la fecha mueve el voto y repetirla es
-idempotente.
+**Esperado:** `200`; la opcion refleja el voto y `votedOption` contiene la fecha elegida por el
+usuario autenticado. Cambiar la fecha mueve el voto y repetirla es idempotente.
 
 ## US11 - Cierre de votacion
 
@@ -140,7 +145,9 @@ reprograma la actividad; sin quorum o ganador, la cancela. La prueba determinist
 
 - `GET /activities/organizers/me`: contiene actividades creadas por el usuario.
 - `GET /activities/participants/me`: contiene actividades a las que se sumo.
-- `GET /votations`: contiene votaciones relacionadas y su estado.
+- `GET /votations`: pagina (`page`, `size`, por defecto 20) de votaciones relacionadas, de la mas
+  nueva a la mas vieja. Filtros opcionales: `status` (`ACTIVE`/`CLOSED`), `activityId` y
+  `votedByMe` (`false` lista las votaciones pendientes de votar).
 
 **Esperado:** `200` en los tres casos.
 

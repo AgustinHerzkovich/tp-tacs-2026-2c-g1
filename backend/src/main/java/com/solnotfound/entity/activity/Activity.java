@@ -2,6 +2,7 @@ package com.solnotfound.entity.activity;
 
 import com.solnotfound.entity.user.User;
 import com.solnotfound.entity.weather.WeatherCondition;
+import com.solnotfound.exception.ErrorCode;
 import com.solnotfound.exception.IllegalStateActivityException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -132,7 +133,8 @@ public class Activity {
     boolean isFull = participants.size() >= maxParticipants;
 
     if (isFull) {
-      throw new IllegalStateActivityException("Activity has no available spots.");
+      throw new IllegalStateActivityException(
+          ErrorCode.ACTIVITY_FULL, "Activity has no available spots.");
     }
 
     participants.add(user);

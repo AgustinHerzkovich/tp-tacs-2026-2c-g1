@@ -10,10 +10,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.solnotfound.dto.PageResponse;
 import com.solnotfound.dto.VotationDTO;
+import com.solnotfound.dto.VotationFilterDTO;
 import com.solnotfound.dto.VotationOptionDTO;
 import com.solnotfound.entity.votation.VotationStatus;
 import com.solnotfound.exception.AccessDeniedException;
+import com.solnotfound.exception.ErrorCode;
 import com.solnotfound.exception.GlobalExceptionHandler;
 import com.solnotfound.exception.ResourceNotFoundException;
 import com.solnotfound.service.VotationService;
@@ -21,6 +24,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.test.web.servlet.MockMvc;
@@ -41,16 +45,50 @@ class VotationControllerTest {
   }
 
   @Test
-  void listsCurrentUsersVotations() throws Exception {
-    when(service.getByOrganizerOrParticipantId("user-1")).thenReturn(List.of());
+  void listsCurrentUsersVotationsAsAPage() throws Exception {
+    when(service.search(eq("user-1"), any(), any()))
+        .thenReturn(new PageResponse<>(List.of(), 0, 20, 0, 0, true, true));
 
     mockMvc
         .perform(get("/votations").principal(authentication("user-1")))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$").isArray())
-        .andExpect(jsonPath("$").isEmpty());
+        .andExpect(jsonPath("$.content").isArray())
+        .andExpect(jsonPath("$.content").isEmpty())
+        .andExpect(jsonPath("$.size").value(20));
 
-    verify(service).getByOrganizerOrParticipantId("user-1");
+    verify(service)
+        .search("user-1", new VotationFilterDTO(null, null, null), PageRequest.of(0, 20));
+  }
+
+  @Test
+  void forwardsVotationFiltersAndPaging() throws Exception {
+    when(service.search(eq("user-1"), any(), any()))
+        .thenReturn(new PageResponse<>(List.of(), 1, 5, 0, 0, false, true));
+
+    mockMvc
+        .perform(
+            get("/votations")
+                .param("status", "ACTIVE")
+                .param("activityId", "activity-1")
+                .param("votedByMe", "false")
+                .param("page", "1")
+                .param("size", "5")
+                .principal(authentication("user-1")))
+        .andExpect(status().isOk());
+
+    verify(service)
+        .search(
+            "user-1",
+            new VotationFilterDTO(VotationStatus.ACTIVE, "activity-1", false),
+            PageRequest.of(1, 5));
+  }
+
+  @Test
+  void rejectsOutOfRangePageSizeWithCodedBadRequest() throws Exception {
+    mockMvc
+        .perform(get("/votations").param("size", "101").principal(authentication("user-1")))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("INVALID_PARAMETER"));
   }
 
   @Test
@@ -58,7 +96,7 @@ class VotationControllerTest {
     when(service.updateVotationOptions(eq("v-1"), any(), eq("organizer")))
         .thenReturn(
             new VotationDTO(
-                "v-1", "activity-1", LocalDateTime.now(), VotationStatus.ACTIVE, List.of()));
+                "v-1", "activity-1", LocalDateTime.now(), VotationStatus.ACTIVE, List.of(), null));
 
     mockMvc
         .perform(
@@ -76,7 +114,9 @@ class VotationControllerTest {
   @Test
   void rejectsOptionUpdateByNonOrganizer() throws Exception {
     when(service.updateVotationOptions(eq("v-1"), any(), eq("participant")))
-        .thenThrow(new AccessDeniedException("Only the activity organizer can update options"));
+        .thenThrow(
+            new AccessDeniedException(
+                ErrorCode.NOT_ORGANIZER, "Only the activity organizer can update options"));
 
     mockMvc
         .perform(
@@ -85,7 +125,8 @@ class VotationControllerTest {
                 .contentType("application/json")
                 .content("{\"dates\":[\"2026-09-01T12:00:00\"]}"))
         .andExpect(status().isForbidden())
-        .andExpect(jsonPath("$.title").value("Access denied"));
+        .andExpect(jsonPath("$.title").value("Access denied"))
+        .andExpect(jsonPath("$.code").value("NOT_ORGANIZER"));
   }
 
   @Test
@@ -98,6 +139,7 @@ class VotationControllerTest {
                 .content("{\"dates\":[]}"))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.title").value("Request validation failed"))
+        .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
         .andExpect(jsonPath("$.errors.dates").exists());
   }
 
@@ -111,7 +153,8 @@ class VotationControllerTest {
                 "activity-1",
                 LocalDateTime.now(),
                 VotationStatus.ACTIVE,
-                List.of(new VotationOptionDTO(option, 1, List.of("Jane Doe")))));
+                List.of(new VotationOptionDTO(option, 1, List.of("Jane Doe"))),
+                option));
 
     mockMvc
         .perform(
@@ -121,7 +164,8 @@ class VotationControllerTest {
                 .content("\"2026-09-01T12:00:00\""))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.options[0].voteCount").value(1))
-        .andExpect(jsonPath("$.options[0].voterNames[0]").value("Jane Doe"));
+        .andExpect(jsonPath("$.options[0].voterNames[0]").value("Jane Doe"))
+        .andExpect(jsonPath("$.votedOption").value("2026-09-01T12:00:00"));
 
     verify(service).vote("v-1", "participant", option);
   }
@@ -206,7 +250,7 @@ class VotationControllerTest {
     when(service.updateVotationSettings(eq("v-1"), any(), eq("organizer")))
         .thenReturn(
             new VotationDTO(
-                "v-1", "activity-1", LocalDateTime.now(), VotationStatus.ACTIVE, List.of()));
+                "v-1", "activity-1", LocalDateTime.now(), VotationStatus.ACTIVE, List.of(), null));
 
     mockMvc
         .perform(

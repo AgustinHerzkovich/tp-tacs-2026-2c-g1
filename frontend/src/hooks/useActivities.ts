@@ -24,6 +24,7 @@ interface UseActivities {
 export function useActivities(filters?: ActivityFilterParams): UseActivities {
   const type = filters?.type;
   const city = filters?.city;
+  const title = filters?.title;
   const dateFrom = filters?.dateFrom;
   const dateTo = filters?.dateTo;
   const availability = filters?.availability;
@@ -35,7 +36,7 @@ export function useActivities(filters?: ActivityFilterParams): UseActivities {
   const [reloadKey, setReloadKey] = useState(0);
   const [explorePage, setExplorePage] = useState(0);
   const [exploreTotalPages, setExploreTotalPages] = useState(0);
-  const requestKey = [type, city, dateFrom, dateTo, availability, status, explorePage, reloadKey]
+  const requestKey = [type, title, city, dateFrom, dateTo, availability, status, explorePage, reloadKey]
     .map((value) => String(value ?? ""))
     .join("|");
   const requestPending = loading || loadedRequest !== requestKey;
@@ -44,7 +45,7 @@ export function useActivities(filters?: ActivityFilterParams): UseActivities {
     let cancelled = false;
 
     api.activities
-      .list({ type, city, dateFrom, dateTo, availability, status, page: explorePage, size: 12 })
+      .list({ type, title, city, dateFrom, dateTo, availability, status, page: explorePage, size: 12 })
       .then((all) => {
         if (cancelled) return;
         setExploreFeed(all.content.map(toExploreActivity));
@@ -66,7 +67,7 @@ export function useActivities(filters?: ActivityFilterParams): UseActivities {
     return () => {
       cancelled = true;
     };
-  }, [availability, city, dateFrom, dateTo, explorePage, reloadKey, requestKey, type]);
+  }, [availability, city, dateFrom, dateTo, explorePage, reloadKey, requestKey, title, type]);
 
   const refresh = useCallback(() => setReloadKey((k) => k + 1), []);
 

@@ -70,6 +70,7 @@ class ActivityServiceTest {
 
     assertThat(created.id()).isNotBlank();
     assertThat(created.title()).isEqualTo("Football match");
+    assertThat(created.organizerId()).isEqualTo("development-user");
     assertThat(created.weatherConditions()).isEqualTo(new WeatherConditionsDTO(30, 10, 28, 25.0));
     assertThat(created.reprogramationRange()).isEqualTo(validReprogramationRange());
     assertThat(activityService.getById(created.id())).isEqualTo(created);
@@ -101,7 +102,9 @@ class ActivityServiceTest {
     assertThatThrownBy(
             () -> activityService.create(validRequest(), "creator-1", List.of(image("image/gif"))))
         .isInstanceOf(InvalidActivityException.class)
-        .hasMessage("Images must be JPEG, PNG, or WebP");
+        .hasMessage("Images must be JPEG, PNG, or WebP")
+        .extracting("code")
+        .isEqualTo(com.solnotfound.exception.ErrorCode.INVALID_IMAGE);
     verify(imageStorage, never()).upload(any(), any());
   }
 
@@ -343,6 +346,47 @@ class ActivityServiceTest {
     assertThat(results)
         .extracting(response -> response.location().city())
         .containsExactly("Buenos Aires");
+  }
+
+  @Test
+  void searchFiltersByTitleIgnoringCaseAndSurroundingSpaces() {
+    activityService.create(
+        requestWith(ActivityType.OUTDOOR, "Buenos Aires", LocalDateTime.now().plusDays(1)));
+    CreateActivityRequest barbecue =
+        new CreateActivityRequest(
+            "Asado en la plaza",
+            "Traer sillas",
+            ActivityType.OUTDOOR,
+            new LocationDTO("Buenos Aires", null, null),
+            LocalDateTime.now().plusDays(1),
+            10,
+            20,
+            validWeatherConditions(),
+            4,
+            validReprogramationRange());
+    activityService.create(barbecue);
+
+    List<ActivityResponse> results =
+        activityService.search(
+            new ActivityFilterDTO(null, null, null, null, null, List.of(), "  ASADO ", List.of()));
+
+    assertThat(results).extracting(ActivityResponse::title).containsExactly("Asado en la plaza");
+  }
+
+  @Test
+  void searchFiltersByIds() {
+    ActivityResponse first =
+        activityService.create(
+            requestWith(ActivityType.OUTDOOR, "Buenos Aires", LocalDateTime.now().plusDays(1)));
+    activityService.create(
+        requestWith(ActivityType.OUTDOOR, "Cordoba", LocalDateTime.now().plusDays(1)));
+
+    List<ActivityResponse> results =
+        activityService.search(
+            new ActivityFilterDTO(
+                null, null, null, null, null, List.of(), null, List.of(first.id(), "missing")));
+
+    assertThat(results).extracting(ActivityResponse::id).containsExactly(first.id());
   }
 
   @Test

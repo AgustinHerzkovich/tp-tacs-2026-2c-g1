@@ -19,7 +19,6 @@ import { useJoinActivity } from "@/hooks/useJoinActivity";
 import { useAuth } from "@/hooks/useAuth";
 import { mapActivityStatus, mapActivityType, pickPattern, pickScene } from "@/lib/activityMapping";
 import { participantDisplayName } from "@/lib/initials";
-import { api } from "@/lib/api";
 import { ErrorState } from "@/components/common/AsyncState";
 import { ActivityDetailSkeleton } from "@/components/common/Skeletons";
 import { useToast } from "@/components/common/ToastProvider";
@@ -30,8 +29,8 @@ export function ActivityDetailPage({ id }: { id: string }) {
   const toast = useToast();
   const { activity, loading, notFound, error, refresh } = useActivity(id);
   const weather = useActivityWeather(id);
-  const voting = useVoting(id, user);
-  const [isOrganizer, setIsOrganizer] = useState(false);
+  const voting = useVoting(id);
+  const isOrganizer = activity != null && activity.organizerId === user?.id;
   const infoColumnRef = useRef<HTMLDivElement>(null);
   const [votingMaxHeight, setVotingMaxHeight] = useState<number>();
 
@@ -41,14 +40,6 @@ export function ActivityDetailPage({ id }: { id: string }) {
   const handleRefreshImages = () => {
     refresh();
   };
-
-  useEffect(() => {
-    let cancelled = false;
-    api.activities.organized().then((activities) => {
-      if (!cancelled) setIsOrganizer(activities.content.some((item) => item.id === id));
-    }).catch(() => undefined);
-    return () => { cancelled = true; };
-  }, [id]);
 
   // Keeps the voting sidebar's max-height in sync with the info column next
   // to it (desktop only — see VotingRoom's `lg:max-h-[var(--voting-max-h)]`)
