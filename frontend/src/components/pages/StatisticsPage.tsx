@@ -152,9 +152,8 @@ export function StatisticsPage() {
   const totalEvents = statistics
     ? statistics.activities.created +
       statistics.activities.rescheduled +
-      statistics.activities.cancelled +
-      statistics.activities.cancelledByWeather
-    : 0;
+      statistics.activities.cancelled
+    : 0
   const successRate =
     statistics && statistics.weatherProvider.requests > 0
       ? Math.round((statistics.weatherProvider.successful / statistics.weatherProvider.requests) * 100)
