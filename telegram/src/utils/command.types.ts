@@ -1,0 +1,1 @@
+export type CommandHandler = (chatId: number, userId?: number) => Promise<void>;
