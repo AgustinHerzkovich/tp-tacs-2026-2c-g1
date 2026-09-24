@@ -38,5 +38,5 @@ export async function loginAs(page: Page, { username, password }: Account): Prom
     .first()
     .click();
 
-  await page.waitForURL(/\/mis-actividades/, { timeout: 30_000 });
+  await page.waitForURL(/\/explorar/, { timeout: 30_000 });
 }

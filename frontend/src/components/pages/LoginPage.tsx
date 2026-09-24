@@ -21,7 +21,7 @@ export function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const requestedRoute = searchParams?.get("returnTo");
-  const returnTo = requestedRoute?.startsWith("/") ? requestedRoute : "/mis-actividades";
+  const returnTo = requestedRoute?.startsWith("/") ? requestedRoute : "/explorar";
   const { initialized, isAuthenticated, login } = useAuth();
   const ready = useHasMounted() && initialized;
 

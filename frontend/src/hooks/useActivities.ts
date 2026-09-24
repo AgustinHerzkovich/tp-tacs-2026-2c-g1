@@ -67,7 +67,7 @@ export function useActivities(filters?: ActivityFilterParams): UseActivities {
     return () => {
       cancelled = true;
     };
-  }, [availability, city, dateFrom, dateTo, explorePage, reloadKey, requestKey, title, type]);
+  }, [availability, city, dateFrom, dateTo, explorePage, reloadKey, requestKey, status, title, type]);
 
   const refresh = useCallback(() => setReloadKey((k) => k + 1), []);
 

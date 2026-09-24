@@ -4,6 +4,7 @@ import { loginAs, USER } from "./helpers";
 test.describe("votación de reprogramación", () => {
   test("un participante vota una fecha alternativa en una votación pendiente", async ({ page }) => {
     await loginAs(page, USER);
+    await page.goto("/mis-actividades");
     await expect(page.getByText("Creadas por mí")).toBeVisible();
 
     const pending = page.getByText("Te toca votar", { exact: true });

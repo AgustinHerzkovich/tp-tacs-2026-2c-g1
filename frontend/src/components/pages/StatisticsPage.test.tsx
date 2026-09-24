@@ -4,10 +4,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { StatisticsPage } from "@/components/pages/StatisticsPage";
 import type { StatisticsResponse } from "@/types/backend";
 
-const { statisticsGet, authState, replace, push } = vi.hoisted(() => ({
+const { statisticsGet, authState, replace, push, back } = vi.hoisted(() => ({
   statisticsGet: vi.fn(),
   replace: vi.fn(),
   push: vi.fn(),
+  back: vi.fn(),
   authState: {
     initialized: true,
     isAuthenticated: true,
@@ -16,7 +17,7 @@ const { statisticsGet, authState, replace, push } = vi.hoisted(() => ({
 }));
 
 vi.mock("next/navigation", () => {
-  const router = { replace, push };
+  const router = { replace, push, back };
   const searchParams = new URLSearchParams();
   return {
     useRouter: () => router,
@@ -49,6 +50,7 @@ const EMPTY_STATS: StatisticsResponse = {
 beforeEach(() => {
   replace.mockReset();
   push.mockReset();
+  back.mockReset();
   statisticsGet.mockReset();
   statisticsGet.mockResolvedValue(STATS);
   authState.initialized = true;
@@ -89,7 +91,7 @@ describe("StatisticsPage range filtering", () => {
     expect(screen.getByText("Canceladas")).toBeInTheDocument();
     expect(screen.getByText("Suspendidas por clima")).toBeInTheDocument();
     expect(screen.getByText("Open-Meteo")).toBeInTheDocument();
-    expect(screen.getByText("Tasa de éxito: 95%")).toBeInTheDocument();
+    expect(screen.getByText(/95% de éxito/)).toBeInTheDocument();
     expect(screen.getByText(/Período:/)).toBeInTheDocument();
 
     // With no from/to in the URL the API is invoked without range boundaries;
