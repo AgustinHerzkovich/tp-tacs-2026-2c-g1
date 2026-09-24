@@ -215,8 +215,8 @@ comprobarlo y ejecutar la verificación completa:
 ```
 
 `verify` ejecuta los tests y las validaciones de Spotless, Checkstyle y SpotBugs. El pre-commit del
-repositorio (ver [README de la raíz](../README.md#pre-commit)) ejecuta este mismo `verify`
-automáticamente.
+repositorio (ver [README de la raíz](../README.md#pre-commit)) solo ejecuta `spotless:check`; la
+verificación completa corre en la CI (`.github/workflows/backend-ci.yml`) en cada pull request.
 
 ## Activity images
 

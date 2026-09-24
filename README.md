@@ -281,17 +281,28 @@ El procedimiento de prueba de carga, sus límites y los criterios para registrar
 [`docs/LOAD_TEST.md`](docs/LOAD_TEST.md). El escenario usa el proveedor meteorológico en memoria
 para no trasladar la carga a un servicio público externo.
 
+### Integración continua
+
+Cada pull request que modifica `backend/` o `frontend/` ejecuta su workflow de GitHub Actions:
+
+- **Backend** (`.github/workflows/backend-ci.yml`): Spotless, Checkstyle, SpotBugs y luego todos
+  los tests, incluidos los de persistencia con Testcontainers. Los checks se ordenan de más rápido a
+  más lento para fallar cuanto antes.
+- **Frontend** (`.github/workflows/frontend-ci.yml`): lint, typecheck, tests unitarios y de
+  componentes y build de producción; los E2E con Playwright se lanzan manualmente.
+
 ### Pre-commit
 
-El repositorio incluye un hook que localiza un JDK 21 instalado y ejecuta `clean verify` antes de
-cada commit. Para activarlo una sola vez por clonación:
+El repositorio incluye un hook liviano que, si el commit incluye archivos Java del backend,
+localiza un JDK 21 y ejecuta solo `spotless:check`. Así se detectan problemas de formato en
+segundos; el resto de las validaciones y los tests quedan a cargo de la CI. Para activarlo una sola
+vez por clonación:
 
 ```bash
 git config core.hooksPath .githooks
 ```
 
-El error `class file version 65.0 ... up to 61.0` indica que el código fue compilado con Java 21,
-pero se intentó ejecutar con Java 17. El hook evita esa mezcla configurando Java 21 antes de Maven.
+Si el hook falla, ejecutar `./mvnw spotless:apply` desde `backend/` y volver a agregar los cambios.
 
 ## Git flow
 
@@ -328,12 +339,18 @@ casos límite para el cierre de una votación, diagnosticar un fallo de compilac
 decisión de autenticación. No se conservaron prompts exhaustivos porque no son artefactos necesarios
 para reproducir la aplicación; sí se documentan aquí el propósito, el criterio y la validación.
 
+Para unificar el uso de IA entre integrantes y herramientas, las instrucciones para asistentes están
+centralizadas en [`AGENTS.md`](AGENTS.md), en la raíz del repositorio: estructura, convenciones,
+reglas de seguridad e idioma y los comandos de verificación que deben pasar antes de dar un cambio
+por terminado. `CLAUDE.md` solo importa ese archivo, de modo que Codex, Claude Code y otros
+asistentes compatibles leen las mismas reglas sin duplicarlas.
+
 ## Trazabilidad de requisitos no funcionales
 
 | Requisito del enunciado | Implementación y documentación |
 | --- | --- |
 | SCM | Repositorio Git; flujo de ramas documentado en [Git flow](#git-flow). |
-| Métodos no triviales documentados | Javadoc exigido por las convenciones de `backend/AGENTS.md` y revisado junto con cada cambio. |
+| Métodos no triviales documentados | Javadoc exigido por las convenciones de [`AGENTS.md`](AGENTS.md) y revisado junto con cada cambio. |
 | Ejecución portable y contenerizada | Dockerfiles de frontend/backend y un único `docker compose up --build --wait`. |
 | Aplicación, DB y red en Compose | `docker-compose.yaml` define frontend, backend, MongoDB, MinIO, Keycloak, volúmenes, red y healthchecks. |
 | Seguridad y secretos | Keycloak, OAuth2/JWT, PKCE, roles y política detallada en [Seguridad y secretos](#seguridad-y-secretos). |
