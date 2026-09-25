@@ -122,7 +122,8 @@ Swagger están en [`docs/SWAGGER_TEST_CASES.md`](docs/SWAGGER_TEST_CASES.md).
 ## API y autenticación
 
 Swagger UI, OpenAPI y `/healthcheck` son públicos. El resto de las rutas exige un access token de
-Keycloak; `/statistics` además requiere el rol de realm `ADMIN`.
+Keycloak; `/statistics` además requiere el rol de realm `ADMIN`. Los endpoints del bot de Telegram
+(`/users/telegram/**`) exigen el rol de realm `TELEGRAM_BOT` **y** el API token del bot.
 
 - Swagger UI: `http://localhost:8080/swagger-ui.html`
 - Especificación OpenAPI JSON: `http://localhost:8080/v3/api-docs`
@@ -135,6 +136,20 @@ Keycloak. Se configuran con `SECURITY_JWT_ISSUER_URI`, `SECURITY_JWT_JWK_SET_URI
 
 El realm de desarrollo no exige verificación de email porque Compose no incluye un servidor SMTP.
 En producción debe configurarse SMTP en Keycloak y volver a habilitar `verifyEmail`.
+
+### Cliente de máquina del bot de Telegram
+
+La función serverless del bot no está exenta de autenticación. Obtiene un access token de Keycloak
+con `client_credentials` usando el cliente confidencial `solnotfoundTelegramBot`, cuya cuenta de
+servicio tiene el rol de realm `TELEGRAM_BOT`. Ese rol es compuesto por `USER`, así que la cuenta
+tiene los mismos permisos que un usuario normal y además es la única habilitada para
+`/users/telegram/**`.
+
+Cada llamada al backend envía las dos credenciales: el JWT en `Authorization: Bearer` y el API token
+en `X-Api-Token` (`TELEGRAM_API_TOKEN`). El backend valida las dos: sin API token responde `401`
+aunque el JWT sea válido, y un JWT sin el rol `TELEGRAM_BOT` recibe `403`. Ninguna credencial
+alcanza por sí sola. El rol y el cliente se crean con el import del realm y
+`keycloak/configure-local.sh`; el detalle operativo está en [`telegram/README.md`](telegram/README.md).
 
 ## Decisiones de diseño
 
@@ -172,13 +187,18 @@ frontend usa Authorization Code con PKCE y nunca persiste tokens en el navegador
 ### Seguridad y secretos
 
 - Los valores de `.env.example`, el realm importado y las cuentas `alumno/alumno` y `admin/admin`
-  son exclusivamente de desarrollo. Deben reemplazarse antes de publicar el sistema.
+  son exclusivamente de desarrollo. Deben reemplazarse antes de publicar el sistema. Incluye el
+  client secret de `solnotfoundTelegramBot`, que `keycloak/configure-local.sh` sobreescribe con
+  `KEYCLOAK_TELEGRAM_BOT_CLIENT_SECRET` y que en GCP se inyecta desde Secret Manager.
 - `.env`, `.env.local`, API keys y credenciales reales no deben versionarse. En producción deben
   inyectarse mediante variables de entorno o un secret manager de la plataforma.
 - El cliente SPA de Keycloak es público y no contiene client secret. Las contraseñas se delegan a
   Keycloak y nunca se almacenan en la aplicación.
 - Los recursos de negocio requieren JWT; las operaciones de administrador vuelven a validar el rol
   en el backend, independientemente de lo que muestre la UI.
+- El bot de Telegram se autentica como cualquier otro cliente: JWT de Keycloak para una cuenta de
+  servicio con el rol `TELEGRAM_BOT` y, además, el API token compartido. El backend exige ambos, así
+  que el acceso al webhook no habilita por sí solo el acceso a la API.
 - Las imágenes se validan por cantidad, tamaño y tipo de contenido. El bucket es privado y se
   entregan URLs firmadas temporales; para GCP se usa identidad de servicio en lugar de archivos JSON
   con claves.

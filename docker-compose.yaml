@@ -82,6 +82,13 @@ services:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_API_TOKEN: ${TELEGRAM_API_TOKEN:-}
       BACKEND_URL: ${BACKEND_URL:-http://backend:8080}
+      KEYCLOAK_URL: ${KEYCLOAK_INTERNAL_URL:-http://keycloak:8080}
+      KEYCLOAK_REALM: ${NEXT_PUBLIC_KEYCLOAK_REALM:-solnotfound}
+      KEYCLOAK_TELEGRAM_BOT_CLIENT_ID: ${KEYCLOAK_TELEGRAM_BOT_CLIENT_ID:-solnotfoundTelegramBot}
+      KEYCLOAK_TELEGRAM_BOT_CLIENT_SECRET: ${KEYCLOAK_TELEGRAM_BOT_CLIENT_SECRET:-solnotfound-telegram-bot-client-secret}
+    depends_on:
+      keycloak-config:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/"]
       interval: 5s
@@ -198,6 +205,9 @@ services:
     environment:
       KEYCLOAK_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:-admin}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KEYCLOAK_PUBLIC_URL: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8090}
+      TELEGRAM_BOT_CLIENT_ID: ${KEYCLOAK_TELEGRAM_BOT_CLIENT_ID:-solnotfoundTelegramBot}
+      TELEGRAM_BOT_CLIENT_SECRET: ${KEYCLOAK_TELEGRAM_BOT_CLIENT_SECRET:-solnotfound-telegram-bot-client-secret}
     depends_on:
       keycloak:
         condition: service_healthy

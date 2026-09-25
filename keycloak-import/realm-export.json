@@ -69,6 +69,20 @@
         "attributes": {}
       },
       {
+        "id": "9c1f6b3a-4c62-4a5b-9b7e-0d0b8e6a2f11",
+        "name": "TELEGRAM_BOT",
+        "description": "Rol de la cuenta de servicio de la funcion serverless del bot de Telegram. Compuesto por USER, asi que tiene los mismos permisos que un usuario normal, y ademas habilita los endpoints /users/telegram/**. Se exige en conjunto con el API token del bot.",
+        "composite": true,
+        "composites": {
+          "realm": [
+            "USER"
+          ]
+        },
+        "clientRole": false,
+        "containerId": "4f52a0ee-e763-45b4-ae9f-c4035085704b",
+        "attributes": {}
+      },
+      {
         "id": "d08421af-3cba-4a59-975e-7a80056f7604",
         "name": "default-roles-solnotfound",
         "description": "${role_default-roles}",
@@ -984,6 +998,79 @@
         "organization",
         "offline_access",
         "microprofile-jwt"
+      ]
+    },
+    {
+      "id": "3f6c9d51-2b0a-4d1e-9c3b-77c1a4e5b902",
+      "clientId": "solnotfoundTelegramBot",
+      "name": "solnotfoundTelegramBot",
+      "description": "Cliente confidencial de la funcion serverless del bot de Telegram. Obtiene su access token con client_credentials y su cuenta de servicio tiene el rol de realm TELEGRAM_BOT.",
+      "rootUrl": "",
+      "adminUrl": "",
+      "baseUrl": "",
+      "surrogateAuthRequired": false,
+      "enabled": true,
+      "alwaysDisplayInConsole": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "solnotfound-telegram-bot-client-secret",
+      "redirectUris": [],
+      "webOrigins": [],
+      "notBefore": 0,
+      "bearerOnly": false,
+      "consentRequired": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "publicClient": false,
+      "frontchannelLogout": true,
+      "protocol": "openid-connect",
+      "attributes": {
+        "realm_client": "false",
+        "logout.confirmation.enabled": "false",
+        "oidc.ciba.grant.enabled": "false",
+        "client.secret.creation.time": "1789056730",
+        "backchannel.logout.session.required": "true",
+        "standard.token.exchange.enabled": "false",
+        "oauth2.jwt.authorization.grant.enabled": "false",
+        "frontchannel.logout.session.required": "true",
+        "oauth2.device.authorization.grant.enabled": "false",
+        "display.on.consent.screen": "false",
+        "backchannel.logout.revoke.offline.tokens": "false",
+        "dpop.bound.access.tokens": "false"
+      },
+      "authenticationFlowBindingOverrides": {},
+      "fullScopeAllowed": false,
+      "nodeReRegistrationTimeout": -1,
+      "protocolMappers": [
+        {
+          "name": "backend audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "solnotfoundBackend",
+            "id.token.claim": "false",
+            "access.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        }
+      ],
+      "defaultClientScopes": [
+        "acr",
+        "roles",
+        "basic"
+      ],
+      "optionalClientScopes": []
+    }
+  ],
+  "users": [
+    {
+      "username": "service-account-solnotfoundTelegramBot",
+      "enabled": true,
+      "serviceAccountClientId": "solnotfoundTelegramBot",
+      "realmRoles": [
+        "TELEGRAM_BOT"
       ]
     }
   ],
