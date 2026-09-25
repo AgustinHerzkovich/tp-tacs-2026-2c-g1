@@ -57,9 +57,12 @@ public class SecurityConfig {
   }
 
   /**
-   * Protects the Telegram bot endpoints with a static API token sent in the {@value
-   * ApiTokenAuthenticationFilter#HEADER} header instead of a Keycloak JWT. Requests without a valid
-   * token receive 401. When no token is configured, every request to these endpoints is rejected.
+   * Protects the Telegram bot endpoints with two independent credentials: a Keycloak JWT issued to
+   * the bot service account, which must carry the TELEGRAM_BOT realm role, and the static API token
+   * sent in the {@value ApiTokenVerificationFilter#HEADER} header. The API token alone grants
+   * nothing, so a leaked token cannot be used without the JWT and vice versa. Requests without the
+   * API token receive 401, and authenticated callers without the role receive 403. When no token is
+   * configured, every request to these endpoints is rejected.
    */
   @Bean
   @Order(2)
@@ -75,9 +78,14 @@ public class SecurityConfig {
                   session.sessionCreationPolicy(
                       org.springframework.security.config.http.SessionCreationPolicy.STATELESS))
           .addFilterBefore(
-              new ApiTokenAuthenticationFilter(apiToken, "telegram-bot", "TELEGRAM_BOT"),
-              org.springframework.security.web.authentication.AnonymousAuthenticationFilter.class)
+              new ApiTokenVerificationFilter(apiToken, "telegram-bot"),
+              org.springframework.security.oauth2.server.resource.web.authentication
+                  .BearerTokenAuthenticationFilter.class)
           .authorizeHttpRequests(requests -> requests.anyRequest().hasRole("TELEGRAM_BOT"))
+          .oauth2ResourceServer(
+              resourceServer ->
+                  resourceServer.jwt(
+                      jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())))
           .exceptionHandling(
               exceptions ->
                   exceptions.authenticationEntryPoint(
