@@ -151,7 +151,7 @@ export function ExplorarPage() {
   };
 
   return (
-    <div className="fade-in px-5 pt-2 pb-6 lg:px-10 lg:pt-8">
+    <div className="fade-in px-5 pt-2 pb-6 lg:mx-auto lg:w-full lg:max-w-7xl lg:px-10 lg:pt-8">
       <div className="hidden lg:block lg:mb-6">
         <p className="text-xs font-extrabold uppercase" style={{ color: "var(--primary)" }}>Planes disponibles</p>
         <h2 className="font-brand text-4xl">Encontrá tu próximo plan</h2>

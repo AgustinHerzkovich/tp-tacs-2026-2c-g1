@@ -3,10 +3,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { createTestStore, renderHookWithStore } from "@/test/utils";
 
 const login = vi.fn<() => Promise<void>>();
+const register = vi.fn<() => Promise<void>>();
 const logout = vi.fn<() => Promise<void>>();
 
 vi.mock("@/lib/keycloak", () => ({
-  getKeycloak: () => ({ login, logout }),
+  getKeycloak: () => ({ login, register, logout }),
 }));
 
 const ADMIN = {
@@ -40,10 +41,13 @@ describe("useAuth", () => {
     expect(result.current.hasRole("FUTBOL")).toBe(false);
   });
 
-  it("delegates login/logout to the Keycloak adapter", async () => {
+  it("delegates login/register/logout to the Keycloak adapter", async () => {
     const { result } = renderHookWithStore(useAuth);
     await result.current.login();
     expect(login).toHaveBeenCalledWith({ redirectUri: expect.stringContaining("http") });
+
+    await result.current.register();
+    expect(register).toHaveBeenCalledWith({ redirectUri: expect.stringContaining("http") });
 
     await result.current.logout();
     expect(logout).toHaveBeenCalledWith({ redirectUri: expect.stringContaining("/login") });

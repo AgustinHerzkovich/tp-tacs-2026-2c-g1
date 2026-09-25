@@ -1,58 +1,62 @@
-import { InfoHint } from "@/components/common/InfoHint";
-import { StickerTag } from "@/components/common/StickerTag";
-import type { Tone } from "@/lib/activityVisuals";
+import {InfoHint} from "@/components/common/InfoHint";
+import {StickerTag} from "@/components/common/StickerTag";
+import type {Tone} from "@/lib/activityVisuals";
 
 interface ActivityRequirementsCardProps {
-  minParticipants: number;
-  anticipationWindow: number;
-  reprogramationMaxDays: number;
+    minParticipants: number;
+    anticipationWindow: number;
+    reprogramationMaxDays: number;
 }
 
 interface Tile {
-  emoji: string;
-  tone: Tone;
-  value: string;
-  label: string;
-  rotate: number;
+    emoji: string;
+    tone: Tone;
+    value: string;
+    label: string;
+    rotate: number;
 }
 
 /** The non-weather requirements for an activity to be confirmed (quórum,
  * aviso previo, ventana de reprogramación). Weather-specific limits live in
  * `WeatherWidget`'s own "dentro de lo permitido" chip instead — keeping them
  * here too would reintroduce the duplicate-info problem this redesign fixes. */
-export function ActivityRequirementsCard({ minParticipants, anticipationWindow, reprogramationMaxDays }: ActivityRequirementsCardProps) {
-  const tiles: Tile[] = [
-    { emoji: "👥", tone: "mint", value: `${minParticipants} mín.`, label: "quórum", rotate: -3 },
-    { emoji: "🔔", tone: "violet", value: `${anticipationWindow}h antes`, label: "aviso", rotate: 4 },
-    { emoji: "🔄", tone: "sun", value: `${reprogramationMaxDays} días`, label: "reprogram.", rotate: -4 },
-  ];
+export function ActivityRequirementsCard({
+                                             minParticipants,
+                                             anticipationWindow,
+                                             reprogramationMaxDays
+                                         }: ActivityRequirementsCardProps) {
+    const tiles: Tile[] = [
+        {emoji: "👥", tone: "mint", value: `${minParticipants} mín.`, label: "quórum", rotate: -3},
+        {emoji: "🔔", tone: "violet", value: `${anticipationWindow}h antes`, label: "aviso", rotate: 4},
+        {emoji: "🔄", tone: "sun", value: `${reprogramationMaxDays} días`, label: "reprogram.", rotate: -4},
+    ];
 
-  return (
-    <div className="mb-6">
-      <div className="flex items-center gap-2 mb-3">
-        <StickerTag tone="rose">Para que se confirme</StickerTag>
-        <InfoHint>
-          Además de que el clima acompañe, la actividad necesita: llegar al quórum mínimo, respetar el aviso previo antes del
-          inicio y —si el clima no da— tener margen dentro de la ventana de reprogramación.
-        </InfoHint>
-      </div>
-      <div className="flex flex-wrap justify-center gap-3">
-        {tiles.map((tile) => (
-          <div
-            key={tile.label}
-            className="flex min-w-[96px] flex-1 flex-col items-center justify-center gap-1 rounded-[18px] border-[3px] border-white px-2 py-3.5 text-center shadow-[0_5px_12px_-6px_rgba(58,51,82,.28)]"
-            style={{ background: `var(--${tile.tone})`, transform: `rotate(${tile.rotate}deg)` }}
-          >
-            <span className="emoji-3d text-[19px]">{tile.emoji}</span>
-            <p className="font-black text-[14.5px]" style={{ color: `var(--${tile.tone}-ink)` }}>
-              {tile.value}
-            </p>
-            <p className="text-[9.5px] font-extrabold" style={{ color: `var(--${tile.tone}-ink)` }}>
-              {tile.label}
-            </p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+    return (
+        <div className="mb-6">
+            <div className="flex items-center gap-2 mb-3">
+                <StickerTag tone="rose">A tener en cuenta</StickerTag>
+                <InfoHint>
+                    La actividad solo se confirma si se llega al quórum mínimo. Además, aquí verás el tiempo de aviso
+                    previo en caso de mal clima y el margen de días permitidos para reprogramar la fecha original.
+                </InfoHint>
+            </div>
+            <div className="flex flex-wrap justify-center gap-3">
+                {tiles.map((tile) => (
+                    <div
+                        key={tile.label}
+                        className="flex min-w-[96px] flex-1 flex-col items-center justify-center gap-1 rounded-[18px] border-[3px] border-white px-2 py-3.5 text-center shadow-[0_5px_12px_-6px_rgba(58,51,82,.28)]"
+                        style={{background: `var(--${tile.tone})`, transform: `rotate(${tile.rotate}deg)`}}
+                    >
+                        <span className="emoji-3d text-[19px]">{tile.emoji}</span>
+                        <p className="font-black text-[14.5px]" style={{color: `var(--${tile.tone}-ink)`}}>
+                            {tile.value}
+                        </p>
+                        <p className="text-[9.5px] font-extrabold" style={{color: `var(--${tile.tone}-ink)`}}>
+                            {tile.label}
+                        </p>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
 }

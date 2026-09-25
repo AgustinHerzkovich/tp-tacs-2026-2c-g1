@@ -73,7 +73,7 @@ export function MisActividadesPage() {
   } = useMisActividades();
 
   return (
-    <div className="fade-in px-5 pt-2 pb-4 lg:px-10 lg:pt-8">
+    <div className="fade-in px-5 pt-2 pb-4 lg:mx-auto lg:w-full lg:max-w-7xl lg:px-10 lg:pt-8">
       <div className="hidden lg:block mb-7">
         <p className="text-xs font-extrabold uppercase" style={{ color: "var(--primary)" }}>Tu agenda</p>
         <h2 className="font-brand text-4xl" style={{ letterSpacing: "0.02em" }}>Mis actividades</h2>
