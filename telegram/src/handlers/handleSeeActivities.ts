@@ -3,7 +3,7 @@ import type { CommandHandler } from "../utils/command.types";
 
 const handleSeeActivities: CommandHandler = async (chatId, userId) => {
   console.log(`[seeActivities] chat=${chatId} userId=${userId}`);
-  // TODO: request al backend: GET ${backendClient}/activities (filtradas por disponibilidad) usando userId=${userId}
+  // TODO: request al backend con backendFetch (JWT + API token): GET /activities (filtradas por disponibilidad) usando userId=${userId}
   await sendMessage(chatId, `Vas a ver las actividades disponibles. (userId=${userId})`);
 };
 

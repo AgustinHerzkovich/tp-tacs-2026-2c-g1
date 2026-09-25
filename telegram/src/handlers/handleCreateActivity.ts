@@ -4,7 +4,7 @@ import type { CommandHandler } from "../utils/command.types";
 
 const handleCreateActivity: CommandHandler = async (chatId, userId) => {
   console.log(`[createActivity] chat=${chatId} userId=${userId}`);
-  // TODO: request al backend: POST ${backendClient}/activities (crear actividad) usando userId=${userId}
+  // TODO: request al backend con backendFetch (JWT + API token): POST /activities (crear actividad) usando userId=${userId}
   const subcommands = COMMAND_TREE["/createActivity"].map((cmd) => `- ${cmd}`).join("\n");
   await sendMessage(
     chatId,
