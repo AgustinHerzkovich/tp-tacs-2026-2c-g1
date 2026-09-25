@@ -20,8 +20,12 @@ interface UseActivities {
  * Mis Actividades (organized/joined) is a separate hook — see
  * useMisActividades.ts — since it needs a different fetch shape (two
  * independently paginated feeds plus voting status) and Explorar never
- * touched that data anyway. */
-export function useActivities(filters?: ActivityFilterParams): UseActivities {
+ * touched that data anyway.
+ *
+ * `enabled: false` skips the fetch entirely (no loading flicker, no
+ * request) — used for Explorar's highlight rails, which only need to fetch
+ * while they're actually shown on screen. */
+export function useActivities(filters?: ActivityFilterParams, enabled = true): UseActivities {
   const type = filters?.type;
   const city = filters?.city;
   const title = filters?.title;
@@ -29,23 +33,25 @@ export function useActivities(filters?: ActivityFilterParams): UseActivities {
   const dateTo = filters?.dateTo;
   const availability = filters?.availability;
   const status = filters?.status;
+  const size = filters?.size ?? 12;
   const [exploreFeed, setExploreFeed] = useState<ExploreActivity[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(enabled);
   const [loadedRequest, setLoadedRequest] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [explorePage, setExplorePage] = useState(0);
   const [exploreTotalPages, setExploreTotalPages] = useState(0);
-  const requestKey = [type, title, city, dateFrom, dateTo, availability, status, explorePage, reloadKey]
+  const requestKey = [type, title, city, dateFrom, dateTo, availability, status, size, explorePage, reloadKey]
     .map((value) => String(value ?? ""))
     .join("|");
-  const requestPending = loading || loadedRequest !== requestKey;
+  const requestPending = enabled && (loading || loadedRequest !== requestKey);
 
   useEffect(() => {
+    if (!enabled) return;
     let cancelled = false;
 
     api.activities
-      .list({ type, title, city, dateFrom, dateTo, availability, status, page: explorePage, size: 12 })
+      .list({ type, title, city, dateFrom, dateTo, availability, status, page: explorePage, size })
       .then((all) => {
         if (cancelled) return;
         setExploreFeed(all.content.map(toExploreActivity));
@@ -67,7 +73,7 @@ export function useActivities(filters?: ActivityFilterParams): UseActivities {
     return () => {
       cancelled = true;
     };
-  }, [availability, city, dateFrom, dateTo, explorePage, reloadKey, requestKey, status, title, type]);
+  }, [availability, city, dateFrom, dateTo, enabled, explorePage, reloadKey, requestKey, size, status, title, type]);
 
   const refresh = useCallback(() => setReloadKey((k) => k + 1), []);
 

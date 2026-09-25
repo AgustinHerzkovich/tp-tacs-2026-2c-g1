@@ -1,4 +1,5 @@
 import { InfoHint } from "@/components/common/InfoHint";
+import { StickerTag } from "@/components/common/StickerTag";
 import type { Tone } from "@/lib/activityVisuals";
 
 interface ActivityRequirementsCardProps {
@@ -29,12 +30,7 @@ export function ActivityRequirementsCard({ minParticipants, anticipationWindow, 
   return (
     <div className="mb-6">
       <div className="flex items-center gap-2 mb-3">
-        <span
-          className="inline-flex items-center rounded-tl-[10px] rounded-tr-[10px] rounded-br-[10px] rounded-bl-[2px] border-2 border-white px-3 py-1.5 text-[10.5px] font-black uppercase tracking-wide"
-          style={{ background: "var(--rose)", color: "var(--rose-ink)", boxShadow: "0 3px 0 var(--rose-ink)" }}
-        >
-          Para que se confirme
-        </span>
+        <StickerTag tone="rose">Para que se confirme</StickerTag>
         <InfoHint>
           Además de que el clima acompañe, la actividad necesita: llegar al quórum mínimo, respetar el aviso previo antes del
           inicio y —si el clima no da— tener margen dentro de la ventana de reprogramación.

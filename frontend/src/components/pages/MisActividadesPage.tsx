@@ -4,6 +4,7 @@ import { useMisActividades } from "@/hooks/useMisActividades";
 import { VotingPendingCard } from "@/components/activities/VotingPendingCard";
 import { MisCard } from "@/components/activities/MisCard";
 import { SectionHeader } from "@/components/common/SectionHeader";
+import { StickerTag } from "@/components/common/StickerTag";
 import { ErrorState } from "@/components/common/AsyncState";
 import { MisGridSkeleton } from "@/components/common/Skeletons";
 import { PageControls } from "@/components/common/PageControls";
@@ -85,7 +86,9 @@ export function MisActividadesPage() {
         <>
           {votingPending.length > 0 && (
             <div className="mb-2">
-              <SectionHeader icon="🔥" label="Te toca votar" tone="mint" className="mb-3" />
+              <StickerTag tone="mint" className="mb-3">
+                🔥 Te toca votar
+              </StickerTag>
               <div className="lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-4">
                 {votingPending.map((a, i) => (
                   <VotingPendingCard key={a.id} activity={a} rotate={i % 2 === 0 ? -1 : 1} />
