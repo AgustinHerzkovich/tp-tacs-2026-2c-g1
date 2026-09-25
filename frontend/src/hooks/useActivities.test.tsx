@@ -100,6 +100,21 @@ describe("useActivities", () => {
     await waitFor(() => expect(list).toHaveBeenCalledTimes(2));
   });
 
+  it("skips the fetch while disabled, then fetches once enabled", async () => {
+    list.mockResolvedValueOnce(pageOf(makeActivity("a1")));
+
+    const { result, rerender } = renderHook(({ enabled }) => useActivities({ size: 8 }, enabled), {
+      initialProps: { enabled: false },
+    });
+
+    expect(result.current.loading).toBe(false);
+    expect(list).not.toHaveBeenCalled();
+
+    rerender({ enabled: true });
+    await waitFor(() => expect(list).toHaveBeenCalledWith(expect.objectContaining({ size: 8 })));
+    await waitFor(() => expect(result.current.exploreFeed).toHaveLength(1));
+  });
+
   it("surfaces load errors", async () => {
     list.mockRejectedValueOnce(new Error("No pudimos cargar las actividades."));
 

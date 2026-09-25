@@ -130,7 +130,7 @@ export function LocationFieldContent({ city, onCityChange, onDone }: LocationFie
           value={city}
           onChange={(event) => onCityChange(event.target.value)}
           placeholder="Buscar por ciudad o dirección"
-          className="pl-10 pr-9 rounded-xl bg-white"
+          className="pl-10 pr-9 rounded-xl border-2 bg-white focus-visible:ring-1"
         />
         {loading && (
           <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 size-4 animate-spin" style={{ color: "var(--muted-foreground)" }} />
@@ -155,9 +155,12 @@ export function LocationFieldContent({ city, onCityChange, onDone }: LocationFie
               <button
                 type="button"
                 onClick={() => choose(result.city || result.label)}
-                className="tap w-full flex items-center gap-3 rounded-xl px-2 py-2 text-left hover:bg-muted"
+                className="tap w-full flex items-center gap-3 rounded-2xl px-2 py-2 text-left hover:bg-muted"
               >
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-full" style={{ background: "var(--secondary)" }}>
+                <span
+                  className="flex size-9 shrink-0 items-center justify-center rounded-full border-[3px] border-white shadow-[0_2px_6px_rgba(58,51,82,.18)]"
+                  style={{ background: "var(--secondary)" }}
+                >
                   <MapPin className="size-4" style={{ color: "var(--secondary-foreground)" }} />
                 </span>
                 <span className="min-w-0 truncate text-[13.5px] font-semibold">{result.label}</span>
@@ -176,9 +179,12 @@ export function LocationFieldContent({ city, onCityChange, onDone }: LocationFie
                 type="button"
                 onClick={useCurrentLocation}
                 disabled={locationLoading}
-                className="tap w-full flex items-center gap-3 rounded-xl px-2 py-2 text-left hover:bg-muted disabled:opacity-60"
+                className="tap w-full flex items-center gap-3 rounded-2xl px-2 py-2 text-left hover:bg-muted disabled:opacity-60"
               >
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-full" style={{ background: "var(--sky)" }}>
+                <span
+                  className="flex size-9 shrink-0 items-center justify-center rounded-full border-[3px] border-white shadow-[0_2px_6px_rgba(58,51,82,.18)]"
+                  style={{ background: "var(--sky)" }}
+                >
                   {locationLoading ? (
                     <Loader2 className="size-4 animate-spin" style={{ color: "var(--sky-ink)" }} />
                   ) : (
@@ -193,9 +199,12 @@ export function LocationFieldContent({ city, onCityChange, onDone }: LocationFie
                 <button
                   type="button"
                   onClick={() => choose(suggestion)}
-                  className="tap w-full flex items-center gap-3 rounded-xl px-2 py-2 text-left hover:bg-muted"
+                  className="tap w-full flex items-center gap-3 rounded-2xl px-2 py-2 text-left hover:bg-muted"
                 >
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-full" style={{ background: "var(--secondary)" }}>
+                  <span
+                    className="flex size-9 shrink-0 items-center justify-center rounded-full border-[3px] border-white shadow-[0_2px_6px_rgba(58,51,82,.18)]"
+                    style={{ background: "var(--secondary)" }}
+                  >
                     <Compass className="size-4" style={{ color: "var(--secondary-foreground)" }} />
                   </span>
                   <span className="text-[13.5px] font-semibold">{suggestion}</span>

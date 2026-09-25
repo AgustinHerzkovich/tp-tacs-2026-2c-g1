@@ -121,4 +121,9 @@ describe("toExploreActivity / toMisActivity", () => {
     expect(explore.where).toBe("Ubicación a confirmar");
     expect(explore.imageUrl).toBeNull();
   });
+
+  it("falls back to a placeholder name instead of the raw userId when a participant has no name", () => {
+    const explore = toExploreActivity(makeActivity({ participants: [{ userId: "u1", name: null }] }));
+    expect(explore.participantNames).toEqual(["Invitade"]);
+  });
 });
