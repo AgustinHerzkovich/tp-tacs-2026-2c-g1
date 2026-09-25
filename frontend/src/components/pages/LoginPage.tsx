@@ -1,21 +1,10 @@
 "use client";
 
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
-
-const noopSubscribe = () => () => {};
-
-/** True only once hydration has committed. The server always renders the
- * "checking session" state (it can't know Keycloak's client-side auth
- * status), so this keeps the very first client render identical to that —
- * otherwise a session restored before/during hydration (e.g. right after a
- * Keycloak logout redirect back to this page) makes React's first client
- * pass disagree with the server HTML and throws a hydration-mismatch error. */
-function useHasMounted(): boolean {
-  return useSyncExternalStore(noopSubscribe, () => true, () => false);
-}
+import { useHasMounted } from "@/hooks/useHasMounted";
 
 export function LoginPage() {
   const router = useRouter();
