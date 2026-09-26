@@ -3,6 +3,7 @@ package com.solnotfound.repository;
 import com.solnotfound.dto.ActivityFilterDTO;
 import com.solnotfound.entity.activity.Activity;
 import com.solnotfound.entity.activity.ActivityStatus;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -69,13 +70,26 @@ public class InMemoryActivityRepository implements IActivityRepository {
   }
 
   @Override
-  public Page<Activity> findActivitiesByOrganizerId(String organizerId, Pageable pageable) {
-    return page(findActivitiesByOrganizerId(organizerId), pageable);
+  public Page<Activity> findActivitiesByOrganizerId(
+      String organizerId, LocalDateTime dateFrom, LocalDateTime dateTo, Pageable pageable) {
+    return page(
+        filterByDateRange(findActivitiesByOrganizerId(organizerId), dateFrom, dateTo), pageable);
   }
 
   @Override
-  public Page<Activity> findActivitiesByParticipantId(String participantId, Pageable pageable) {
-    return page(findActivitiesByParticipantId(participantId), pageable);
+  public Page<Activity> findActivitiesByParticipantId(
+      String participantId, LocalDateTime dateFrom, LocalDateTime dateTo, Pageable pageable) {
+    return page(
+        filterByDateRange(findActivitiesByParticipantId(participantId), dateFrom, dateTo),
+        pageable);
+  }
+
+  private List<Activity> filterByDateRange(
+      List<Activity> source, LocalDateTime dateFrom, LocalDateTime dateTo) {
+    return source.stream()
+        .filter(activity -> dateFrom == null || !activity.getDateTime().isBefore(dateFrom))
+        .filter(activity -> dateTo == null || !activity.getDateTime().isAfter(dateTo))
+        .toList();
   }
 
   private Page<Activity> page(List<Activity> source, Pageable pageable) {

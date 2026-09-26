@@ -151,21 +151,35 @@ public class ActivityController {
   @GetMapping("/organizers/me")
   public ResponseEntity<PageResponse<ActivityResponse>> getOrganized(
       Authentication authentication,
+      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+          LocalDateTime dateFrom,
+      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+          LocalDateTime dateTo,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "12") int size) {
     return ResponseEntity.ok(
         activityService.getByOrganizerId(
-            jwt(authentication).getSubject(), pageRequest(page, size, "dateTime")));
+            jwt(authentication).getSubject(),
+            dateFrom,
+            dateTo,
+            pageRequest(page, size, "dateTime")));
   }
 
   @GetMapping("/participants/me")
   public ResponseEntity<PageResponse<ActivityResponse>> getJoined(
       Authentication authentication,
+      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+          LocalDateTime dateFrom,
+      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+          LocalDateTime dateTo,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "12") int size) {
     return ResponseEntity.ok(
         activityService.getByParticipantId(
-            jwt(authentication).getSubject(), pageRequest(page, size, "dateTime")));
+            jwt(authentication).getSubject(),
+            dateFrom,
+            dateTo,
+            pageRequest(page, size, "dateTime")));
   }
 
   private PageRequest pageRequest(int page, int size, String sortProperty) {
