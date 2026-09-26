@@ -85,7 +85,7 @@ export function useMisActividades(options?: { skipFeeds?: boolean }): UseMisActi
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const userId = user?.id ?? null;
-  const requestKey = [organizedPage, joinedPage, reloadKey, userId].join("|");
+  const requestKey = [organizedPage, joinedPage, reloadKey, userId, skipFeeds].join("|");
   const requestPending = loading || loadedRequest !== requestKey;
 
   useEffect(() => {

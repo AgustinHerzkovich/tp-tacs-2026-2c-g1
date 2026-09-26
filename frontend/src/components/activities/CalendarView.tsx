@@ -40,6 +40,13 @@ export function CalendarView() {
       const date = new Date(current.year, current.month0 + delta, 1);
       return { year: date.getFullYear(), month0: date.getMonth() };
     });
+    // The selection must follow the visible month — otherwise "Tu selección" keeps showing a
+    // day from a month that's no longer on screen (see review finding).
+    setSelectedKey((current) => {
+      const [y, m] = current.split("-").map(Number);
+      const date = new Date(y ?? today.getFullYear(), (m ?? 1) - 1 + delta, 1);
+      return dateKey(date);
+    });
   }
 
   const selectedDate = useMemo(() => {
