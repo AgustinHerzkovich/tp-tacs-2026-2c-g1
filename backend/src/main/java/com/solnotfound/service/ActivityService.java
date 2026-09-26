@@ -377,14 +377,20 @@ public class ActivityService {
     return activities.stream().map(this::toResponse).toList();
   }
 
-  public PageResponse<ActivityResponse> getByOrganizerId(String id, Pageable pageable) {
+  public PageResponse<ActivityResponse> getByOrganizerId(
+      String id, LocalDateTime dateFrom, LocalDateTime dateTo, Pageable pageable) {
     return PageResponse.from(
-        activityRepository.findActivitiesByOrganizerId(id, pageable).map(this::toResponse));
+        activityRepository
+            .findActivitiesByOrganizerId(id, dateFrom, dateTo, pageable)
+            .map(this::toResponse));
   }
 
-  public PageResponse<ActivityResponse> getByParticipantId(String id, Pageable pageable) {
+  public PageResponse<ActivityResponse> getByParticipantId(
+      String id, LocalDateTime dateFrom, LocalDateTime dateTo, Pageable pageable) {
     return PageResponse.from(
-        activityRepository.findActivitiesByParticipantId(id, pageable).map(this::toResponse));
+        activityRepository
+            .findActivitiesByParticipantId(id, dateFrom, dateTo, pageable)
+            .map(this::toResponse));
   }
 
   private void validate(CreateActivityRequest request, String timeZoneId) {

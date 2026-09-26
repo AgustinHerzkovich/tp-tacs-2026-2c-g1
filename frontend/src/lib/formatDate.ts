@@ -9,7 +9,7 @@ const MONTHS = [
   "ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic",
 ];
 
-function parseLocalDateTime(iso: string): Date {
+export function parseLocalDateTime(iso: string): Date {
   const [datePart, timePart = "00:00:00"] = iso.split("T");
   const [year, month, day] = (datePart ?? "").split("-").map(Number);
   const [hour = 0, minute = 0] = timePart.split(":").map(Number);

@@ -5,7 +5,11 @@ test.describe("votación de reprogramación", () => {
   test("un participante vota una fecha alternativa en una votación pendiente", async ({ page }) => {
     await loginAs(page, USER);
     await page.goto("/mis-actividades");
-    await expect(page.getByText("Creadas por mí")).toBeVisible();
+    // "Mis actividades" opens in Calendario view by default, but "Te toca votar" (checked
+    // below) is shown regardless of view — this just confirms the page loaded. The "Mis
+    // actividades" heading itself is desktop-only (hidden on mobile), so check the view
+    // toggle instead, which is visible on every viewport this suite runs at.
+    await expect(page.getByRole("button", { name: "Calendario" })).toBeVisible();
 
     const pending = page.getByText("Te toca votar", { exact: true });
     if (!(await pending.count())) {

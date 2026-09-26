@@ -68,12 +68,18 @@ export const api = {
     list: (filters?: ActivityFilterParams) =>
       request<PageResponse<ActivityResponse>>(`/activities${queryString({ ...filters })}`),
     get: (id: string) => request<ActivityResponse>(`/activities/${id}`),
-    /** Activities the current user organizes. */
-    organized: (page = 0, size = 12) =>
-      request<PageResponse<ActivityResponse>>(`/activities/organizers/me${queryString({ page, size })}`),
-    /** Activities the current user joined as a participant. */
-    mine: (page = 0, size = 12) =>
-      request<PageResponse<ActivityResponse>>(`/activities/participants/me${queryString({ page, size })}`),
+    /** Activities the current user organizes. `range` narrows the results to a date window
+     * (e.g. the month shown by the calendar view) — both bounds are naive ISO LocalDateTime
+     * strings, omitted entirely when not given. */
+    organized: (page = 0, size = 12, range?: { dateFrom?: string; dateTo?: string }) =>
+      request<PageResponse<ActivityResponse>>(
+        `/activities/organizers/me${queryString({ page, size, ...range })}`,
+      ),
+    /** Activities the current user joined as a participant. See `organized` for `range`. */
+    mine: (page = 0, size = 12, range?: { dateFrom?: string; dateTo?: string }) =>
+      request<PageResponse<ActivityResponse>>(
+        `/activities/participants/me${queryString({ page, size, ...range })}`,
+      ),
     join: (id: string) => request<ActivityResponse>(`/activities/${id}/participants/me`, { method: "PUT" }),
     leave: (id: string) => request<ActivityResponse>(`/activities/${id}/participants/me`, { method: "DELETE" }),
     weather: (id: string) => request<ActivityWeatherResponse>(`/activities/${id}/weather`),
