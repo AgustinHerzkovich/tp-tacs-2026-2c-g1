@@ -56,8 +56,49 @@ public class SecurityConfig {
     }
   }
 
+  /**
+   * Protects the Telegram bot endpoints with two independent credentials: a Keycloak JWT issued to
+   * the bot service account, which must carry the TELEGRAM_BOT realm role, and the static API token
+   * sent in the {@value ApiTokenVerificationFilter#HEADER} header. The API token alone grants
+   * nothing, so a leaked token cannot be used without the JWT and vice versa. Requests without the
+   * API token receive 401, and authenticated callers without the role receive 403. When no token is
+   * configured, every request to these endpoints is rejected.
+   */
   @Bean
   @Order(2)
+  SecurityFilterChain telegramSecurityFilterChain(
+      HttpSecurity http,
+      @org.springframework.beans.factory.annotation.Value("${telegram.api-token}")
+          String apiToken) {
+    try {
+      return http.securityMatcher("/users/telegram/**")
+          .csrf(csrf -> csrf.disable())
+          .sessionManagement(
+              session ->
+                  session.sessionCreationPolicy(
+                      org.springframework.security.config.http.SessionCreationPolicy.STATELESS))
+          .addFilterBefore(
+              new ApiTokenVerificationFilter(apiToken, "telegram-bot"),
+              org.springframework.security.oauth2.server.resource.web.authentication
+                  .BearerTokenAuthenticationFilter.class)
+          .authorizeHttpRequests(requests -> requests.anyRequest().hasRole("TELEGRAM_BOT"))
+          .oauth2ResourceServer(
+              resourceServer ->
+                  resourceServer.jwt(
+                      jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())))
+          .exceptionHandling(
+              exceptions ->
+                  exceptions.authenticationEntryPoint(
+                      new org.springframework.security.web.authentication.HttpStatusEntryPoint(
+                          org.springframework.http.HttpStatus.UNAUTHORIZED)))
+          .build();
+    } catch (Exception exception) {
+      throw new IllegalStateException("Could not configure Telegram security", exception);
+    }
+  }
+
+  @Bean
+  @Order(3)
   SecurityFilterChain securityFilterChain(HttpSecurity http) {
     try {
       return http.csrf(csrf -> csrf.disable())
