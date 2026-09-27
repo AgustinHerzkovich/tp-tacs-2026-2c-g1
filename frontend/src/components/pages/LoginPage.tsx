@@ -17,6 +17,11 @@ const noopSubscribe = () => () => {};
 function useHasMounted(): boolean {
   return useSyncExternalStore(noopSubscribe, () => true, () => false);
 }
+import { useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
+import { useHasMounted } from "@/hooks/useHasMounted";
 
 export function LoginPage() {
   const router = useRouter();
@@ -25,6 +30,7 @@ export function LoginPage() {
   const returnTo = requestedRoute?.startsWith("/") ? requestedRoute : "/mis-actividades";
   const telegramChatId = searchParams?.get("t") === "true" ? parseTelegramChatId(searchParams.get("cid")) : null;
   const fromTelegram = telegramChatId !== null;
+  const returnTo = requestedRoute?.startsWith("/") ? requestedRoute : "/explorar";
   const { initialized, isAuthenticated, login } = useAuth();
   const ready = useHasMounted() && initialized;
   const telegramLink = useTelegramLink(telegramChatId, isAuthenticated);
@@ -51,6 +57,7 @@ export function LoginPage() {
           {fromTelegram
             ? "Iniciá sesión para vincular tu cuenta con el bot de Telegram."
             : "Iniciá sesión o creá tu cuenta de forma segura con Keycloak."}
+          Iniciá sesión o creá tu cuenta para empezar.
         </p>
       </div>
 

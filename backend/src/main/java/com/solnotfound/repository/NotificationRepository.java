@@ -73,4 +73,14 @@ public class NotificationRepository implements INotificationRepository {
       Boolean read, String receiverUserId, Pageable pageable) {
     return repository.findByReadAndReceiverUserId(read, receiverUserId, pageable);
   }
+
+  @Override
+  public List<Notification> findByReceiverUserId(String receiverUserId) {
+    return repository.findByReceiverUserId(receiverUserId);
+  }
+
+  @Override
+  public Page<Notification> findByReceiverUserId(String receiverUserId, Pageable pageable) {
+    return repository.findByReceiverUserId(receiverUserId, pageable);
+  }
 }

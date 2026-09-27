@@ -11,9 +11,9 @@ test.describe("detalle de actividad", () => {
     await firstCard.click();
     await expect(page).toHaveURL(/\/actividades\/.+/);
 
-    await expect(page.getByText("Fecha y hora")).toBeVisible();
-    await expect(page.getByText("Participantes")).toBeVisible();
-    await expect(page.getByText("PRONÓSTICO PARA LA ACTIVIDAD")).toBeVisible();
+    await expect(page.getByText("Sobre la actividad")).toBeVisible();
+    await expect(page.getByText(/pronóstico para el día/i)).toBeVisible();
+    await expect(page.getByText("Para que se confirme")).toBeVisible();
 
     // Back to the feed without navigating in-app; the button keeps its aria label.
     await page.getByRole("button", { name: "Volver" }).click();

@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 import com.solnotfound.adapters.IWeatherAdapter;
 import com.solnotfound.dto.UpdateVotationOptionsRequest;
 import com.solnotfound.dto.UpdateVotationSettingsRequest;
+import com.solnotfound.dto.VotationFilterDTO;
 import com.solnotfound.entity.activity.Activity;
 import com.solnotfound.entity.activity.Location;
 import com.solnotfound.entity.activity.ReprogramationRange;
@@ -34,6 +35,7 @@ import java.time.LocalTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.PageRequest;
 
 class VotationServiceTest {
 
@@ -68,9 +70,79 @@ class VotationServiceTest {
     votationRepository.save(votation("v-2", joined));
     votationRepository.save(votation("v-3", "missing"));
 
-    assertThat(service.getByOrganizerOrParticipantId("user-1"))
+    assertThat(service.search("user-1", noFilter(), PageRequest.of(0, 20)).content())
         .extracting(dto -> dto.id())
         .containsExactlyInAnyOrder("v-1", "v-2");
+  }
+
+  @Test
+  void filtersVotationsByStatusActivityAndOwnVote() {
+    Activity first = activity("a-1", "organizer", List.of("participant"));
+    Activity second = activity("a-2", "organizer", List.of("participant"));
+    activityRepository.save(first);
+    activityRepository.save(second);
+    LocalDateTime option = first.getDateTime().plusDays(1);
+    Votation voted = votationWithOptions("v-1", "a-1", option);
+    voted.setActivity(first);
+    voted.getOptions().getFirst().setUsers(List.of(User.withId("participant")));
+    Votation pending = votationWithOptions("v-2", "a-2", option);
+    pending.setActivity(second);
+    Votation closed = votation("v-3", second);
+    closed.setStatus(VotationStatus.CLOSED);
+    votationRepository.save(voted);
+    votationRepository.save(pending);
+    votationRepository.save(closed);
+    PageRequest page = PageRequest.of(0, 20);
+
+    assertThat(
+            service
+                .search(
+                    "participant", new VotationFilterDTO(VotationStatus.ACTIVE, null, false), page)
+                .content())
+        .extracting(dto -> dto.id())
+        .containsExactly("v-2");
+    assertThat(
+            service.search("participant", new VotationFilterDTO(null, null, true), page).content())
+        .singleElement()
+        .satisfies(
+            dto -> {
+              assertThat(dto.id()).isEqualTo("v-1");
+              assertThat(dto.votedOption()).isEqualTo(option);
+            });
+    assertThat(
+            service.search("participant", new VotationFilterDTO(null, "a-2", null), page).content())
+        .extracting(dto -> dto.id())
+        .containsExactlyInAnyOrder("v-2", "v-3");
+  }
+
+  @Test
+  void doesNotListVotationsOfActivitiesTheUserDoesNotBelongTo() {
+    Activity activity = activity("a-1", "organizer", List.of("participant"));
+    activityRepository.save(activity);
+    votationRepository.save(votation("v-1", activity));
+
+    assertThat(
+            service
+                .search("outsider", new VotationFilterDTO(null, "a-1", null), PageRequest.of(0, 20))
+                .content())
+        .isEmpty();
+  }
+
+  @Test
+  void paginatesVotationsNewestFirst() {
+    Activity activity = activity("a-1", "organizer", List.of());
+    activityRepository.save(activity);
+    for (int index = 0; index < 3; index++) {
+      Votation votation = votation("v-" + index, activity);
+      votation.setCreationDate(LocalDateTime.of(2026, 9, 1 + index, 10, 0));
+      votationRepository.save(votation);
+    }
+
+    var firstPage = service.search("organizer", noFilter(), PageRequest.of(0, 2));
+
+    assertThat(firstPage.content()).extracting(dto -> dto.id()).containsExactly("v-2", "v-1");
+    assertThat(firstPage.totalElements()).isEqualTo(3);
+    assertThat(firstPage.totalPages()).isEqualTo(2);
   }
 
   @Test
@@ -203,6 +275,7 @@ class VotationServiceTest {
     var result = service.vote("v-1", "participant", firstOption);
 
     assertThat(result.options().getFirst().voteCount()).isEqualTo(1);
+    assertThat(result.votedOption()).isEqualTo(firstOption);
     assertThat(result.options().getFirst().voterNames()).containsExactly("Jane Doe");
     assertThat(votation.getOptions().getFirst().getUsers())
         .containsExactly(activity.getParticipants().getFirst());
@@ -276,6 +349,7 @@ class VotationServiceTest {
     service.vote("v-1", "participant", firstOption);
     var result = service.vote("v-1", "participant", secondOption);
 
+    assertThat(result.votedOption()).isEqualTo(secondOption);
     assertThat(result.options().get(0).voteCount()).isZero();
     assertThat(result.options().get(1).voteCount()).isEqualTo(1);
     assertThat(votation.getOptions().get(0).getUsers()).isEmpty();
@@ -346,6 +420,10 @@ class VotationServiceTest {
     assertThatThrownBy(() -> service.vote("v-1", "participant", option))
         .isInstanceOf(AccessDeniedException.class)
         .hasMessageContaining("closed");
+  }
+
+  private VotationFilterDTO noFilter() {
+    return new VotationFilterDTO(null, null, null);
   }
 
   private Activity activity(String id, String organizerId, List<String> participantIds) {

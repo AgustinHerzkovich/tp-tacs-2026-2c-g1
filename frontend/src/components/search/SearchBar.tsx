@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
-import { Search, SlidersHorizontal } from "lucide-react";
+import { Search, SlidersHorizontal, X } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useHeaderCenterSlot } from "@/components/layout/HeaderSlot";
+import { StickerTag } from "@/components/common/StickerTag";
 import { LocationFieldContent } from "./LocationField";
 import { DateRangeFieldContent } from "./DateRangeField";
 import { FiltersContent } from "./FiltersContent";
@@ -24,6 +25,8 @@ interface SearchBarProps {
   onDateRangeChange: (range: { dateFrom: string; dateTo: string }) => void;
   onlyAvailable: boolean;
   onOnlyAvailableChange: (value: boolean) => void;
+  includeAllStatuses: boolean;
+  onIncludeAllStatusesChange: (value: boolean) => void;
   onClear: () => void;
   invalidDates?: boolean;
   /** Human label of the active type filter ("Outdoor"/"Indoor"/"Mixto"), only
@@ -43,6 +46,7 @@ export function SearchBar({
   city, onCityChange,
   dateFrom, dateTo, onDateRangeChange,
   onlyAvailable, onOnlyAvailableChange,
+  includeAllStatuses, onIncludeAllStatusesChange,
   onClear, invalidDates, typeLabel,
 }: SearchBarProps) {
   const [openSegment, setOpenSegment] = useState<Segment>(null);
@@ -93,20 +97,24 @@ export function SearchBar({
           twice with shared state fought itself into never staying open. */}
       <div className="flex items-stretch gap-2">
         {/* Desktop: 3-segment pill, each opens its own popover */}
-        <div className="hidden lg:flex flex-1 items-stretch rounded-full bg-white ring-1 ring-foreground/5 shadow-[0_6px_20px_-10px_rgba(58,51,82,.25)]">
+        <div className="hidden lg:flex flex-1 items-stretch rounded-full border-[3px] border-border bg-white shadow-[0_4px_0_var(--border)]">
           <Popover open={openSegment === "donde"} onOpenChange={(open) => setOpenSegment(open ? "donde" : null)}>
             <PopoverTrigger asChild>
-              <button type="button" className="flex-1 min-w-0 flex flex-col justify-center rounded-full px-6 py-2 text-left hover:bg-muted/60">
+              <button type="button" className="flex-1 min-w-0 flex flex-col justify-center rounded-l-full px-6 py-2 text-left hover:bg-muted/60">
                 <span className="text-[10px] font-extrabold uppercase" style={{ color: "var(--muted-foreground)" }}>Dónde</span>
                 <span className="truncate text-[13.5px] font-semibold">{city || "Explorá ubicaciones"}</span>
               </button>
             </PopoverTrigger>
-            <PopoverContent align="start" className="w-80">
+            <PopoverContent align="start" className="w-80 rounded-3xl border-[3px] border-border p-5 shadow-[0_14px_30px_-14px_rgba(58,51,82,.3)]">
+              <div className="flex items-center justify-between mb-4">
+                <StickerTag tone="sky">📍 Dónde</StickerTag>
+                <PopoverCloseButton onClose={() => setOpenSegment(null)} />
+              </div>
               <LocationFieldContent city={city} onCityChange={onCityChange} onDone={() => setOpenSegment(null)} />
             </PopoverContent>
           </Popover>
 
-          <div className="w-px my-2.5 shrink-0" style={{ background: "var(--border)" }} />
+          <div className="w-[3px] my-2.5 shrink-0 bg-border" />
 
           <Popover open={openSegment === "cuando"} onOpenChange={(open) => setOpenSegment(open ? "cuando" : null)}>
             <PopoverTrigger asChild>
@@ -115,24 +123,30 @@ export function SearchBar({
                 <span className="truncate text-[13.5px] font-semibold">{dateSummary || "Agregá fechas"}</span>
               </button>
             </PopoverTrigger>
-            <PopoverContent align="center" className="w-auto p-5">
+            <PopoverContent align="center" className="w-auto rounded-3xl border-[3px] border-border p-5 shadow-[0_14px_30px_-14px_rgba(58,51,82,.3)]">
+              <div className="flex items-center justify-between mb-4">
+                <StickerTag tone="sun">🗓️ Cuándo</StickerTag>
+                <PopoverCloseButton onClose={() => setOpenSegment(null)} />
+              </div>
               <DateRangeFieldContent dateFrom={dateFrom} dateTo={dateTo} onChange={onDateRangeChange} invalid={invalidDates} numberOfMonths={2} />
             </PopoverContent>
           </Popover>
 
-          <div className="w-px my-2.5 shrink-0" style={{ background: "var(--border)" }} />
+          <div className="w-[3px] my-2.5 shrink-0 bg-border" />
 
           {/* "Qué" is a plain input, not a popup — there's nothing to pick
               from a panel for free-text search, so a popover would just be
-              an empty click-to-focus step. */}
-          <div className="flex-1 min-w-0 flex flex-col justify-center px-6 py-2">
+              an empty click-to-focus step. The hover still matches the
+              other two segments even though there's no button semantics to
+              back it — it's the same control surface. */}
+          <div className="flex-1 min-w-0 flex flex-col justify-center rounded-r-full px-6 py-2 hover:bg-muted/60">
             <label htmlFor="search-query" className="text-[10px] font-extrabold uppercase" style={{ color: "var(--muted-foreground)" }}>Qué</label>
             <input
               id="search-query"
               value={query}
               onChange={(event) => onQueryChange(event.target.value)}
               placeholder="Buscar actividades"
-              className="truncate bg-transparent text-[13.5px] font-semibold outline-none placeholder:text-foreground placeholder:font-semibold"
+              className="truncate bg-transparent text-[13.5px] font-semibold outline-none placeholder:text-muted-foreground placeholder:font-semibold"
             />
           </div>
 
@@ -161,6 +175,8 @@ export function SearchBar({
         <FiltersTrigger
           onlyAvailable={onlyAvailable}
           onOnlyAvailableChange={onOnlyAvailableChange}
+          includeAllStatuses={includeAllStatuses}
+          onIncludeAllStatusesChange={onIncludeAllStatusesChange}
           onClear={onClear}
           open={filtersOpen}
           onOpenChange={setFiltersOpen}
@@ -199,7 +215,7 @@ export function SearchBar({
                 value={query}
                 onChange={(event) => onQueryChange(event.target.value)}
                 placeholder="Buscar actividades"
-                className="rounded-xl bg-white"
+                className="rounded-xl bg-white focus-visible:ring-1"
               />
             </div>
           </div>
@@ -214,33 +230,67 @@ export function SearchBar({
 }
 
 function FiltersTrigger({
-  onlyAvailable, onOnlyAvailableChange, onClear, open, onOpenChange,
+  onlyAvailable, onOnlyAvailableChange, includeAllStatuses, onIncludeAllStatusesChange, onClear, open, onOpenChange,
 }: {
   onlyAvailable: boolean;
   onOnlyAvailableChange: (value: boolean) => void;
+  includeAllStatuses: boolean;
+  onIncludeAllStatusesChange: (value: boolean) => void;
   onClear: () => void;
   open: boolean;
   onOpenChange: Dispatch<SetStateAction<boolean>>;
 }) {
+  // Both filters start at their "curated" default (only joinable activities,
+  // only ones with room) — the dot flags when the user opted out of that.
+  const nonDefault = !onlyAvailable || includeAllStatuses;
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>
         <button
           type="button"
           aria-label="Filtros"
-          className="tap relative shrink-0 flex size-12 items-center justify-center rounded-full border-2 bg-white"
-          style={{ borderColor: "var(--border)" }}
+          className="tap relative shrink-0 flex size-12 items-center justify-center rounded-full border-[3px] border-border bg-white shadow-[0_4px_0_var(--border)]"
         >
           <SlidersHorizontal className="size-[18px]" />
-          {onlyAvailable && (
-            <span className="absolute top-1.5 right-1.5 size-2.5 rounded-full border-2 border-white" style={{ background: "var(--primary)" }} />
+          {nonDefault && (
+            <span className="absolute -top-0.5 -right-0.5 size-3 rounded-full border-2 border-white" style={{ background: "var(--primary)" }} />
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-64">
-        <FiltersContent onlyAvailable={onlyAvailable} onOnlyAvailableChange={onOnlyAvailableChange} onClear={onClear} />
+      <PopoverContent align="end" className="w-96 rounded-3xl border-[3px] border-border p-5 shadow-[0_14px_30px_-14px_rgba(58,51,82,.3)]">
+        <div className="flex items-center justify-between mb-4">
+          <StickerTag tone="violet">
+            <SlidersHorizontal className="size-3 mr-1" /> Filtros
+          </StickerTag>
+          <PopoverCloseButton onClose={() => onOpenChange(false)} />
+        </div>
+        <FiltersContent
+          onlyAvailable={onlyAvailable}
+          onOnlyAvailableChange={onOnlyAvailableChange}
+          includeAllStatuses={includeAllStatuses}
+          onIncludeAllStatusesChange={onIncludeAllStatusesChange}
+          onClear={onClear}
+        />
       </PopoverContent>
     </Popover>
+  );
+}
+
+/** "✕" next to a segment's popover's tag label, on the same row so both
+ * sit at the same height — a dismiss affordance in addition to the
+ * click-outside/Escape Radix already gives for free. Just the mark at
+ * rest; the circle only shows up on hover so it doesn't compete with the
+ * tag label beside it. */
+function PopoverCloseButton({ onClose }: { onClose: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-label="Cerrar"
+      onClick={onClose}
+      className="tap flex size-7 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+    >
+      <X className="size-3.5" />
+    </button>
   );
 }
 
@@ -254,8 +304,13 @@ function SheetFieldRow({
   children: ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border-2 overflow-hidden" style={{ borderColor: expanded ? "var(--primary)" : "var(--border)" }}>
-      <button type="button" onClick={onToggle} className="w-full flex items-center justify-between gap-3 px-4 py-3.5 text-left">
+    <div className="rounded-2xl border-2 overflow-hidden" style={{ borderColor: "var(--border)" }}>
+      <button
+        type="button"
+        onClick={onToggle}
+        className="tap w-full flex items-center justify-between gap-3 px-4 py-3.5 text-left outline-none"
+        style={expanded ? { background: "var(--muted)" } : undefined}
+      >
         <span className="text-[11px] font-extrabold uppercase shrink-0" style={{ color: "var(--muted-foreground)" }}>{label}</span>
         {!expanded && <span className="truncate text-[13px] font-bold">{value}</span>}
       </button>

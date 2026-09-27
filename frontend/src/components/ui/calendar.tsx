@@ -52,11 +52,11 @@ function Calendar({
         // way to its edges and butts up against the next cell with no gap).
         range_start: cn(
           defaultClassNames.range_start,
-          "rounded-l-full bg-secondary [&>button]:bg-primary [&>button]:text-primary-foreground [&>button]:hover:bg-primary"
+          "rounded-l-full bg-secondary [&>button]:border-2 [&>button]:border-white [&>button]:bg-primary [&>button]:text-primary-foreground [&>button]:shadow-[0_2px_0_var(--secondary-foreground)] [&>button]:hover:bg-primary"
         ),
         range_end: cn(
           defaultClassNames.range_end,
-          "rounded-r-full bg-secondary [&>button]:bg-primary [&>button]:text-primary-foreground [&>button]:hover:bg-primary"
+          "rounded-r-full bg-secondary [&>button]:border-2 [&>button]:border-white [&>button]:bg-primary [&>button]:text-primary-foreground [&>button]:shadow-[0_2px_0_var(--secondary-foreground)] [&>button]:hover:bg-primary"
         ),
         range_middle: cn(
           defaultClassNames.range_middle,

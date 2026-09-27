@@ -53,6 +53,12 @@ const buttonVariants = cva(
         class:
           "shadow-[0_4px_0_var(--destructive)] hover:shadow-[0_2px_0_var(--destructive)] hover:translate-y-[2px]",
       },
+      {
+        variant: "destructive",
+        size: "icon-lg",
+        class:
+          "border-2 border-white shadow-[0_4px_0_var(--rose-ink)] hover:shadow-[0_2px_0_var(--rose-ink)] hover:translate-y-[2px]",
+      },
     ],
     defaultVariants: {
       variant: "default",

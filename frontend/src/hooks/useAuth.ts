@@ -10,6 +10,7 @@ export interface UseAuth {
   isAuthenticated: boolean;
   hasRole: (role: string) => boolean;
   login: () => Promise<void>;
+  register: () => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -24,6 +25,7 @@ export function useAuth(): UseAuth {
     isAuthenticated: initialized && user !== null,
     hasRole: (role: string) => user?.roles.includes(role) ?? false,
     login: () => getKeycloak().login({ redirectUri: window.location.href }),
+    register: () => getKeycloak().register({ redirectUri: window.location.href }),
     logout: () => getKeycloak().logout({ redirectUri: `${window.location.origin}/login` }),
   };
 }

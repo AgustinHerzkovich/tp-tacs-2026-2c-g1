@@ -4,6 +4,7 @@
 // token — never call fetch("/api/...") directly from a hook/component.
 
 import { authFetch } from "@/lib/authFetch";
+import { errorCodeOf, userMessageFor } from "@/lib/errorMessages";
 import { beginRequest, endRequest } from "@/lib/loading";
 import type {
   ActivityFilterParams,
@@ -16,15 +17,21 @@ import type {
   UpdateVotationSettingsRequest,
   UserDTO,
   VotationDTO,
+  VotationFilterParams,
 } from "@/types/backend";
 
+/** A failed API call. `message` is always a user-facing Spanish text (see
+ * errorMessages.ts); `code` is the backend's machine-readable error code,
+ * for callers that need to branch on the exact reason. */
 export class ApiError extends Error {
   status: number;
+  code: string | null;
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, code: string | null = null) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.code = code;
   }
 }
 
@@ -34,11 +41,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     const res = await authFetch(`/api${path}`, init);
     if (!res.ok) {
       const body: unknown = await res.json().catch(() => null);
-      const message =
-        body && typeof body === "object" && "message" in body && typeof body.message === "string"
-          ? body.message
-          : `Error ${res.status} llamando a ${path}`;
-      throw new ApiError(res.status, message);
+      const code = errorCodeOf(body);
+      throw new ApiError(res.status, userMessageFor(res.status, code), code);
     }
     if (res.status === 204) return undefined as T;
     return (await res.json()) as T;
@@ -51,7 +55,9 @@ function json(method: string, body: unknown): RequestInit {
   return { method, headers: { "content-type": "application/json" }, body: JSON.stringify(body) };
 }
 
-function queryString(params?: Record<string, string | number | boolean | undefined>): string {
+function queryString(
+  params?: Record<string, string | number | boolean | string[] | undefined>,
+): string {
   if (!params) return "";
   const entries = Object.entries(params).filter(([, value]) => value !== undefined && value !== "");
   if (entries.length === 0) return "";
@@ -76,8 +82,10 @@ export const api = {
     create: (body: FormData) => request<ActivityResponse>("/activities", { method: "POST", body }),
   },
   votations: {
-    /** Votations for activities the current user organizes or joined. */
-    mine: () => request<VotationDTO[]>("/votations"),
+    /** One page of the votations of activities the current user organizes or
+     * joined, newest first. */
+    mine: (filters?: VotationFilterParams) =>
+      request<PageResponse<VotationDTO>>(`/votations${queryString({ ...filters })}`),
     /** `dateTime` is the chosen option's raw ISO LocalDateTime string. */
     vote: (votationId: string, dateTime: string) =>
       request<VotationDTO>(`/votations/${votationId}/votes/me`, json("PUT", dateTime)),
@@ -89,7 +97,7 @@ export const api = {
   notifications: {
     list: (page = 0, size = 10) =>
       request<PageResponse<NotificationResponse>>(`/notifications${queryString({ page, size })}`),
-    markRead: (id: string) => request<NotificationResponse>(`/notifications/${id}/read`, { method: "PATCH" }),
+    markRead: (id: string) => request<void>(`/notifications/${id}/read`, { method: "PATCH" }),
   },
   users: {
     /** Links the Telegram chat that opened the login link to the current user. */

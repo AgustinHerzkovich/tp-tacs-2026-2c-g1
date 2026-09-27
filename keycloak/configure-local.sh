@@ -20,7 +20,10 @@ BOT_CLIENT_SECRET="${TELEGRAM_BOT_CLIENT_SECRET:-solnotfound-telegram-bot-client
 "$KCADM" update "realms/$REALM" \
   -s displayName=Planazo \
   -s displayNameHtml=Planazo \
-  -s loginTheme=planazo
+  -s loginTheme=planazo \
+  -s internationalizationEnabled=true \
+  -s 'supportedLocales=["es"]' \
+  -s defaultLocale=es
 
 # Los tokens que emite Keycloak llevan el issuer derivado de la URL usada para
 # pedirlos. Fijar la URL publica del realm hace que el token de la funcion del

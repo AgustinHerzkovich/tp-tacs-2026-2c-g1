@@ -28,5 +28,5 @@ export function formatSearchSummary(params: {
   if (params.query.trim()) parts.push(`“${params.query.trim()}”`);
   const typeLabel = TYPE_LABELS[params.type];
   if (typeLabel) parts.push(typeLabel);
-  return parts.length > 0 ? parts.join(" · ") : "¿A dónde vamos?";
+  return parts.length > 0 ? parts.join(" · ") : "¿Qué plan buscás?";
 }

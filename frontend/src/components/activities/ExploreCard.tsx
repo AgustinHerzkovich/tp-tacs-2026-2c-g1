@@ -16,7 +16,7 @@ export function ExploreCard({ activity, onRefreshImages }: { activity: ExploreAc
     <Link href={`/actividades/${activity.id}`}>
       <Card className="tap mb-5 flex flex-col overflow-hidden gap-0 py-0 transition-shadow lg:mb-0 lg:h-full lg:hover:shadow-lg lg:hover:shadow-[rgba(58,51,82,0.12)]">
         <div className="relative">
-          <Scene scene={activity.scene} imageUrl={activity.imageUrl} alt={activity.title} height={180} onRefresh={onRefreshImages} />
+          <Scene scene={activity.scene} pattern={activity.pattern} imageUrl={activity.imageUrl} alt={activity.title} height={180} onRefresh={onRefreshImages} />
           <TypeBadge type={activity.type} className="absolute top-3 left-3" />
           <StatusBadge status={activity.status} className="absolute top-3 right-3" />
         </div>

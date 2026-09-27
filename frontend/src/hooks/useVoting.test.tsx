@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { useVoting } from "@/hooks/useVoting";
-import type { VotationDTO } from "@/types/backend";
+import type { PageResponse, VotationDTO } from "@/types/backend";
 
 const { mine, vote, updateOptions, updateSettings } = vi.hoisted(() => ({
   mine: vi.fn(),
@@ -25,14 +25,28 @@ const VOTATION: VotationDTO = {
     { dateTime: "2026-09-20T18:00:00", voteCount: 3, voterNames: ["A"] },
     { dateTime: "2026-09-21T18:00:00", voteCount: 1, voterNames: ["B"] },
   ],
+  votedOption: null,
 };
 
+function pageOf(...votations: VotationDTO[]): PageResponse<VotationDTO> {
+  return {
+    content: votations,
+    page: 0,
+    size: 1,
+    totalElements: votations.length,
+    totalPages: votations.length === 0 ? 0 : 1,
+    first: true,
+    last: true,
+  };
+}
+
 describe("useVoting", () => {
-  it("loads the activity's votation and maps the options for display", async () => {
-    mine.mockResolvedValueOnce([VOTATION, { ...VOTATION, id: "v2", activityId: "other" }]);
+  it("asks only for the latest votation of the activity and maps its options", async () => {
+    mine.mockResolvedValueOnce(pageOf(VOTATION));
     const { result } = renderHook(() => useVoting("a1"));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(mine).toHaveBeenCalledWith({ activityId: "a1", size: 1 });
     expect(result.current.votation).toMatchObject({ id: "v1", activityId: "a1" });
     expect(result.current.options).toHaveLength(2);
     expect(result.current.options[0]).toMatchObject({ id: "2026-09-20T18:00:00", votes: 3 });
@@ -41,19 +55,29 @@ describe("useVoting", () => {
     expect(result.current.error).toBeNull();
   });
 
-  it("leaves the votation null when the activity is not among the user's votations", async () => {
-    mine.mockResolvedValueOnce([
-      { ...VOTATION, id: "v9", activityId: "another-activity" },
-    ]);
+  it("leaves the votation null when the activity has no votation for the user", async () => {
+    mine.mockResolvedValueOnce(pageOf());
     const { result } = renderHook(() => useVoting("a1"));
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.votation).toBeNull();
     expect(result.current.options).toEqual([]);
+    expect(result.current.votedId).toBeNull();
   });
 
-  it("selects an option and submits the vote through the API", async () => {
-    mine.mockResolvedValueOnce([VOTATION]);
-    const updated: VotationDTO = { ...VOTATION, options: [{ dateTime: "2026-09-21T18:00:00", voteCount: 2, voterNames: ["B"] }] };
+  it("restores a previous vote from the backend's votedOption", async () => {
+    mine.mockResolvedValueOnce(pageOf({ ...VOTATION, votedOption: "2026-09-20T18:00:00" }));
+    const { result } = renderHook(() => useVoting("a1"));
+    await waitFor(() => expect(result.current.votation).not.toBeNull());
+    expect(result.current.votedId).toBe("2026-09-20T18:00:00");
+  });
+
+  it("selects an option, submits the vote and takes votedId from the response", async () => {
+    mine.mockResolvedValueOnce(pageOf(VOTATION));
+    const updated: VotationDTO = {
+      ...VOTATION,
+      options: [{ dateTime: "2026-09-21T18:00:00", voteCount: 2, voterNames: ["B"] }],
+      votedOption: "2026-09-21T18:00:00",
+    };
     vote.mockResolvedValueOnce(updated);
 
     const { result } = renderHook(() => useVoting("a1"));
@@ -73,7 +97,7 @@ describe("useVoting", () => {
   });
 
   it("does not submit a vote without a selection", async () => {
-    mine.mockResolvedValueOnce([VOTATION]);
+    mine.mockResolvedValueOnce(pageOf(VOTATION));
     const { result } = renderHook(() => useVoting("a1"));
     await waitFor(() => expect(result.current.votation).not.toBeNull());
 
@@ -86,7 +110,7 @@ describe("useVoting", () => {
   });
 
   it("lets the organizer replace the options", async () => {
-    mine.mockResolvedValueOnce([VOTATION]);
+    mine.mockResolvedValueOnce(pageOf(VOTATION));
     const updated: VotationDTO = { ...VOTATION, options: [{ dateTime: "2026-09-24T18:00:00", voteCount: 0, voterNames: [] }] };
     updateOptions.mockResolvedValueOnce(updated);
 
@@ -99,7 +123,7 @@ describe("useVoting", () => {
   });
 
   it("lets the organizer edit quorum and duration", async () => {
-    mine.mockResolvedValueOnce([VOTATION]);
+    mine.mockResolvedValueOnce(pageOf(VOTATION));
     updateSettings.mockResolvedValueOnce({ ...VOTATION });
 
     const { result } = renderHook(() => useVoting("a1"));

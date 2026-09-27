@@ -30,6 +30,7 @@ const N1: NotificationResponse = {
   title: "Clima",
   message: "Lluvia probable",
   createdAt: "2026-09-13T11:48:00",
+  read: false,
 };
 const N2: NotificationResponse = {
   id: "n2",
@@ -38,10 +39,11 @@ const N2: NotificationResponse = {
   title: "Reprogramada",
   message: "Paso al sábado",
   createdAt: "2026-09-13T10:00:00",
+  read: true,
 };
 
 describe("useNotifications", () => {
-  it("loads and maps unread notifications, deriving the counter from the page", async () => {
+  it("loads and maps notifications with their read state", async () => {
     list.mockResolvedValueOnce(pageOf([N1, N2]));
     const { result } = renderHook(() => useNotifications());
 
@@ -55,10 +57,11 @@ describe("useNotifications", () => {
       icon: "🌧️",
       title: "Clima",
       body: "Lluvia probable",
+      read: false,
     });
     expect(typeof result.current.notifications[0]?.time).toBe("string");
     expect(result.current.notifications[1]?.kind).toBe("reprog");
-    expect(result.current.unreadCount).toBe(2);
+    expect(result.current.unreadCount).toBe(1);
     expect(result.current.totalPages).toBe(1);
   });
 
@@ -73,7 +76,7 @@ describe("useNotifications", () => {
     expect(markRead).toHaveBeenCalledWith("n1");
     expect(result.current.notifications).toHaveLength(1);
     expect(result.current.notifications[0]?.id).toBe("n2");
-    expect(result.current.unreadCount).toBe(1);
+    expect(result.current.unreadCount).toBe(0);
   });
 
   it("moves to the previous page when the last item of a page is read", async () => {

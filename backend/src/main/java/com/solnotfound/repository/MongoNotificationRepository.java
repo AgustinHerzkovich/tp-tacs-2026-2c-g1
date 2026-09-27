@@ -15,4 +15,10 @@ interface MongoNotificationRepository extends MongoRepository<Notification, Stri
   @Query(value = "{ 'read': ?0, 'receiverUser': ?1 }", sort = "{ 'createdAt': -1 }")
   Page<Notification> findByReadAndReceiverUserId(
       Boolean read, String receiverUserId, Pageable pageable);
+
+  @Query(value = "{ 'receiverUser': ?0 }", sort = "{ 'read': 1, 'createdAt': -1 }")
+  List<Notification> findByReceiverUserId(String receiverUserId);
+
+  @Query(value = "{ 'receiverUser': ?0 }", sort = "{ 'read': 1, 'createdAt': -1 }")
+  Page<Notification> findByReceiverUserId(String receiverUserId, Pageable pageable);
 }

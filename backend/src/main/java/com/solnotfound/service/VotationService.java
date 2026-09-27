@@ -1,9 +1,11 @@
 package com.solnotfound.service;
 
 import com.solnotfound.adapters.IWeatherAdapter;
+import com.solnotfound.dto.PageResponse;
 import com.solnotfound.dto.UpdateVotationOptionsRequest;
 import com.solnotfound.dto.UpdateVotationSettingsRequest;
 import com.solnotfound.dto.VotationDTO;
+import com.solnotfound.dto.VotationFilterDTO;
 import com.solnotfound.entity.activity.Activity;
 import com.solnotfound.entity.user.User;
 import com.solnotfound.entity.votation.Votation;
@@ -12,6 +14,7 @@ import com.solnotfound.entity.votation.VotationStatus;
 import com.solnotfound.entity.weather.IBadWeatherChecker;
 import com.solnotfound.entity.weather.WeatherForecast;
 import com.solnotfound.exception.AccessDeniedException;
+import com.solnotfound.exception.ErrorCode;
 import com.solnotfound.exception.InvalidVotationOptionsException;
 import com.solnotfound.exception.InvalidVotationSettingsException;
 import com.solnotfound.exception.ResourceNotFoundException;
@@ -27,6 +30,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -54,31 +59,51 @@ public class VotationService {
     this.userRepository = userRepository;
   }
 
-  public List<VotationDTO> getByOrganizerOrParticipantId(String userId) {
+  /**
+   * Returns one page of the votations of activities the user organizes or joined, newest first.
+   *
+   * <p>Every filter is optional. {@code activityId} restricts the result to one activity, and
+   * yields an empty page when the user does not belong to it. {@code votedByMe} keeps only
+   * votations where the user already voted ({@code true}) or has not voted yet ({@code false}),
+   * which lets clients list pending votes without loading every votation.
+   *
+   * @param userId authenticated user identifier
+   * @param filter optional status, activity and vote filters
+   * @param pageable requested page
+   * @return one page of votations, each with the user's own vote in {@code votedOption}
+   */
+  public PageResponse<VotationDTO> search(
+      String userId, VotationFilterDTO filter, Pageable pageable) {
     List<String> activityIds =
         Stream.concat(
                 activityRepository.findActivitiesByOrganizerId(userId).stream(),
                 activityRepository.findActivitiesByParticipantId(userId).stream())
             .map(Activity::getId)
             .distinct()
+            .filter(id -> filter.activityId() == null || filter.activityId().equals(id))
             .toList();
-    List<Votation> votations = votationRepository.findByActivityIds(activityIds);
-    return votations.stream().map(VotationMapper::toDTO).toList();
+    Page<VotationDTO> page =
+        votationRepository
+            .search(activityIds, filter, userId, pageable)
+            .map(votation -> VotationMapper.toDTO(votation, userId));
+    return PageResponse.from(page);
   }
 
   public VotationDTO updateVotationOptions(
       String votationId, UpdateVotationOptionsRequest request, String userId) {
     Votation votation = votationRepository.findById(votationId);
     if (votation == null) {
-      throw new ResourceNotFoundException("Votation not found: " + votationId);
+      throw new ResourceNotFoundException(
+          ErrorCode.VOTATION_NOT_FOUND, "Votation not found: " + votationId);
     }
 
     Activity activity = votation.getActivity();
     if (activity.getOrganizer() == null || !userId.equals(activity.getOrganizer().getId())) {
-      throw new AccessDeniedException("Only the activity organizer can update votation options");
+      throw new AccessDeniedException(
+          ErrorCode.NOT_ORGANIZER, "Only the activity organizer can update votation options");
     }
     if (votation.getStatus() != com.solnotfound.entity.votation.VotationStatus.ACTIVE) {
-      throw new InvalidVotationOptionsException(request.dates());
+      throw new InvalidVotationOptionsException(ErrorCode.VOTATION_CLOSED, request.dates());
     }
     if (new HashSet<>(request.dates()).size() != request.dates().size()) {
       throw new InvalidVotationOptionsException(request.dates());
@@ -126,7 +151,7 @@ public class VotationService {
     votation.setOptions(newOptions);
     votationRepository.save(votation);
 
-    return VotationMapper.toDTO(votation);
+    return VotationMapper.toDTO(votation, userId);
   }
 
   /**
@@ -147,7 +172,8 @@ public class VotationService {
     Activity activity = findActivity(votation);
     requireOrganizer(activity, userId);
     if (votation.getStatus() != VotationStatus.ACTIVE) {
-      throw new AccessDeniedException("Votation already closed: " + votationId);
+      throw new AccessDeniedException(
+          ErrorCode.VOTATION_CLOSED, "Votation already closed: " + votationId);
     }
     Duration duration = request.duration();
     if (duration.isZero() || duration.isNegative()) {
@@ -167,13 +193,14 @@ public class VotationService {
     votation.setMinQuorum(request.minQuorum());
     votation.setClosingDate(closingDate);
     votationRepository.save(votation);
-    return VotationMapper.toDTO(votation);
+    return VotationMapper.toDTO(votation, userId);
   }
 
   private Votation findVotation(String votationId) {
     Votation votation = votationRepository.findById(votationId);
     if (votation == null) {
-      throw new ResourceNotFoundException("Votation not found: " + votationId);
+      throw new ResourceNotFoundException(
+          ErrorCode.VOTATION_NOT_FOUND, "Votation not found: " + votationId);
     }
     return votation;
   }
@@ -181,14 +208,16 @@ public class VotationService {
   private Activity findActivity(Votation votation) {
     Activity activity = votation.getActivity();
     if (activity == null) {
-      throw new ResourceNotFoundException("Activity not found for votation: " + votation.getId());
+      throw new ResourceNotFoundException(
+          ErrorCode.ACTIVITY_NOT_FOUND, "Activity not found for votation: " + votation.getId());
     }
     return activity;
   }
 
   private void requireOrganizer(Activity activity, String userId) {
     if (activity.getOrganizer() == null || !userId.equals(activity.getOrganizer().getId())) {
-      throw new AccessDeniedException("Only the activity organizer can update the votation");
+      throw new AccessDeniedException(
+          ErrorCode.NOT_ORGANIZER, "Only the activity organizer can update the votation");
     }
   }
 
@@ -206,14 +235,17 @@ public class VotationService {
   public VotationDTO vote(String votationId, String userId, LocalDateTime vote) {
     final Votation votation = votationRepository.findById(votationId);
     if (votation == null) {
-      throw new ResourceNotFoundException("Votation not found: " + votationId);
+      throw new ResourceNotFoundException(
+          ErrorCode.VOTATION_NOT_FOUND, "Votation not found: " + votationId);
     }
     if (!votation.isAnOption(vote)) {
-      throw new ResourceNotFoundException("Option not found: " + vote);
+      throw new ResourceNotFoundException(
+          ErrorCode.VOTATION_OPTION_NOT_FOUND, "Option not found: " + vote);
     }
     final Activity activity = votation.getActivity();
     if (activity == null) {
-      throw new ResourceNotFoundException("Activity not found for votation: " + votation.getId());
+      throw new ResourceNotFoundException(
+          ErrorCode.ACTIVITY_NOT_FOUND, "Activity not found for votation: " + votation.getId());
     }
     final User user =
         userRepository.save(
@@ -222,9 +254,11 @@ public class VotationService {
                 .orElseThrow(
                     () ->
                         new ResourceNotFoundException(
+                            ErrorCode.NOT_ACTIVITY_MEMBER,
                             "User doesn't belong to this activity: " + userId)));
     if (votation.getStatus() != VotationStatus.ACTIVE) {
-      throw new AccessDeniedException("Votation already closed: " + votationId);
+      throw new AccessDeniedException(
+          ErrorCode.VOTATION_CLOSED, "Votation already closed: " + votationId);
     }
     final Optional<LocalDateTime> currentVote = votation.getVoteByUser(user);
     if (currentVote.isPresent() && !currentVote.get().equals(vote)) {
@@ -234,6 +268,6 @@ public class VotationService {
       votation.vote(vote, user);
     }
     votationRepository.save(votation);
-    return VotationMapper.toDTO(votation);
+    return VotationMapper.toDTO(votation, userId);
   }
 }

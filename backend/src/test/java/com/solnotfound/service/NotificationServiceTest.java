@@ -11,6 +11,7 @@ import com.solnotfound.exception.AccessDeniedException;
 import com.solnotfound.exception.ResourceNotFoundException;
 import com.solnotfound.repository.INotificationRepository;
 import com.solnotfound.repository.IUserRepository;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.StreamSupport;
@@ -51,6 +52,27 @@ class NotificationServiceTest {
 
     assertTrue(notification.isRead());
     verify(notificationRepository, times(1)).save(notification);
+  }
+
+  @Test
+  void getNotificationsByUser_ReturnsReadStateFromAllNotifications() {
+    Activity secondActivity = new Activity();
+    secondActivity.setId("act-2");
+    Notification readNotification =
+        new Notification(
+            User.withId("user-auth-123"), secondActivity, new BadWeatherAlertNotificationType());
+    readNotification.setId("notif-2");
+    readNotification.setCreatedAt(LocalDateTime.now());
+    readNotification.setAsRead();
+    when(notificationRepository.findByReceiverUserId("user-auth-123"))
+        .thenReturn(List.of(notification, readNotification));
+
+    var response = notificationService.getNotificationsByUser("user-auth-123");
+
+    assertEquals(2, response.size());
+    assertFalse(response.get(0).read());
+    assertTrue(response.get(1).read());
+    verify(notificationRepository).findByReceiverUserId("user-auth-123");
   }
 
   @Test

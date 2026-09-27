@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   mapActivityStatus,
   mapActivityType,
+  pickPattern,
   pickScene,
   toBackendActivityType,
   toExploreActivity,
@@ -32,6 +33,7 @@ function makeActivity(overrides: Partial<ActivityResponse> = {}): ActivityRespon
     reprogramationRange: { maxDays: 3, initialHour: "09:00:00", finalHour: "21:00:00" },
     status: "CONFIRMED",
     imageUrls: ["https://cdn.example.com/a.jpg", "https://cdn.example.com/b.jpg"],
+    organizerId: "organizer-1",
     ...overrides,
   };
 }
@@ -39,6 +41,19 @@ function makeActivity(overrides: Partial<ActivityResponse> = {}): ActivityRespon
 describe("pickScene", () => {
   it("is deterministic for the same id", () => {
     expect(pickScene("act-1")).toBe(pickScene("act-1"));
+  });
+});
+
+describe("pickPattern", () => {
+  it("is deterministic for the same id", () => {
+    expect(pickPattern("act-1")).toBe(pickPattern("act-1"));
+  });
+
+  it("can differ from another activity that shares a scene", () => {
+    // act-1 and act-8 both hash to the same scene (verified below); the
+    // pattern should still be free to vary independently of it.
+    expect(pickScene("act-1")).toBe(pickScene("act-8"));
+    expect(pickPattern("act-1")).not.toBe(pickPattern("act-8"));
   });
 });
 
@@ -105,5 +120,10 @@ describe("toExploreActivity / toMisActivity", () => {
     const explore = toExploreActivity(makeActivity({ location: { city: null, latitude: null, longitude: null }, imageUrls: [] }));
     expect(explore.where).toBe("Ubicación a confirmar");
     expect(explore.imageUrl).toBeNull();
+  });
+
+  it("falls back to a placeholder name instead of the raw userId when a participant has no name", () => {
+    const explore = toExploreActivity(makeActivity({ participants: [{ userId: "u1", name: null }] }));
+    expect(explore.participantNames).toEqual(["Invitade"]);
   });
 });

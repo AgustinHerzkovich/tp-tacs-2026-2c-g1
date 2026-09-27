@@ -1,19 +1,41 @@
 name: Frontend CI
 
 on:
+  # Sin filtro de paths en PRs: el check "Lint, types, test y build" es
+  # obligatorio, y si el workflow no arranca GitHub lo espera para siempre. El
+  # job `changes` decide si hay algo que verificar; si no, `checks` queda
+  # "skipped", que cuenta como aprobado.
   pull_request:
-    paths:
-      - "frontend/**"
-      - ".github/workflows/frontend-ci.yml"
   push:
     branches: [main]
     paths:
       - "frontend/**"
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
+  changes:
+    name: Detectar cambios en el frontend
+    runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ github.event_name != 'pull_request' || steps.filter.outputs.frontend == 'true' }}
+    steps:
+      - id: filter
+        if: github.event_name == 'pull_request'
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            frontend:
+              - 'frontend/**'
+              - '.github/workflows/frontend-ci.yml'
+
   checks:
     name: Lint, types, test y build
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:

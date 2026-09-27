@@ -14,16 +14,16 @@ export interface NotificationView {
   title: string;
   body: string;
   time: string;
+  read: boolean;
 }
 
 interface UseNotifications {
-  /** GET /notifications only ever returns the user's UNREAD notifications
-   * (see backend's NotificationService.getNotificationsByUser) — there is no
-   * "history" of already-read ones, so every item here is unread by
-   * definition and markRead removes it from this list rather than flagging
-   * it, matching what a refetch would return. */
+  /** GET /notifications returns all notifications, with unread ones first. */
   notifications: NotificationView[];
   unreadCount: number;
+  /** Total notifications across all pages (`totalElements`), for the
+   * drawer's "X sin leer · Y en total" header — distinct from `page.length`. */
+  total: number;
   loading: boolean;
   error: string | null;
   markRead: (id: string) => Promise<void>;
@@ -40,6 +40,7 @@ export function useNotifications(): UseNotifications {
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [total, setTotal] = useState(0);
 
   const load = useCallback(() => {
     api.notifications
@@ -56,11 +57,13 @@ export function useNotifications(): UseNotifications {
               title: n.title,
               body: n.message,
               time: formatRelativeTime(n.createdAt),
+              read: n.read,
             };
           }),
         );
         setTotalPages(all.totalPages);
-        setUnreadCount(all.totalElements);
+        setTotal(all.totalElements);
+        setUnreadCount(all.content.filter((notification) => !notification.read).length);
         setError(null);
       })
       .catch((err: unknown) => setError(err instanceof Error ? err.message : "No pudimos cargar las notificaciones."))
@@ -79,5 +82,5 @@ export function useNotifications(): UseNotifications {
     else load();
   };
 
-  return { notifications, unreadCount, loading, error, markRead, page, totalPages, setPage };
+  return { notifications, unreadCount, total, loading, error, markRead, page, totalPages, setPage };
 }

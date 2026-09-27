@@ -48,25 +48,38 @@ public class ActivityStatusScheduler {
   @Scheduled(cron = "${activity.status-check-cron:0 */5 * * * *}")
   public void finishPastActivities() {
     LocalDateTime now = LocalDateTime.now();
+    int finished = 0;
+    int notificationsSent = 0;
+    int failures = 0;
+    var activeActivities = activityRepository.findActive();
+    log.info("Activity status check started: activeActivities={}", activeActivities.size());
 
-    for (Activity activity : activityRepository.findActive()) {
+    for (Activity activity : activeActivities) {
       try {
         if (activity.getDateTime().isBefore(now)) {
           transitionService.transition(
               activity, ActivityStatus.FINISHED, ActivityTransitionReason.SCHEDULED_TIME_PASSED);
+          finished++;
+          log.debug("Activity marked finished: activityId={}", activity.getId());
         } else if (activity.nearStart(now, notificationThreshold)
             && !activity.wasStartingSoonNotificationSent()) {
           eventPublisher.publishEvent(
               ActivityNotificationEvent.from(activity, new StartingSoonNotificationType()));
           activity.markStartingSoonNotificationSent();
           activityRepository.save(activity);
+          notificationsSent++;
+          log.debug("Starting-soon notification sent: activityId={}", activity.getId());
         }
       } catch (RuntimeException exception) {
-        log.error(
-            "Could not process status for activity {}: {}",
-            activity.getId(),
-            exception.getMessage());
+        failures++;
+        log.error("Could not process activity status: activityId={}", activity.getId(), exception);
       }
     }
+    log.info(
+        "Activity status check completed: activeActivities={} finished={} notificationsSent={} failures={}",
+        activeActivities.size(),
+        finished,
+        notificationsSent,
+        failures);
   }
 }

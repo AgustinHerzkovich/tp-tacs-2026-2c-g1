@@ -52,3 +52,9 @@ override.tf.json
 
 # graft's local graph cache — regenerable, not committed (run `graft build`).
 /graft/
+
+### AI assistant instructions ###
+# Single source of truth is the root AGENTS.md (imported by CLAUDE.md).
+# `next dev` regenerates these when launched by an AI agent; keep them out of git.
+frontend/AGENTS.md
+frontend/CLAUDE.md

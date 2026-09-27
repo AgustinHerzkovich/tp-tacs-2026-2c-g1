@@ -2,6 +2,7 @@ package com.solnotfound.controller;
 
 import com.solnotfound.dto.NotificationResponse;
 import com.solnotfound.dto.PageResponse;
+import com.solnotfound.exception.InvalidPageRequestException;
 import com.solnotfound.service.NotificationService;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
@@ -30,7 +31,7 @@ public class NotificationController {
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "10") int size) {
     if (page < 0 || size < 1 || size > 100) {
-      throw new IllegalArgumentException(
+      throw new InvalidPageRequestException(
           "Page must be non-negative and size must be between 1 and 100");
     }
     return ResponseEntity.ok(
@@ -41,7 +42,7 @@ public class NotificationController {
   @PatchMapping("/{id}/read")
   public ResponseEntity<Void> markAsRead(@PathVariable String id, Authentication authentication) {
     notificationService.markAsRead(id, jwt(authentication).getSubject());
-    return ResponseEntity.ok().build();
+    return ResponseEntity.noContent().build();
   }
 
   private Jwt jwt(Authentication authentication) {
