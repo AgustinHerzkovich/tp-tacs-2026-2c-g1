@@ -9,8 +9,10 @@
 # loadtest/results/<timestamp>-<scenario>/<rate>/ and is checked against the thresholds below.
 # The script stops at the first failing stage and exits with a non-zero status.
 #
-# Only run it against the local stack (see docs/LOAD_TEST.md): it needs the `planazo-loadtest`
-# Keycloak client and the loadtestNN users created by keycloak/configure-local.sh.
+# Locally it uses the `planazo-loadtest` client and loadtestNN users from
+# keycloak/configure-local.sh. Any other target (e.g. GCP) is refused unless ALLOW_REMOTE=1 and
+# LOADTEST_PASSWORD are set, and then it skips the weather endpoint and starts at lower rates.
+# See docs/LOAD_TEST.md before running it anywhere but localhost.
 set -euo pipefail
 
 BASE_URL="${BASE_URL:-http://localhost:8080}"
@@ -18,9 +20,9 @@ KEYCLOAK_URL="${KEYCLOAK_URL:-http://localhost:8090}"
 KEYCLOAK_REALM="${KEYCLOAK_REALM:-solnotfound}"
 KEYCLOAK_CLIENT_ID="${KEYCLOAK_CLIENT_ID:-planazo-loadtest}"
 LOADTEST_USERS="${LOADTEST_USERS:-10}"
+LOADTEST_USER_PREFIX="${LOADTEST_USER_PREFIX:-loadtest}"
 DURATION="${DURATION:-60s}"
 TIMEOUT="${TIMEOUT:-10s}"
-DEFAULT_RATES="${RATES:-10/s 50/s 100/s}"
 MIN_OK_RATIO="${MIN_OK_RATIO:-0.99}"
 MAX_P95_MS="${MAX_P95_MS:-500}"
 TIME_ZONE="${TIME_ZONE:-America/Argentina/Buenos_Aires}"
@@ -29,8 +31,31 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BOUNDARY="planazo-loadtest-boundary"
 
 usage() {
-  sed -n '2,12p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  sed -n '2,15p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
   exit 2
+}
+
+# Succeeds when the URL points to this machine.
+is_local_url() {
+  [[ "$1" =~ ^https?://(localhost|127\.0\.0\.1|\[::1\])(:[0-9]+)?(/|$) ]]
+}
+
+# Decides local/remote defaults and refuses remote targets without explicit opt-in.
+configure_target() {
+  if is_local_url "$BASE_URL" && is_local_url "$KEYCLOAK_URL"; then
+    REMOTE=false
+    DEFAULT_RATES="${RATES:-10/s 50/s 100/s}"
+    INCLUDE_WEATHER="${INCLUDE_WEATHER:-true}"
+    return
+  fi
+  REMOTE=true
+  [[ "${ALLOW_REMOTE:-}" == 1 ]] ||
+    fail "BASE_URL/KEYCLOAK_URL are not local; set ALLOW_REMOTE=1 after coordinating the test (docs/LOAD_TEST.md)"
+  [[ -n "${LOADTEST_PASSWORD:-}" ]] ||
+    fail "remote targets need LOADTEST_PASSWORD (the password of the temporary load test users)"
+  DEFAULT_RATES="${RATES:-5/s 10/s 20/s 50/s}"
+  # Remotely the weather endpoint calls the real provider; do not load it unless asked to.
+  INCLUDE_WEATHER="${INCLUDE_WEATHER:-false}"
 }
 
 log() { printf '[loadtest] %s\n' "$*" >&2; }
@@ -51,18 +76,19 @@ future_date_time() {
   date -d "+$1 days" '+%Y-%m-%dT10:00:00' 2>/dev/null || date -v "+$1d" '+%Y-%m-%dT10:00:00'
 }
 
-# Prints an access token for loadtestNN obtained with the password grant.
+# Prints an access token for <prefix>NN obtained with the password grant. Locally the password
+# defaults to the username (keycloak/configure-local.sh); remote runs require LOADTEST_PASSWORD.
 fetch_token() {
   local username
-  username="$(printf 'loadtest%02d' "$1")"
+  username="$(printf '%s%02d' "$LOADTEST_USER_PREFIX" "$1")"
   curl -fsS \
-    -d grant_type=password \
-    -d "client_id=$KEYCLOAK_CLIENT_ID" \
-    -d "username=$username" \
-    -d "password=$username" \
+    --data-urlencode grant_type=password \
+    --data-urlencode "client_id=$KEYCLOAK_CLIENT_ID" \
+    --data-urlencode "username=$username" \
+    --data-urlencode "password=${LOADTEST_PASSWORD:-$username}" \
     "$KEYCLOAK_URL/realms/$KEYCLOAK_REALM/protocol/openid-connect/token" |
     jq -er .access_token ||
-    fail "could not get a token for $username; is the stack up and keycloak-config finished?"
+    fail "could not get a token for $username; check the Keycloak client, users and password"
 }
 
 # Fills TOKENS[1..LOADTEST_USERS]. Called once per stage because access tokens are short-lived.
@@ -147,7 +173,9 @@ read_targets() {
   target GET "/activities?type=OUTDOOR&status=CONFIRMED&page=0&size=12" "$token"
   target GET "/activities?city=Buenos%20Aires&availability=true&page=0&size=12" "$token"
   target GET "/activities/$seed_id" "$token"
-  target GET "/activities/${OWN_IDS[i]}/weather" "$token"
+  if [[ "$INCLUDE_WEATHER" == true ]]; then
+    target GET "/activities/${OWN_IDS[i]}/weather" "$token"
+  fi
   target GET "/activities/organizers/me?page=0&size=12" "$token"
   target GET "/activities/participants/me?page=0&size=12" "$token"
   target GET "/votations?page=0&size=20" "$token"
@@ -236,6 +264,7 @@ main() {
     smoke | read | mixed) shift ;;
     *) usage ;;
   esac
+  configure_target
   local rates=("$@")
   if ((${#rates[@]} == 0)); then
     read -r -a rates <<<"$DEFAULT_RATES"
@@ -246,8 +275,10 @@ main() {
 
   RUN_ID="$(date '+%Y%m%d-%H%M%S')"
   RUN_DIR="$SCRIPT_DIR/results/$RUN_ID-$SCENARIO"
+  # targets.jsonl holds live bearer tokens: keep results readable only by the current user.
+  umask 077
   mkdir -p "$RUN_DIR"
-  log "scenario=$SCENARIO base_url=$BASE_URL rates=${rates[*]} duration=$DURATION results=$RUN_DIR"
+  log "scenario=$SCENARIO base_url=$BASE_URL remote=$REMOTE weather=$INCLUDE_WEATHER rates=${rates[*]} duration=$DURATION results=$RUN_DIR"
 
   if [[ "$SCENARIO" != smoke ]]; then
     warm_up

@@ -8,9 +8,12 @@ históricos: en cada entrega hay que correrla en un ambiente limpio y registrar 
 
 ## Alcance y precauciones
 
-- Correrla **solo contra el stack local** (`docker compose`). El cliente de Keycloak que habilita el
-  login por usuario y contraseña (`planazo-loadtest`) y los usuarios `loadtest01`..`loadtest10` los
-  crea únicamente `keycloak/configure-local.sh`. No están en `realm-export.json` y no existen en GCP.
+- Por defecto se corre **contra el stack local** (`docker compose`). El cliente de Keycloak que
+  habilita el login por usuario y contraseña (`planazo-loadtest`) y los usuarios
+  `loadtest01`..`loadtest10` los crea únicamente `keycloak/configure-local.sh`. No están en
+  `realm-export.json` y no existen en GCP.
+- Si `BASE_URL` o `KEYCLOAK_URL` no apuntan a `localhost`, el script se niega a correr salvo que se
+  pasen `ALLOW_REMOTE=1` y `LOADTEST_PASSWORD`. Ver [Prueba contra GCP](#prueba-contra-gcp).
 - Usar `WEATHER_PROVIDER=in-memory` para no trasladar la carga a Open-Meteo.
 - Se prueba el backend directo (`http://localhost:8080`). Para medir también el proxy de Next.js se
   puede apuntar `BASE_URL` a `http://localhost:3000/api`, pero así se mezclan dos servicios en la
@@ -56,7 +59,11 @@ Variables de entorno:
 | `BASE_URL` | `http://localhost:8080` | API contra la que se corre la prueba. |
 | `KEYCLOAK_URL` | `http://localhost:8090` | Keycloak (el issuer tiene que coincidir con el del backend). |
 | `LOADTEST_USERS` | `10` | Cantidad de usuarios `loadtestNN` a usar. |
-| `RATES` | `10/s 50/s 100/s` | Etapas si no se pasan como argumentos. |
+| `LOADTEST_USER_PREFIX` | `loadtest` | Prefijo de los usuarios (`<prefijo>01`, `<prefijo>02`, ...). |
+| `LOADTEST_PASSWORD` | igual al usuario | Contraseña de todos los usuarios de prueba. Obligatoria fuera de local. |
+| `ALLOW_REMOTE` | vacío | `1` para permitir un destino que no es `localhost`. |
+| `INCLUDE_WEATHER` | `true` local, `false` remoto | Incluir `GET /activities/{id}/weather`. |
+| `RATES` | `10/s 50/s 100/s` (remoto: `5/s 10/s 20/s 50/s`) | Etapas si no se pasan como argumentos. |
 | `DURATION` | `60s` | Duración de cada etapa. |
 | `TIMEOUT` | `10s` | Timeout por request. |
 | `MIN_OK_RATIO` | `0.99` | Proporción mínima de respuestas 2xx/3xx. |
@@ -93,13 +100,14 @@ está en `.gitignore` y no se versiona salvo que se acuerde como evidencia de un
 
 | Archivo | Contenido |
 | --- | --- |
-| `targets.jsonl` | Targets usados, con los tokens (no compartirlo). |
+| `targets.jsonl` | Targets usados, **con tokens válidos** (no compartirlo). |
 | `results.bin` | Resultados crudos de Vegeta. |
 | `report.txt`, `report.json` | Reporte de texto y en JSON. |
 | `histogram.txt` | Histograma de latencias. |
 | `plot.html` | Gráfico interactivo de latencia en el tiempo. |
 
-Para volver a analizar una corrida: `vegeta report -type=text <ruta>/results.bin`.
+Para volver a analizar una corrida: `vegeta report -type=text <ruta>/results.bin`. Las carpetas de
+resultados se crean con permisos solo para el usuario actual, porque `targets.jsonl` contiene tokens.
 
 ## Registro
 
@@ -116,5 +124,92 @@ Para cada ejecución que se presente, registrar:
 ## Limpieza
 
 Después de la prueba, comprobar que `curl --fail http://localhost:8080/healthcheck` sigue
-respondiendo. `docker compose down -v` detiene el stack y **borra los volúmenes** (incluidas las
-actividades creadas por la prueba). Usarlo solo en el ambiente de la prueba.
+respondiendo.
+
+`loadtest/cleanup.js` borra solo lo que creó la prueba:
+- las actividades cuyo título empieza con `Load test ` **y** que tienen la descripción fija del
+  script;
+- las votaciones, notificaciones y eventos de estadísticas de esas actividades;
+- los usuarios organizadores de esas actividades que no queden referenciados en ningún otro
+  documento.
+
+Por defecto corre en modo de prueba y solo informa cuántos documentos borraría:
+
+```bash
+# Local (mongosh dentro del contenedor)
+docker compose cp loadtest/cleanup.js mongodb:/tmp/cleanup.js
+docker compose exec -e DB_NAME=mi_base_de_datos mongodb \
+  mongosh -u admin -p password123 --quiet /tmp/cleanup.js
+# Revisar lo que informa y aplicar
+docker compose exec -e DB_NAME=mi_base_de_datos -e APPLY=1 mongodb \
+  mongosh -u admin -p password123 --quiet /tmp/cleanup.js
+
+# Atlas (mongosh local; la URI sale del secreto de la aplicación)
+DB_NAME=<base> mongosh "<uri de Atlas>" loadtest/cleanup.js
+APPLY=1 DB_NAME=<base> mongosh "<uri de Atlas>" loadtest/cleanup.js
+```
+
+En el ambiente local también se puede usar `docker compose down -v`, que detiene el stack y
+**borra todos los volúmenes**. Usarlo solo en el ambiente de la prueba.
+
+## Prueba contra GCP
+
+En GCP el cuello de botella no es la app sino la infraestructura del despliegue (ver `terraform/`):
+
+- **Atlas M0:** tier compartido con topes de operaciones por segundo, conexiones y transferencia.
+- **Backend en Cloud Run:** hasta 2 instancias de 1 vCPU, con escalado desde 0 (*cold starts*).
+- **Keycloak:** 1 instancia, sobre Cloud SQL `db-f1-micro`.
+
+Por eso el límite va a ser mucho menor que en local. El resultado describe ese ambiente y no la
+capacidad de la aplicación.
+
+### Antes
+
+1. **Coordinar con el equipo.** Acordar una ventana que no coincida con demos ni correcciones:
+   Atlas M0 puede quedar limitado para todos mientras dura la prueba.
+2. **Crear en el realm de GCP un cliente y usuarios temporales**, por la consola de administración
+   o con `kcadm.sh`. `configure-local.sh` no se aplica en la nube. El cliente necesita:
+   - público, con *Direct access grants* habilitado y *Standard flow* deshabilitado;
+   - los client scopes por defecto `basic`, `profile`, `email`, `roles`, `web-origins` y `acr` (sin
+     `basic` el token no trae `sub`);
+   - un mapper *Audience* que incluya `solnotfoundBackend` en el access token (sin él, el backend
+     responde 401).
+
+   Los usuarios (`loadtest01`..`loadtestNN`, o el prefijo que se elija) llevan todos una
+   **contraseña aleatoria y larga**, nunca igual al usuario. Esa contraseña no se commitea.
+3. **Lanzar la carga desde una VM en la misma región que Cloud Run** (por ejemplo `e2-standard-2`),
+   no desde una conexión hogareña: el ancho de banda y la latencia de internet contaminan la
+   medición.
+4. **Verificar sin generar carga:** que `/healthcheck` responda y que el endpoint de token devuelva
+   un `access_token` con `sub` y `aud` correctos.
+
+### Durante
+
+```bash
+ALLOW_REMOTE=1 \
+BASE_URL=https://<backend> \
+KEYCLOAK_URL=https://<keycloak> \
+LOADTEST_PASSWORD='<contraseña temporal>' \
+./loadtest/run.sh read
+```
+
+- **Calentar:** antes de medir, correr unos minutos de `smoke` o `read 2/s` para que Cloud Run tenga
+  instancias activas. Si no, se mide el *cold start*.
+- **Empezar con `read`:** las etapas por defecto son `5/s 10/s 20/s 50/s`. `/weather` queda
+  excluido para no cargar Open-Meteo.
+- **Usar `mixed` solo en una corrida corta y con tasa baja:** sus actividades aparecen en Explorar
+  para los usuarios reales e inflan las estadísticas del panel de administración.
+- **Distinguir los `429` de los `5xx`:** un `429` significa que Cloud Run llegó al máximo de
+  instancias; un `5xx`, que falló la app.
+- **Observar:** en Cloud Run, instancias, latencia, CPU, 429 y 5xx; en Cloud Logging, excepciones; en
+  Atlas, operaciones, conexiones y avisos de *throttling*.
+
+### Después
+
+1. Ejecutar `loadtest/cleanup.js` contra Atlas: primero en modo de prueba, después con `APPLY=1`.
+2. Borrar del realm el cliente y los usuarios temporales.
+3. Comprobar `/healthcheck` y el login desde el frontend.
+4. Borrar la VM de carga y revertir cualquier cambio temporal de infraestructura (por ejemplo,
+   `min_instance_count`).
+5. Borrar o guardar en un lugar privado `loadtest/results/`: los tokens expiran a los 5 minutos,
+   pero no dejan de ser credenciales.
