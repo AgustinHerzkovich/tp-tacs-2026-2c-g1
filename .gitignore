@@ -37,6 +37,9 @@ build/
 .env.*
 !.env.example
 
+### Local-only helper scripts (never versioned) ###
+/local/
+
 ### Terraform ###
 .terraform/
 *.tfstate

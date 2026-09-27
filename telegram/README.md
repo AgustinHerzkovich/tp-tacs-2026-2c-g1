@@ -51,6 +51,40 @@ Los valores por defecto de desarrollo están en el `.env.example` de la raíz. E
 cliente y el client secret se crean automáticamente con el import del realm y
 `keycloak/configure-local.sh`.
 
+## Comandos
+
+| Comando | Qué hace |
+| --- | --- |
+| `/start` | Identifica el chat contra el backend. Si el chat ya está vinculado a una cuenta, saluda y muestra el teclado; si no, manda el link de login del frontend. |
+| `/login` | Reenvía el link de login para vincular el chat a una cuenta. |
+| `/seeActivities` | Lista las actividades en las que el usuario es participante, de la más próxima a la más lejana, con el estado completo que devuelve el backend. |
+| `/myActivities` | Lista las actividades que organiza el usuario y avisa cuáles están en votación de reprogramación. |
+
+Salvo `/start` y `/login`, todos exigen un chat identificado: si el usuario todavía no ejecutó
+`/start`, el bot se lo pide.
+
+Los listados se arman recorriendo las páginas de `GET /activities` y filtrando en el bot por
+`organizerId` y por `participants[].userId` (ver la limitación de identidad más abajo). Cada actividad
+se muestra con su estado, disponibilidad, cantidad de participantes, límites de clima, anticipación
+del chequeo y ventana de reprogramación. Los mensajes largos se parten en varios envíos porque
+Telegram corta todo lo que pase los 4096 caracteres.
+
+### Limitación de identidad
+
+El backend toma la identidad de negocio del claim `sub` del JWT, así que la cuenta de servicio del
+bot solo puede actuar en nombre propio. El bot puede leer el catálogo completo de actividades, pero no
+usar los endpoints donde el usuario es el actor:
+
+- `GET /activities/participants/me` y `GET /activities/organizers/me` devolverían las actividades
+  del bot, o sea listas vacías.
+- `GET /activities/{id}/weather` responde `403`, porque exige que quien consulta sea participante.
+- `GET /votations` y `PUT /votations/{id}/votes/me` registrarían la votación a nombre del bot.
+
+Por eso los comandos son de solo lectura. Quedan pendientes para cuando el backend exponga una ruta
+que resuelva el chat al usuario: votar, consultar el clima de una actividad, abandonar o cancelar.
+Tampoco hay endpoint que guarde los cambios de clima, anticipación o ventana de reprogramación de una
+actividad ya creada, así que la configuración de actividades no se expone desde el bot.
+
 ## Deploy a GCP
 
 Requiere:
