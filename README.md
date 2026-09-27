@@ -304,9 +304,10 @@ Playwright usa por defecto `alumno/alumno` y `admin/admin` del realm local. Se p
 `E2E_USER_USERNAME`, `E2E_USER_PASSWORD`, `E2E_ADMIN_USERNAME` y `E2E_ADMIN_PASSWORD`; la URL se
 configura con `E2E_BASE_URL`. Estas credenciales son datos de prueba, no cuentas productivas.
 
-El procedimiento de prueba de carga, sus límites y los criterios para registrar resultados están en
-[`docs/LOAD_TEST.md`](docs/LOAD_TEST.md). El escenario usa el proveedor meteorológico en memoria
-para no trasladar la carga a un servicio público externo.
+La prueba de carga se corre con Vegeta mediante `loadtest/run.sh` (escenarios `smoke`, `read` y
+`mixed`, con usuarios autenticados). El procedimiento, los umbrales y cómo registrar los resultados
+están en [`docs/LOAD_TEST.md`](docs/LOAD_TEST.md). Se usa el proveedor meteorológico en memoria para
+no trasladar la carga a un servicio público externo.
 
 ### Integración continua
 
@@ -385,7 +386,7 @@ asistentes compatibles leen las mismas reglas sin duplicarlas.
 | Uso responsable de proveedores | Caché, límites, timeout, retry, circuit breaker y degradación controlada descritos en [Servicio meteorológico](#servicio-meteorológico). |
 | API documentada | OpenAPI, Swagger UI y casos manuales enlazados en [API y autenticación](#api-y-autenticación). |
 | Calidad y tests | Maven, Vitest, Testing Library y Playwright documentados en [Calidad de código](#calidad-de-código). |
-| Load test | Escenario y protocolo reproducible en [`docs/LOAD_TEST.md`](docs/LOAD_TEST.md). |
+| Load test | Vegeta con `loadtest/run.sh`, escenarios autenticados y umbrales en [`docs/LOAD_TEST.md`](docs/LOAD_TEST.md). |
 | Frontend amigable con framework CSS | Next.js responsive con Tailwind CSS v4 y componentes shadcn/ui. |
 | Uso de IA | Herramientas, tareas, criterio y ejemplos documentados en [Uso de inteligencia artificial](#uso-de-inteligencia-artificial). |
 ## Activity images
