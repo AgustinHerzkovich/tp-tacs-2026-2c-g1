@@ -4,8 +4,20 @@ import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { toMisActivity } from "@/lib/activityMapping";
 import { useAuth } from "@/hooks/useAuth";
-import type { ActivityResponse } from "@/types/backend";
+import type { ActivityResponse, PageResponse } from "@/types/backend";
 import type { MisActivity } from "@/types/domain";
+
+/** An empty page, used to skip the organized/joined feed requests entirely
+ * (see `skipFeeds`) without a separate code path for the rest of the fetch. */
+const EMPTY_PAGE: PageResponse<ActivityResponse> = {
+  content: [],
+  page: 0,
+  size: 0,
+  totalElements: 0,
+  totalPages: 0,
+  first: true,
+  last: true,
+};
 
 const PAGE_SIZE = 12;
 
@@ -50,8 +62,14 @@ const PENDING_VOTES_SIZE = 20;
  * the user's ACTIVE votations they have not voted in yet
  * (GET /votations?status=ACTIVE&votedByMe=false) and loads their PROPOSED
  * activities in a single GET /activities?ids=…, so a pending vote shows up
- * even if its activity is on another page. */
-export function useMisActividades(): UseMisActividades {
+ * even if its activity is on another page.
+ *
+ * `skipFeeds` (used by the calendar view, which fetches its own month-scoped
+ * data via `useCalendarActivities`) skips the organized/joined page requests
+ * — only the votingPending banner's requests still fire — so the two views
+ * don't double up on network calls when only one of them is on screen. */
+export function useMisActividades(options?: { skipFeeds?: boolean }): UseMisActividades {
+  const skipFeeds = options?.skipFeeds ?? false;
   const { user } = useAuth();
   const [organizedFeed, setOrganizedFeed] = useState<MisActivity[]>([]);
   const [organizedTotal, setOrganizedTotal] = useState(0);
@@ -67,7 +85,7 @@ export function useMisActividades(): UseMisActividades {
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const userId = user?.id ?? null;
-  const requestKey = [organizedPage, joinedPage, reloadKey, userId].join("|");
+  const requestKey = [organizedPage, joinedPage, reloadKey, userId, skipFeeds].join("|");
   const requestPending = loading || loadedRequest !== requestKey;
 
   useEffect(() => {
@@ -84,8 +102,8 @@ export function useMisActividades(): UseMisActividades {
       });
 
     Promise.all([
-      api.activities.organized(organizedPage, PAGE_SIZE),
-      api.activities.mine(joinedPage, PAGE_SIZE),
+      skipFeeds ? Promise.resolve(EMPTY_PAGE) : api.activities.organized(organizedPage, PAGE_SIZE),
+      skipFeeds ? Promise.resolve(EMPTY_PAGE) : api.activities.mine(joinedPage, PAGE_SIZE),
       pendingVotes,
     ])
       .then(([organized, joined, pending]) => {
@@ -119,7 +137,7 @@ export function useMisActividades(): UseMisActividades {
     return () => {
       cancelled = true;
     };
-  }, [organizedPage, joinedPage, reloadKey, requestKey, userId]);
+  }, [organizedPage, joinedPage, reloadKey, requestKey, userId, skipFeeds]);
 
   const votingPending: PendingVote[] = pendingActivities.map((activity) => ({
     ...toMisActivity(activity),

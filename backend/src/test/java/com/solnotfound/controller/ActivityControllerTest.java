@@ -255,7 +255,7 @@ class ActivityControllerTest {
   @Test
   void listsActivitiesOrganizedByCurrentUser() throws Exception {
     ActivityService service = mock(ActivityService.class);
-    when(service.getByOrganizerId(eq("user-1"), any()))
+    when(service.getByOrganizerId(eq("user-1"), isNull(), isNull(), any()))
         .thenReturn(new com.solnotfound.dto.PageResponse<>(List.of(), 0, 12, 0, 0, true, true));
     ActivityController controller = new ActivityController(service);
 
@@ -265,13 +265,34 @@ class ActivityControllerTest {
         .perform(get("/activities/organizers/me").principal(authentication("user-1")))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.content").isEmpty());
-    verify(service).getByOrganizerId(eq("user-1"), any());
+    verify(service).getByOrganizerId(eq("user-1"), isNull(), isNull(), any());
+  }
+
+  @Test
+  void listsActivitiesOrganizedByCurrentUserWithinDateRange() throws Exception {
+    ActivityService service = mock(ActivityService.class);
+    LocalDateTime dateFrom = LocalDateTime.of(2026, 9, 1, 0, 0, 0);
+    LocalDateTime dateTo = LocalDateTime.of(2026, 9, 30, 23, 59, 59);
+    when(service.getByOrganizerId(eq("user-1"), eq(dateFrom), eq(dateTo), any()))
+        .thenReturn(new com.solnotfound.dto.PageResponse<>(List.of(), 0, 12, 0, 0, true, true));
+    ActivityController controller = new ActivityController(service);
+
+    MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+
+    mockMvc
+        .perform(
+            get("/activities/organizers/me")
+                .param("dateFrom", "2026-09-01T00:00:00")
+                .param("dateTo", "2026-09-30T23:59:59")
+                .principal(authentication("user-1")))
+        .andExpect(status().isOk());
+    verify(service).getByOrganizerId(eq("user-1"), eq(dateFrom), eq(dateTo), any());
   }
 
   @Test
   void listsActivitiesJoinedByCurrentUser() throws Exception {
     ActivityService service = mock(ActivityService.class);
-    when(service.getByParticipantId(eq("user-1"), any()))
+    when(service.getByParticipantId(eq("user-1"), isNull(), isNull(), any()))
         .thenReturn(new com.solnotfound.dto.PageResponse<>(List.of(), 0, 12, 0, 0, true, true));
     ActivityController controller = new ActivityController(service);
 
@@ -281,7 +302,28 @@ class ActivityControllerTest {
         .perform(get("/activities/participants/me").principal(authentication("user-1")))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.content").isEmpty());
-    verify(service).getByParticipantId(eq("user-1"), any());
+    verify(service).getByParticipantId(eq("user-1"), isNull(), isNull(), any());
+  }
+
+  @Test
+  void listsActivitiesJoinedByCurrentUserWithinDateRange() throws Exception {
+    ActivityService service = mock(ActivityService.class);
+    LocalDateTime dateFrom = LocalDateTime.of(2026, 9, 1, 0, 0, 0);
+    LocalDateTime dateTo = LocalDateTime.of(2026, 9, 30, 23, 59, 59);
+    when(service.getByParticipantId(eq("user-1"), eq(dateFrom), eq(dateTo), any()))
+        .thenReturn(new com.solnotfound.dto.PageResponse<>(List.of(), 0, 12, 0, 0, true, true));
+    ActivityController controller = new ActivityController(service);
+
+    MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+
+    mockMvc
+        .perform(
+            get("/activities/participants/me")
+                .param("dateFrom", "2026-09-01T00:00:00")
+                .param("dateTo", "2026-09-30T23:59:59")
+                .principal(authentication("user-1")))
+        .andExpect(status().isOk());
+    verify(service).getByParticipantId(eq("user-1"), eq(dateFrom), eq(dateTo), any());
   }
 
   private Jwt jwt(String userId) {
