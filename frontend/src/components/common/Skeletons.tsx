@@ -64,6 +64,20 @@ export function MisGridSkeleton({ count = 4 }: { count?: number }) {
   );
 }
 
+export function CalendarSkeleton() {
+  return (
+    <div aria-busy="true" aria-label="Cargando calendario">
+      <span className="sr-only" role="status">Cargando calendario</span>
+      <Skeleton className="h-5 w-40 mx-auto mb-4" />
+      <div className="grid grid-cols-7 gap-1 lg:gap-2">
+        {Array.from({ length: 35 }, (_, i) => (
+          <Skeleton key={i} className="h-11 lg:h-[92px] rounded-xl" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function StatisticsSkeleton() {
   return (
     <div aria-busy="true" aria-label="Cargando estadísticas">

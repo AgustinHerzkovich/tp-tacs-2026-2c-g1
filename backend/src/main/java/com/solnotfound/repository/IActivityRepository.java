@@ -2,6 +2,7 @@ package com.solnotfound.repository;
 
 import com.solnotfound.dto.ActivityFilterDTO;
 import com.solnotfound.entity.activity.Activity;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -24,7 +25,9 @@ public interface IActivityRepository {
 
   Page<Activity> search(ActivityFilterDTO filter, Pageable pageable);
 
-  Page<Activity> findActivitiesByOrganizerId(String organizerId, Pageable pageable);
+  Page<Activity> findActivitiesByOrganizerId(
+      String organizerId, LocalDateTime dateFrom, LocalDateTime dateTo, Pageable pageable);
 
-  Page<Activity> findActivitiesByParticipantId(String participantId, Pageable pageable);
+  Page<Activity> findActivitiesByParticipantId(
+      String participantId, LocalDateTime dateFrom, LocalDateTime dateTo, Pageable pageable);
 }

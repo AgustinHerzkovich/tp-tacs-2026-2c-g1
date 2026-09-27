@@ -15,6 +15,7 @@ import com.solnotfound.dto.ActivityResponse;
 import com.solnotfound.dto.ActivityWeatherResponse;
 import com.solnotfound.dto.CreateActivityRequest;
 import com.solnotfound.dto.LocationDTO;
+import com.solnotfound.dto.PageResponse;
 import com.solnotfound.dto.ParticipantDTO;
 import com.solnotfound.dto.ReprogramationRangeDTO;
 import com.solnotfound.dto.WeatherConditionsDTO;
@@ -44,6 +45,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.PageRequest;
 
 class ActivityServiceTest {
 
@@ -736,6 +738,72 @@ class ActivityServiceTest {
 
     assertThatThrownBy(() -> service.getByParticipantId("1"))
         .isInstanceOf(NullPointerException.class);
+  }
+
+  @Test
+  void pagedOrganizerQueryFiltersByDateRange() {
+    LocalDateTime inRange = LocalDateTime.now().plusDays(10);
+    LocalDateTime outOfRange = LocalDateTime.now().plusDays(30);
+    ActivityResponse inside =
+        activityService.create(requestWith(ActivityType.OUTDOOR, "Buenos Aires", inRange));
+    ActivityResponse outside =
+        activityService.create(requestWith(ActivityType.OUTDOOR, "Buenos Aires", outOfRange));
+    activityRepository.findById(inside.id()).setOrganizer(user("1"));
+    activityRepository.findById(outside.id()).setOrganizer(user("1"));
+
+    PageResponse<ActivityResponse> result =
+        activityService.getByOrganizerId(
+            "1", LocalDateTime.now(), LocalDateTime.now().plusDays(15), PageRequest.of(0, 12));
+
+    assertThat(result.content()).extracting(ActivityResponse::id).containsExactly(inside.id());
+  }
+
+  @Test
+  void pagedOrganizerQueryWithoutDateRangeReturnsEverything() {
+    ActivityResponse first = activityService.create(validRequest());
+    ActivityResponse second = activityService.create(validRequest());
+    activityRepository.findById(first.id()).setOrganizer(user("1"));
+    activityRepository.findById(second.id()).setOrganizer(user("1"));
+
+    PageResponse<ActivityResponse> result =
+        activityService.getByOrganizerId("1", null, null, PageRequest.of(0, 12));
+
+    assertThat(result.content())
+        .extracting(ActivityResponse::id)
+        .containsExactlyInAnyOrder(first.id(), second.id());
+  }
+
+  @Test
+  void pagedParticipantQueryFiltersByDateRange() {
+    LocalDateTime inRange = LocalDateTime.now().plusDays(10);
+    LocalDateTime outOfRange = LocalDateTime.now().plusDays(30);
+    ActivityResponse inside =
+        activityService.create(requestWith(ActivityType.OUTDOOR, "Buenos Aires", inRange));
+    ActivityResponse outside =
+        activityService.create(requestWith(ActivityType.OUTDOOR, "Buenos Aires", outOfRange));
+    activityRepository.findById(inside.id()).setParticipants(List.of(user("1")));
+    activityRepository.findById(outside.id()).setParticipants(List.of(user("1")));
+
+    PageResponse<ActivityResponse> result =
+        activityService.getByParticipantId(
+            "1", LocalDateTime.now(), LocalDateTime.now().plusDays(15), PageRequest.of(0, 12));
+
+    assertThat(result.content()).extracting(ActivityResponse::id).containsExactly(inside.id());
+  }
+
+  @Test
+  void pagedParticipantQueryWithoutDateRangeReturnsEverything() {
+    ActivityResponse first = activityService.create(validRequest());
+    ActivityResponse second = activityService.create(validRequest());
+    activityRepository.findById(first.id()).setParticipants(List.of(user("1")));
+    activityRepository.findById(second.id()).setParticipants(List.of(user("1")));
+
+    PageResponse<ActivityResponse> result =
+        activityService.getByParticipantId("1", null, null, PageRequest.of(0, 12));
+
+    assertThat(result.content())
+        .extracting(ActivityResponse::id)
+        .containsExactlyInAnyOrder(first.id(), second.id());
   }
 
   private CreateActivityRequest requestWith(
