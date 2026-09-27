@@ -2,6 +2,7 @@ package com.solnotfound.repository;
 
 import com.solnotfound.entity.user.User;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class InMemoryUserRepository implements IUserRepository {
@@ -15,6 +16,26 @@ public class InMemoryUserRepository implements IUserRepository {
   @Override
   public User save(User user) {
     users.put(user.getId(), user);
+    return user;
+  }
+
+  @Override
+  public Optional<User> findByTelegramChatId(Long telegramChatId) {
+    return users.values().stream()
+        .filter(user -> telegramChatId.equals(user.getTelegramChatId()))
+        .findFirst();
+  }
+
+  @Override
+  public User linkTelegramChat(String userId, String name, Long telegramChatId) {
+    findByTelegramChatId(telegramChatId)
+        .filter(previous -> !previous.getId().equals(userId))
+        .ifPresent(previous -> previous.setTelegramChatId(null));
+    User user = findOrCreate(userId);
+    if (user.getName() == null) {
+      user.setName(name);
+    }
+    user.setTelegramChatId(telegramChatId);
     return user;
   }
 }
