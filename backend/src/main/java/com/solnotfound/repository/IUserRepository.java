@@ -10,4 +10,6 @@ public interface IUserRepository {
   User save(User user);
 
   Optional<User> findByTelegramChatId(Long telegramChatId);
+
+  User linkTelegramChat(String userId, String name, Long telegramChatId);
 }

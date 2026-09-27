@@ -25,4 +25,17 @@ public class InMemoryUserRepository implements IUserRepository {
         .filter(user -> telegramChatId.equals(user.getTelegramChatId()))
         .findFirst();
   }
+
+  @Override
+  public User linkTelegramChat(String userId, String name, Long telegramChatId) {
+    findByTelegramChatId(telegramChatId)
+        .filter(previous -> !previous.getId().equals(userId))
+        .ifPresent(previous -> previous.setTelegramChatId(null));
+    User user = findOrCreate(userId);
+    if (user.getName() == null) {
+      user.setName(name);
+    }
+    user.setTelegramChatId(telegramChatId);
+    return user;
+  }
 }

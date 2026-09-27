@@ -3,6 +3,7 @@ package com.solnotfound.controller;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -102,5 +103,33 @@ class TelegramSecurityTest {
                 .header(API_TOKEN_HEADER, API_TOKEN)
                 .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_TELEGRAM_BOT"))))
         .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void regularUsersLinkTheirTelegramChatWithTheirJwtOnly() throws Exception {
+    User user = User.withId("user-1");
+    user.setName("Jane Doe");
+    when(userRepository.linkTelegramChat(
+            org.mockito.ArgumentMatchers.eq("user-1"),
+            org.mockito.ArgumentMatchers.any(),
+            org.mockito.ArgumentMatchers.eq(123L)))
+        .thenReturn(user);
+
+    mockMvc
+        .perform(
+            put("/users/me/telegram")
+                .with(jwt().jwt(token -> token.subject("user-1")))
+                .contentType("application/json")
+                .content("{\"chatId\":123}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value("user-1"));
+  }
+
+  @Test
+  void linkingTelegramChatRequiresAuthentication() throws Exception {
+    mockMvc
+        .perform(
+            put("/users/me/telegram").contentType("application/json").content("{\"chatId\":1}"))
+        .andExpect(status().isUnauthorized());
   }
 }

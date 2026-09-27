@@ -540,6 +540,12 @@
       "roles": [
         "offline_access"
       ]
+    },
+    {
+      "client": "solnotfoundTelegramBot",
+      "roles": [
+        "TELEGRAM_BOT"
+      ]
     }
   ],
   "clientScopeMappings": {

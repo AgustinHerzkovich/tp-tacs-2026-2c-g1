@@ -1,5 +1,4 @@
 export type User = {
-    id: number;
-    telegramChatId: number;
-    name: string;
-}
+  id: string;
+  name: string | null;
+};

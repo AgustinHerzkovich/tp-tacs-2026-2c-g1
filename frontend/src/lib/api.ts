@@ -14,6 +14,7 @@ import type {
   StatisticsResponse,
   UpdateVotationOptionsRequest,
   UpdateVotationSettingsRequest,
+  UserDTO,
   VotationDTO,
 } from "@/types/backend";
 
@@ -89,6 +90,10 @@ export const api = {
     list: (page = 0, size = 10) =>
       request<PageResponse<NotificationResponse>>(`/notifications${queryString({ page, size })}`),
     markRead: (id: string) => request<NotificationResponse>(`/notifications/${id}/read`, { method: "PATCH" }),
+  },
+  users: {
+    /** Links the Telegram chat that opened the login link to the current user. */
+    linkTelegram: (chatId: number) => request<UserDTO>("/users/me/telegram", json("PUT", { chatId })),
   },
   statistics: {
     get: (params?: { from?: string; to?: string }) =>

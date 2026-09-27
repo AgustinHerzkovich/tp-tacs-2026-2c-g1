@@ -10,7 +10,6 @@ USER_ROLE=USER
 BOT_ROLE=TELEGRAM_BOT
 BOT_CLIENT_ID="${TELEGRAM_BOT_CLIENT_ID:-solnotfoundTelegramBot}"
 BOT_CLIENT_SECRET="${TELEGRAM_BOT_CLIENT_SECRET:-solnotfound-telegram-bot-client-secret}"
-BOT_SERVICE_ACCOUNT="service-account-$BOT_CLIENT_ID"
 
 "$KCADM" config credentials \
   --server "$SERVER" \
@@ -60,7 +59,7 @@ ensure_realm_role() {
       -s composite=true
   fi
 
-  "$KCADM" add-roles -r "$REALM" --rolename "$role" --composites "$USER_ROLE"
+  "$KCADM" add-roles -r "$REALM" --rname "$role" --rolename "$USER_ROLE"
 }
 
 ensure_user alumno alumno alumno@planazo.local
@@ -71,12 +70,36 @@ ensure_user admin admin admin@planazo.local
 ensure_realm_role "$BOT_ROLE" \
   "Rol de la cuenta de servicio de la funcion serverless del bot de Telegram. Compuesto por USER; habilita los endpoints /users/telegram/** junto con el API token del bot."
 
+# El import del realm solo corre si el realm no existe, asi que en un volumen
+# viejo el cliente puede faltar. La API de admin identifica al cliente por su
+# UUID interno, no por el clientId.
+bot_client_uuid=$("$KCADM" get clients -r "$REALM" -q "clientId=$BOT_CLIENT_ID" --fields id --format csv --noquotes)
+if [ -z "$bot_client_uuid" ]; then
+  "$KCADM" create clients -r "$REALM" \
+    -s "clientId=$BOT_CLIENT_ID" \
+    -s enabled=true \
+    -s publicClient=false \
+    -s clientAuthenticatorType=client-secret \
+    -s standardFlowEnabled=false \
+    -s implicitFlowEnabled=false \
+    -s directAccessGrantsEnabled=false \
+    -s serviceAccountsEnabled=true
+  bot_client_uuid=$("$KCADM" get clients -r "$REALM" -q "clientId=$BOT_CLIENT_ID" --fields id --format csv --noquotes)
+fi
+
 # El secreto del cliente confidencial lo usa la funcion del bot para pedir su
 # access token con client_credentials.
-"$KCADM" update "clients/$BOT_CLIENT_ID" -r "$REALM" -s "secret=$BOT_CLIENT_SECRET"
+"$KCADM" update "clients/$bot_client_uuid" -r "$REALM" -s "secret=$BOT_CLIENT_SECRET"
 
 # Crear la cuenta de servicio del cliente (si el import del realm ya la creo,
 # esta llamada no hace nada) y asignarle el rol del bot.
-"$KCADM" get "clients/$BOT_CLIENT_ID/service-account-user" -r "$REALM" >/dev/null
-"$KCADM" add-roles -r "$REALM" --uusername "$BOT_SERVICE_ACCOUNT" --rolename "$BOT_ROLE"
+bot_service_account_id=$("$KCADM" get "clients/$bot_client_uuid/service-account-user" -r "$REALM" --fields id --format csv --noquotes)
+"$KCADM" add-roles -r "$REALM" --uid "$bot_service_account_id" --rolename "$BOT_ROLE"
+
+# El cliente tiene fullScopeAllowed=false, asi que el token solo incluye los roles
+# de realm mapeados explicitamente al cliente. Sin este mapping el JWT no lleva
+# TELEGRAM_BOT y el backend responde 403.
+bot_role_id=$("$KCADM" get "roles/$BOT_ROLE" -r "$REALM" --fields id --format csv --noquotes)
+"$KCADM" create "clients/$bot_client_uuid/scope-mappings/realm" -r "$REALM" \
+  -b "[{\"id\":\"$bot_role_id\",\"name\":\"$BOT_ROLE\"}]"
 

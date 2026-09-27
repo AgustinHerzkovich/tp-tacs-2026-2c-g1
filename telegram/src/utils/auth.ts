@@ -11,7 +11,7 @@ const API_TOKEN_HEADER = "X-Api-Token";
 const EXPIRY_SKEW_MS = 30_000;
 
 let cachedToken: { value: string; expiresAt: number } | undefined;
-let pendingToken: Promise<string> | undefined;
+let pendingToken: string | undefined;
 
 interface TokenResponse {
   access_token?: string;
@@ -34,9 +34,9 @@ export async function getAccessToken(): Promise<string> {
     return cachedToken.value;
   }
 
-  pendingToken = pendingToken ?? requestAccessToken();
+  pendingToken = pendingToken ?? await requestAccessToken();
   try {
-    return await pendingToken;
+    return pendingToken;
   } finally {
     pendingToken = undefined;
   }
@@ -80,7 +80,7 @@ export async function backendFetch(path: string, init: RequestInit = {}): Promis
   if (!telegramApiToken) {
     throw new Error("Falta TELEGRAM_API_TOKEN: el backend rechaza las llamadas del bot sin el API token");
   }
-
+  try {
   const send = async (accessToken: string): Promise<Response> =>
     fetch(`${backendClient}${path}`, {
       ...init,
@@ -101,3 +101,7 @@ export async function backendFetch(path: string, init: RequestInit = {}): Promis
 
   return response;
 }
+catch (error) {
+  console.error(`[authToken] error al llamar a backendFetch(${path}): ${error}`);
+  throw error;  
+}}

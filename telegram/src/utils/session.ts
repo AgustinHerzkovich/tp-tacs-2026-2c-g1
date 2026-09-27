@@ -1,5 +1,5 @@
 interface SessionState {
-  userId?: number;
+  userId?: string;
   activeMenu?: string;
 }
 
@@ -13,11 +13,11 @@ export function getSession(chatId: number): SessionState {
   return created;
 }
 
-export function getUserId(chatId: number): number | undefined {
+export function getUserId(chatId: number): string | undefined {
   return sessions.get(chatId)?.userId;
 }
 
-export function setUserId(chatId: number, userId: number | undefined): void {
+export function setUserId(chatId: number, userId: string | undefined): void {
   const session = getSession(chatId);
   session.userId = userId;
 }

@@ -76,17 +76,23 @@ services:
     build:
       context: ./telegram
       dockerfile: Dockerfile
+      target: dev
     ports:
       - "8081:8080"
     environment:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_API_TOKEN: ${TELEGRAM_API_TOKEN:-}
-      BACKEND_URL: ${BACKEND_URL:-http://backend:8080}
+      # Dentro de la red de Compose el backend es "backend"; localhost seria el propio bot.
+      BACKEND_URL: http://backend:8080
+      # URL del frontend tal como la abre el usuario desde Telegram (no la de la red de Compose).
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       KEYCLOAK_URL: ${KEYCLOAK_INTERNAL_URL:-http://keycloak:8080}
       KEYCLOAK_REALM: ${NEXT_PUBLIC_KEYCLOAK_REALM:-solnotfound}
       KEYCLOAK_TELEGRAM_BOT_CLIENT_ID: ${KEYCLOAK_TELEGRAM_BOT_CLIENT_ID:-solnotfoundTelegramBot}
       KEYCLOAK_TELEGRAM_BOT_CLIENT_SECRET: ${KEYCLOAK_TELEGRAM_BOT_CLIENT_SECRET:-solnotfound-telegram-bot-client-secret}
     depends_on:
+      backend:
+        condition: service_healthy
       keycloak-config:
         condition: service_completed_successfully
     healthcheck:
@@ -95,6 +101,13 @@ services:
       timeout: 5s
       retries: 12
       start_period: 10s
+    develop:
+      watch:
+        - action: sync
+          path: ./telegram/src
+          target: /app/src
+        - action: rebuild
+          path: ./telegram/package.json
     networks:
       - tacs-network
 

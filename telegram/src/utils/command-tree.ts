@@ -18,3 +18,5 @@ export const COMMAND_PARENT: Record<string, string> = Object.fromEntries(
     children.map((child) => [child, parent])
   )
 );
+/** Comandos de primer nivel que se ofrecen al usuario identificado. */
+export const MAIN_MENU: readonly string[] = Object.keys(COMMAND_TREE);
