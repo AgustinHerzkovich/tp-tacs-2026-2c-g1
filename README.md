@@ -22,29 +22,29 @@ Ejemplo del JSON que debe enviarse en la parte `activity` de `POST /activities`:
 
 ```json
 {
-    "title": "Asado en la plaza",
-    "description": "Junta con amigos, llevar sillas",
-    "type": "OUTDOOR",
-    "location": {
-      "city": "Buenos Aires",
-      "latitude": null,
-      "longitude": null
-    },
-    "dateTime": "2026-08-25T18:00:00",
-    "minParticipants": 4,
-    "maxParticipants": 15,
-    "weatherConditions": {
-      "maxRainProbability": 30,
-      "minTemperature": 10,
-      "maxTemperature": 30,
-      "maxWindSpeed": 25.0
-    },
-    "anticipationWindow": 24,
-    "reprogramationRange": {
-      "maxDays": 3,
-      "initialHour": "10:00:00",
-      "finalHour": "20:00:00"
-    }
+  "title": "Asado en la plaza",
+  "description": "Junta con amigos, llevar sillas",
+  "type": "OUTDOOR",
+  "location": {
+    "city": "Buenos Aires",
+    "latitude": null,
+    "longitude": null
+  },
+  "dateTime": "2026-08-25T18:00:00",
+  "minParticipants": 4,
+  "maxParticipants": 15,
+  "weatherConditions": {
+    "maxRainProbability": 30,
+    "minTemperature": 10,
+    "maxTemperature": 30,
+    "maxWindSpeed": 25.0
+  },
+  "anticipationWindow": 24,
+  "reprogramationRange": {
+    "maxDays": 3,
+    "initialHour": "10:00:00",
+    "finalHour": "20:00:00"
+  }
 }
 ```
 
@@ -330,7 +330,24 @@ vez por clonación:
 git config core.hooksPath .githooks
 ```
 
-Si el hook falla, ejecutar `./mvnw spotless:apply` desde `backend/` y volver a agregar los cambios.
+Funciona en Windows (Git Bash, que viene con Git for Windows), macOS y Linux.
+No hace falta definir `JAVA_HOME`: busca un JDK 21 (con `javac`) primero en `JAVA_HOME`, después en
+el Java por defecto del sistema (`archlinux-java` en Arch, `update-alternatives` en Mint/Ubuntu,
+`/usr/libexec/java_home` en macOS) y por último en las rutas habituales (`/usr/lib/jvm`, `~/.jdks`,
+`~/.sdkman`, `/Library/Java/JavaVirtualMachines`, Homebrew y las carpetas de instalación de
+Windows). Si el Java por defecto es otra versión pero hay un JDK 21 instalado, usa ese. Si no
+encuentra ninguno, el commit se cancela con un mensaje.
+
+`.gitattributes` fuerza fin de línea LF en el hook, en `mvnw` y en los `*.sh`. En Windows, un clon
+hecho antes de ese cambio puede tener esos archivos con CRLF; para regenerarlos, desde la raíz:
+
+```bash
+rm .githooks/pre-commit backend/mvnw keycloak/configure-local.sh loadtest/run.sh
+git checkout -- .githooks/pre-commit backend/mvnw keycloak/configure-local.sh loadtest/run.sh
+```
+
+Si el hook falla por formato, ejecutar `./mvnw spotless:apply` desde `backend/` y volver a agregar
+los cambios.
 
 ## Git flow
 
@@ -343,7 +360,7 @@ desde sus interfaces web y CLIs integradas al repositorio, como herramientas de 
 disponibles variaron durante el proyecto; no se incorporó una dependencia de IA al producto ni se
 enviaron secretos deliberadamente a los asistentes. Su uso se concentró en las siguientes tareas:
 
-- Generación y adaptación de código repetitivo o *boilerplate*.
+- Generación y adaptación de código repetitivo o _boilerplate_.
 - Propuesta de casos de prueba y revisión de la cobertura de tests.
 - Revisión de las user stories para detectar requisitos, casos límite o validaciones que pudieran
   haberse omitido.
@@ -375,20 +392,21 @@ asistentes compatibles leen las mismas reglas sin duplicarlas.
 
 ## Trazabilidad de requisitos no funcionales
 
-| Requisito del enunciado | Implementación y documentación |
-| --- | --- |
-| SCM | Repositorio Git; flujo de ramas documentado en [Git flow](#git-flow). |
-| Métodos no triviales documentados | Javadoc exigido por las convenciones de [`AGENTS.md`](AGENTS.md) y revisado junto con cada cambio. |
-| Ejecución portable y contenerizada | Dockerfiles de frontend/backend y un único `docker compose up --build --wait`. |
-| Aplicación, DB y red en Compose | `docker-compose.yaml` define frontend, backend, MongoDB, MinIO, Keycloak, volúmenes, red y healthchecks. |
-| Seguridad y secretos | Keycloak, OAuth2/JWT, PKCE, roles y política detallada en [Seguridad y secretos](#seguridad-y-secretos). |
-| Clima desacoplado y testeable | `IWeatherAdapter`, adapter en memoria y pruebas sin proveedor externo. |
-| Uso responsable de proveedores | Caché, límites, timeout, retry, circuit breaker y degradación controlada descritos en [Servicio meteorológico](#servicio-meteorológico). |
-| API documentada | OpenAPI, Swagger UI y casos manuales enlazados en [API y autenticación](#api-y-autenticación). |
-| Calidad y tests | Maven, Vitest, Testing Library y Playwright documentados en [Calidad de código](#calidad-de-código). |
-| Load test | Vegeta con `loadtest/run.sh`, escenarios autenticados y umbrales en [`docs/LOAD_TEST.md`](docs/LOAD_TEST.md). |
-| Frontend amigable con framework CSS | Next.js responsive con Tailwind CSS v4 y componentes shadcn/ui. |
-| Uso de IA | Herramientas, tareas, criterio y ejemplos documentados en [Uso de inteligencia artificial](#uso-de-inteligencia-artificial). |
+| Requisito del enunciado             | Implementación y documentación                                                                                                           |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| SCM                                 | Repositorio Git; flujo de ramas documentado en [Git flow](#git-flow).                                                                    |
+| Métodos no triviales documentados   | Javadoc exigido por las convenciones de [`AGENTS.md`](AGENTS.md) y revisado junto con cada cambio.                                       |
+| Ejecución portable y contenerizada  | Dockerfiles de frontend/backend y un único `docker compose up --build --wait`.                                                           |
+| Aplicación, DB y red en Compose     | `docker-compose.yaml` define frontend, backend, MongoDB, MinIO, Keycloak, volúmenes, red y healthchecks.                                 |
+| Seguridad y secretos                | Keycloak, OAuth2/JWT, PKCE, roles y política detallada en [Seguridad y secretos](#seguridad-y-secretos).                                 |
+| Clima desacoplado y testeable       | `IWeatherAdapter`, adapter en memoria y pruebas sin proveedor externo.                                                                   |
+| Uso responsable de proveedores      | Caché, límites, timeout, retry, circuit breaker y degradación controlada descritos en [Servicio meteorológico](#servicio-meteorológico). |
+| API documentada                     | OpenAPI, Swagger UI y casos manuales enlazados en [API y autenticación](#api-y-autenticación).                                           |
+| Calidad y tests                     | Maven, Vitest, Testing Library y Playwright documentados en [Calidad de código](#calidad-de-código).                                     |
+| Load test                           | Vegeta con `loadtest/run.sh`, escenarios autenticados y umbrales en [`docs/LOAD_TEST.md`](docs/LOAD_TEST.md).                            |
+| Frontend amigable con framework CSS | Next.js responsive con Tailwind CSS v4 y componentes shadcn/ui.                                                                          |
+| Uso de IA                           | Herramientas, tareas, criterio y ejemplos documentados en [Uso de inteligencia artificial](#uso-de-inteligencia-artificial).             |
+
 ## Activity images
 
 Local development uses the private MinIO bucket started by `docker compose up --build`.
