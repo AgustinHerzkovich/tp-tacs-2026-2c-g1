@@ -122,6 +122,9 @@ services:
       MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE:-mi_base_de_datos}
     volumes:
       - mongodb-data:/data/db
+      # The mongo image also declares /data/configdb as a VOLUME; naming it avoids a new
+      # anonymous volume every time the container is recreated.
+      - mongodb-config:/data/configdb
     healthcheck:
       test:
         [
@@ -236,6 +239,7 @@ services:
 
 volumes:
   mongodb-data:
+  mongodb-config:
   minio-data:
   keycloak-postgres-data:
 
