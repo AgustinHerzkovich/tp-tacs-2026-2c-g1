@@ -50,7 +50,7 @@ describe("useAuth", () => {
     expect(register).toHaveBeenCalledWith({ redirectUri: expect.stringContaining("http") });
 
     await result.current.logout();
-    expect(logout).toHaveBeenCalledWith({ redirectUri: expect.stringContaining("/login") });
+    expect(logout).toHaveBeenCalledWith({ redirectUri: `${window.location.origin}/` });
   });
 });
 

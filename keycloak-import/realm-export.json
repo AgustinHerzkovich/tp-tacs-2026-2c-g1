@@ -956,7 +956,7 @@
         "client.introspection.response.allow.jwt.claim.enabled": "false",
         "standard.token.exchange.enabled": "false",
         "oauth2.jwt.authorization.grant.enabled": "false",
-        "post.logout.redirect.uris": "http://localhost:3000/login",
+        "post.logout.redirect.uris": "+",
         "frontchannel.logout.session.required": "true",
         "oauth2.device.authorization.grant.enabled": "false",
         "backchannel.logout.revoke.offline.tokens": "false",

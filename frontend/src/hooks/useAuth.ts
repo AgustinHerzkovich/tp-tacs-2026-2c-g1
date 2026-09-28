@@ -26,6 +26,6 @@ export function useAuth(): UseAuth {
     hasRole: (role: string) => user?.roles.includes(role) ?? false,
     login: () => getKeycloak().login({ redirectUri: window.location.href }),
     register: () => getKeycloak().register({ redirectUri: window.location.href }),
-    logout: () => getKeycloak().logout({ redirectUri: `${window.location.origin}/login` }),
+    logout: () => getKeycloak().logout({ redirectUri: `${window.location.origin}/` }),
   };
 }
