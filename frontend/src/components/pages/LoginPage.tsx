@@ -51,8 +51,7 @@ export function LoginPage() {
         <p className="text-[13px] font-bold mt-1" style={{ color: "var(--muted-foreground)" }}>
           {fromTelegram
             ? "Iniciá sesión para vincular tu cuenta con el bot de Telegram."
-            : "Iniciá sesión o creá tu cuenta de forma segura con Keycloak."}
-          Iniciá sesión o creá tu cuenta para empezar.
+            : "Iniciá sesión o creá tu cuenta para empezar."}
         </p>
       </div>
 
