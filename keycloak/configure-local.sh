@@ -65,6 +65,13 @@ ensure_realm_role() {
   "$KCADM" add-roles -r "$REALM" --rname "$role" --rolename "$USER_ROLE"
 }
 
+# El logout redirige a la landing (/). "+" acepta las mismas URIs que las de
+# redireccion validas del cliente (http://localhost:3000/*). El import del realm
+# no actualiza un realm existente, por eso se aplica tambien aca.
+frontend_client_uuid=$("$KCADM" get clients -r "$REALM" -q "clientId=solnotfoundFrontend" --fields id --format csv --noquotes)
+"$KCADM" update "clients/$frontend_client_uuid" -r "$REALM" \
+  -s 'attributes."post.logout.redirect.uris"=+'
+
 ensure_user alumno alumno alumno@planazo.local
 ensure_user admin admin admin@planazo.local
 
