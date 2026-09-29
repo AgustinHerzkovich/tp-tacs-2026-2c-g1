@@ -1,16 +1,6 @@
 export const COMMAND_TREE: Record<string, readonly string[]> = {
   "/seeActivities": [],
-  "/myActivities": [
-    "/checkActivityClimate",
-    "/cancelActivity",
-    "/vote",
-    "/checkVotingResults",
-  ],
-  "/createActivity": [
-    "/configureClimate",
-    "/configureAnticipation",
-    "/configureReprogramation",
-  ],
+  "/myActivities": [],
 };
 
 export const COMMAND_PARENT: Record<string, string> = Object.fromEntries(

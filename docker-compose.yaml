@@ -144,7 +144,11 @@ services:
       - tacs-network
 
   minio:
-    image: quay.io/minio/minio:RELEASE.2025-07-23T15-54-02Z
+    # MinIO dejo de publicar imagenes de la edicion community: quay.io/minio/minio responde 401
+    # para todos sus tags y el repo de Docker Hub ya no existe. pgsty/minio es un fork compatible
+    # (mismo comando "server /data", mismas variables MINIO_ROOT_* y mismo formato en disco), asi
+    # que el bucket y los datos que hubiera siguen sirviendo sin cambios.
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
     command: server /data --console-address ":9001"
     ports:
       - "9000:9000"

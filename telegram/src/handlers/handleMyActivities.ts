@@ -1,14 +1,24 @@
-import sendMessage from "../utils/sendMessage";
-import { COMMAND_TREE } from "../utils/command-tree";
+import { fetchAllActivities, isOrganizer } from "../utils/activities";
+import { renderActivityList, VOTATION_NOTE } from "../utils/activityFormat";
+import { sendLongMessage } from "../utils/sendMessage";
 import type { CommandHandler } from "../utils/command.types";
 
+/**
+ * Lista las actividades que organiza el usuario, de la más próxima a la más lejana, avisando
+ * cuáles están en votación de reprogramación (ActivityStatus.PROPOSED).
+ */
 const handleMyActivities: CommandHandler = async (chatId, userId) => {
   console.log(`[myActivities] chat=${chatId} userId=${userId}`);
-  // TODO: request al backend con backendFetch (JWT + API token): GET /activities/participants/me y GET /activities/organizers/me usando userId=${userId}
-  const subcommands = COMMAND_TREE["/myActivities"].map((cmd) => `- ${cmd}`).join("\n");
-  await sendMessage(
+  const activities = (await fetchAllActivities()).filter((activity) => isOrganizer(activity, userId));
+
+  await sendLongMessage(
     chatId,
-    `Tus actividades. (userId=${userId})\n\nSubcomandos disponibles:\n${subcommands}`
+    renderActivityList(activities, {
+      header: "🗂️ Tus actividades",
+      emptyMessage: "Todavía no organizás ninguna actividad.",
+      noteFor: (activity) => (activity.status === "PROPOSED" ? VOTATION_NOTE : undefined),
+    }),
+    { parseMode: "HTML" }
   );
 };
 

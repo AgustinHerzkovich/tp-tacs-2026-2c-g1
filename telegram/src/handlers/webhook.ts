@@ -34,7 +34,8 @@ async function runCommand(chatId: number, command: string, handleCommand: Comman
   }
 
   console.log(`[webhook] ejecutando comando "${command}" en chat ${chatId}`);
-  await handleCommand(chatId, userId);
+  // Los comandos fuera de COMMANDS_WITHOUT_USER ya llegaron acá con userId definido.
+  await handleCommand(chatId, userId ?? "");
   console.log(`[webhook] comando "${command}" finalizado`);
 
   setActiveMenu(chatId, parent ?? command);
@@ -58,6 +59,10 @@ export const webhook: HttpFunction = async (req: any, res: any) => {
         await runCommand(message.chat.id, command, handleCommand);
       } catch (err) {
         console.error(`[webhook] error ejecutando "${command}":`, err);
+        await sendMessage(
+          message.chat.id,
+          "No pudimos obtener lo que pediste en este momento. Probá de nuevo en un rato."
+        );
       }
     } else {
       console.log(`[webhook] comando desconocido: "${command}"`);

@@ -179,6 +179,13 @@ Estas decisiones cubren aspectos no definidos de forma exhaustiva por el enuncia
 - **Rangos estadísticos inclusivos:** `from` y `to` incluyen ambos extremos; sin parámetros se
   consultan los últimos siete días. Una cancelación climática incluye mal clima y ausencia de
   alternativas favorables.
+- **Bot de Telegram de solo lectura:** la función se autentica con la cuenta de servicio de
+  `solnotfoundTelegramBot`, y el backend toma la identidad de negocio del claim `sub`, así que el bot
+  no puede actuar en nombre del usuario del chat. Los comandos arman sus listados recorriendo
+  `GET /activities` y filtrando por `organizerId` y `participants[].userId`. Votar, consultar el clima
+  de una actividad, abandonar o cancelar requieren que el backend exponga una ruta que resuelva el
+  chat de Telegram al usuario; hoy no hay ninguna. El detalle está en
+  [`telegram/README.md`](telegram/README.md).
 
 Keycloak es el proveedor de identidad y el backend funciona como OAuth2 Resource Server sin
 administrar contraseñas. Los access y refresh tokens permanecen en memoria en `keycloak-js`; el
