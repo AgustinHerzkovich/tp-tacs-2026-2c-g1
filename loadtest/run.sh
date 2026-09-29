@@ -58,6 +58,11 @@ configure_target() {
   INCLUDE_WEATHER="${INCLUDE_WEATHER:-false}"
 }
 
+# The native Windows jq.exe (used from Git Bash) ends its output lines with CRLF; command
+# substitution only strips the LF, so ids and tokens kept a trailing \r and Vegeta rejected the URLs.
+# Stripping \r is a no-op elsewhere, and pipefail keeps jq's exit status (needed by `jq -e`).
+jq() { command jq "$@" | tr -d '\r'; }
+
 log() { printf '[loadtest] %s\n' "$*" >&2; }
 fail() {
   log "ERROR: $*"

@@ -2,9 +2,9 @@
 
 La prueba de carga usa [Vegeta](https://github.com/tsenart/vegeta) mediante el script versionado
 `loadtest/run.sh`. El script saca tokens reales de Keycloak, arma los targets, ejecuta la prueba por
-etapas de tasa creciente y decide si cada etapa pasa o no según umbrales fijos. No incluye resultados
-históricos: en cada entrega hay que correrla en un ambiente limpio y registrar la ejecución (ver
-[Registro](#registro)).
+etapas de tasa creciente y decide si cada etapa pasa o no según umbrales fijos. La ejecución
+presentada en la Entrega 3 está en [Ejecución registrada](#ejecución-registrada-entrega-3); para
+nuevas corridas ver [Registro](#registro).
 
 ## Alcance y precauciones
 
@@ -108,6 +108,63 @@ está en `.gitignore` y no se versiona salvo que se acuerde como evidencia de un
 
 Para volver a analizar una corrida: `vegeta report -type=text <ruta>/results.bin`. Las carpetas de
 resultados se crean con permisos solo para el usuario actual, porque `targets.jsonl` contiene tokens.
+
+## Ejecución registrada (Entrega 3)
+
+**Todas las etapas pasaron los umbrales, sin errores ni respuestas `5xx`.**
+
+| Dato | Valor |
+| --- | --- |
+| Fecha | 29/09/2026 |
+| Commit | `f47bfbc` (`develop` al crear `release/Entrega_03`), más la corrección de CRLF de `run.sh` |
+| Host | AMD Ryzen 5 8400F (6 núcleos / 12 hilos), 15,6 GB de RAM, Windows 11 Pro |
+| Docker | Docker Desktop 29.8 (WSL 2), 12 CPUs y 8 GB asignados |
+| Stack | `WEATHER_PROVIDER=in-memory APP_SEED_ENABLED=true docker compose up --build --wait` |
+| Vegeta | v12.13.0, 10 usuarios, 60 s por etapa, timeout 10 s |
+| Destino | `BASE_URL=http://[::1]:8080` (ver nota de Windows abajo) |
+
+| Escenario | Etapa | Requests | Throughput | Éxito | Códigos | p50 | p95 | p99 |
+| --- | --- | ---: | ---: | ---: | --- | ---: | ---: | ---: |
+| `smoke` | 10/s | 600 | 10,0/s | 100 % | 200 | 2 ms | 3 ms | 4 ms |
+| `smoke` | 50/s | 3.000 | 50,0/s | 100 % | 200 | 1 ms | 2 ms | 3 ms |
+| `smoke` | 100/s | 5.999 | 100,0/s | 100 % | 200 | 1 ms | 1 ms | 2 ms |
+| `read` | 10/s | 600 | 10,0/s | 100 % | 200 | 4 ms | 10 ms | 11 ms |
+| `read` | 50/s | 3.000 | 50,0/s | 100 % | 200 | 3 ms | 8 ms | 10 ms |
+| `read` | 100/s | 5.999 | 100,0/s | 100 % | 200 | 3 ms | 8 ms | 10 ms |
+| `mixed` | 10/s | 600 | 10,0/s | 100 % | 546×200, 54×201 | 4 ms | 8 ms | 10 ms |
+| `mixed` | 50/s | 3.000 | 50,0/s | 100 % | 2.728×200, 272×201 | 4 ms | 8 ms | 9 ms |
+| `mixed` | 100/s | 6.000 | 100,0/s | 100 % | 5.455×200, 545×201 | 4 ms | 8 ms | 9 ms |
+| `read` (extra) | 200/s | 11.998 | 200,0/s | 100 % | 200 | 4 ms | 8 ms | 10 ms |
+| `read` (extra) | 400/s | 24.000 | 400,0/s | 100 % | 200 | 4 ms | 9 ms | 10 ms |
+| `read` (extra) | 800/s | 47.999 | 800,0/s | 100 % | 200 | 4 ms | 9 ms | 24 ms |
+
+Las etapas extra de `read` (`./loadtest/run.sh read 200/s 400/s 800/s`) se corrieron para buscar
+el límite. A 800 req/s todavía se cumplen los umbrales con amplio margen; no se siguió subiendo,
+así que la capacidad real del stack local es mayor que la medida.
+
+Consumo máximo observado con `docker stats` durante todas las corridas:
+
+| Contenedor | CPU máx. | Memoria máx. |
+| --- | ---: | ---: |
+| backend | 456 % (≈4,6 núcleos) | 477 MiB |
+| mongodb | 245 % | 434 MiB |
+| keycloak | 38 % | 640 MiB |
+| frontend, minio, keycloak-postgres, telegram | < 20 % | < 150 MiB |
+
+El backend y MongoDB son los que absorben la carga. Keycloak solo interviene al emitir los tokens
+al comienzo de cada etapa, porque el backend valida los JWT localmente con el JWKS. En los logs del
+backend no hubo errores asociados a las requests de la prueba.
+
+### Notas para correrla en Windows
+
+- **Otro programa en el puerto 8080.** En el equipo de la medición, un proceso ajeno
+  (`ApplicationWebServer.exe`) escuchaba en `0.0.0.0:8080` por IPv4, y Vegeta resuelve `localhost`
+  a `127.0.0.1`, así que recibía `404` de ese proceso. `curl` usa IPv6 primero y por eso el
+  healthcheck respondía bien. Se evitó apuntando a `BASE_URL=http://[::1]:8080`. Si pasa lo mismo,
+  revisar el puerto con `netstat -ano | findstr :8080`.
+- **`jq.exe` y CRLF.** El `jq` nativo de Windows termina sus líneas con CRLF y los ids quedaban con
+  un `\r` que Vegeta rechazaba (`invalid control character in URL`). `run.sh` lo elimina desde esta
+  entrega.
 
 ## Registro
 
