@@ -5,7 +5,9 @@ import com.solnotfound.dto.ActivityResponse;
 import com.solnotfound.dto.ActivityWeatherResponse;
 import com.solnotfound.dto.CreateActivityRequest;
 import com.solnotfound.dto.PageResponse;
+import com.solnotfound.entity.activity.ActivityStatus;
 import com.solnotfound.entity.activity.ActivityType;
+import com.solnotfound.exception.InvalidPageRequestException;
 import com.solnotfound.service.ActivityService;
 import com.solnotfound.storage.MultipartImageFile;
 import io.swagger.v3.oas.annotations.Operation;
@@ -93,7 +95,10 @@ public class ActivityController {
   @GetMapping
   public ResponseEntity<PageResponse<ActivityResponse>> getAll(
       @RequestParam(required = false) ActivityType type,
+      @RequestParam(required = false) List<ActivityStatus> status,
       @RequestParam(required = false) String city,
+      @RequestParam(required = false) String title,
+      @RequestParam(required = false) List<String> ids,
       @RequestParam(required = false) Boolean availability,
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
           LocalDateTime dateFrom,
@@ -103,7 +108,15 @@ public class ActivityController {
       @RequestParam(defaultValue = "12") int size) {
     PageResponse<ActivityResponse> activities =
         activityService.search(
-            new ActivityFilterDTO(type, city, dateFrom, dateTo, availability),
+            new ActivityFilterDTO(
+                type,
+                city,
+                dateFrom,
+                dateTo,
+                availability,
+                status == null ? List.of() : status,
+                title,
+                ids),
             pageRequest(page, size, "dateTime"));
     return ResponseEntity.ok(activities);
   }
@@ -138,26 +151,40 @@ public class ActivityController {
   @GetMapping("/organizers/me")
   public ResponseEntity<PageResponse<ActivityResponse>> getOrganized(
       Authentication authentication,
+      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+          LocalDateTime dateFrom,
+      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+          LocalDateTime dateTo,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "12") int size) {
     return ResponseEntity.ok(
         activityService.getByOrganizerId(
-            jwt(authentication).getSubject(), pageRequest(page, size, "dateTime")));
+            jwt(authentication).getSubject(),
+            dateFrom,
+            dateTo,
+            pageRequest(page, size, "dateTime")));
   }
 
   @GetMapping("/participants/me")
   public ResponseEntity<PageResponse<ActivityResponse>> getJoined(
       Authentication authentication,
+      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+          LocalDateTime dateFrom,
+      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+          LocalDateTime dateTo,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "12") int size) {
     return ResponseEntity.ok(
         activityService.getByParticipantId(
-            jwt(authentication).getSubject(), pageRequest(page, size, "dateTime")));
+            jwt(authentication).getSubject(),
+            dateFrom,
+            dateTo,
+            pageRequest(page, size, "dateTime")));
   }
 
   private PageRequest pageRequest(int page, int size, String sortProperty) {
     if (page < 0 || size < 1 || size > 100) {
-      throw new IllegalArgumentException(
+      throw new InvalidPageRequestException(
           "Page must be non-negative and size must be between 1 and 100");
     }
     return PageRequest.of(page, size, Sort.by(sortProperty).ascending());

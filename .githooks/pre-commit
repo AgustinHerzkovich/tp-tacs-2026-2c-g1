@@ -2,45 +2,142 @@
 
 set -e
 
+# Lightweight check: only verifies backend formatting with Spotless. Checkstyle,
+# SpotBugs and the tests run in CI (.github/workflows/backend-ci.yml).
+#
+# Must stay POSIX sh: it runs under Git Bash on Windows, bash 3.2 (as sh) on macOS,
+# dash on Debian/Ubuntu/Mint and bash on Arch. Git GUIs (IntelliJ, SourceTree, GitHub
+# Desktop) run it with a minimal PATH, so it looks for a JDK 21 by itself.
+
 repo_root=$(git rev-parse --show-toplevel) || exit 1
 backend_dir="$repo_root/backend"
 
+if ! git diff --cached --name-only --diff-filter=ACMR | grep -q '^backend/.*\.java$'; then
+  exit 0
+fi
+
+case "$(uname -s)" in
+  MINGW* | MSYS* | CYGWIN*) windows=true ;;
+  *) windows=false ;;
+esac
+
+# Prints the major version of the given java binary ("21" for 21.0.x, "1" for 1.8).
+# Scans every line because JAVA_TOOL_OPTIONS makes the JVM print "Picked up ..." first.
 java_major() {
-  "$1" -version 2>&1 | sed -n '1s/.*version "\([0-9][0-9]*\).*/\1/p'
+  "$1" -version 2>&1 | sed -n 's/.* version "\([0-9][0-9]*\).*/\1/p' | head -n 1
 }
 
-if [ -n "$JAVA_HOME" ] && [ -x "$JAVA_HOME/bin/java.exe" ] \
-    && [ "$(java_major "$JAVA_HOME/bin/java.exe")" = "21" ]; then
-  java_home=$JAVA_HOME
-elif [ -n "$JAVA_HOME" ] && [ -x "$JAVA_HOME/bin/java" ] \
-    && [ "$(java_major "$JAVA_HOME/bin/java")" = "21" ]; then
-  java_home=$JAVA_HOME
-elif [ "$(java_major java)" = "21" ]; then
-  java_home=
-else
-  for candidate in "$HOME"/.jdks/*21* /c/Program\ Files/Java/*21* \
-      /c/Program\ Files/Microsoft/jdk-21* /c/Program\ Files/Eclipse\ Adoptium/jdk-21*; do
-    if [ -x "$candidate/bin/java.exe" ] && [ "$(java_major "$candidate/bin/java.exe")" = "21" ]; then
-      java_home=$candidate
-      break
+# Prints the home of the JDK that the given java binary belongs to. Resolves the
+# symlinks behind /usr/bin/java (archlinux-java, update-alternatives) and the macOS
+# /usr/bin/java stub, which is how those systems pick the default Java without JAVA_HOME.
+java_home_of() {
+  "$1" -XshowSettings:properties -version 2>&1 \
+    | tr -d '\r' | sed -n 's/^ *java\.home = //p' | head -n 1
+}
+
+# Converts a Windows path (C:\...) to the POSIX form Git Bash tests need.
+posix_path() {
+  if [ "$windows" = true ] && [ -n "$1" ] && command -v cygpath >/dev/null 2>&1; then
+    cygpath -u "$1"
+  else
+    echo "$1"
+  fi
+}
+
+# Succeeds when the directory is a Java 21 JDK home. javac is required too: the Maven
+# wrapper refuses to run without it, so a JRE-only package is not enough.
+is_jdk21() {
+  [ -n "$1" ] || return 1
+  if [ -x "$1/bin/java" ] && [ -x "$1/bin/javac" ]; then
+    [ "$(java_major "$1/bin/java")" = "21" ]
+  elif [ -x "$1/bin/java.exe" ] && [ -x "$1/bin/javac.exe" ]; then
+    [ "$(java_major "$1/bin/java.exe")" = "21" ]
+  else
+    return 1
+  fi
+}
+
+# Prints the first JDK 21 home found, from most to least explicit choice.
+find_jdk21() {
+  candidate=$(posix_path "${JAVA_HOME-}")
+  if is_jdk21 "$candidate"; then
+    echo "$candidate"
+    return
+  fi
+
+  # The system default: archlinux-java on Arch, update-alternatives on Debian/Ubuntu/Mint,
+  # the registered JDK on macOS and whatever java.exe is first on PATH on Windows.
+  if command -v java >/dev/null 2>&1; then
+    candidate=$(posix_path "$(java_home_of java)")
+    if is_jdk21 "$candidate"; then
+      echo "$candidate"
+      return
+    fi
+  fi
+
+  # macOS knows every installed JDK; java_home fails (non-zero) when there is no 21.
+  if [ -x /usr/libexec/java_home ]; then
+    candidate=$(/usr/libexec/java_home -v 21 2>/dev/null) || candidate=
+    if is_jdk21 "$candidate"; then
+      echo "$candidate"
+      return
+    fi
+  fi
+
+  # Common JDK 21 locations for non-default installs: IntelliJ/SDKMAN downloads, macOS
+  # (IntelliJ, installers, Homebrew on Apple Silicon and Intel), Arch (java-21-openjdk),
+  # Debian/Ubuntu/Mint (java-21-openjdk-amd64), vendor packages and Windows installers.
+  for candidate in \
+      "$HOME"/.jdks/*21* \
+      "$HOME"/Library/Java/JavaVirtualMachines/*21*/Contents/Home \
+      /Library/Java/JavaVirtualMachines/*21*/Contents/Home \
+      /opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home \
+      /usr/local/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home \
+      "$HOME"/.sdkman/candidates/java/21* \
+      /usr/lib/jvm/java-21-openjdk* \
+      /usr/lib/jvm/jdk-21* \
+      /usr/lib/jvm/temurin-21* \
+      /usr/lib/jvm/zulu21* \
+      /c/Program\ Files/Java/*21* \
+      /c/Program\ Files/Microsoft/jdk-21* \
+      /c/Program\ Files/Eclipse\ Adoptium/jdk-21* \
+      /c/Program\ Files/Amazon\ Corretto/jdk21* \
+      /c/Program\ Files/Zulu/zulu-21* \
+      /c/Program\ Files/BellSoft/LibericaJDK-21*; do
+    if is_jdk21 "$candidate"; then
+      echo "$candidate"
+      return
     fi
   done
+}
 
-  if [ -z "$java_home" ]; then
-    echo "Pre-commit requires Java 21 and could not find a local JDK 21." >&2
-    exit 1
-  fi
+java_home=$(find_jdk21)
+if [ -z "$java_home" ]; then
+  echo "Pre-commit requires a Java 21 JDK (with javac) and could not find one." >&2
+  echo "Install one or point JAVA_HOME to it, then retry the commit." >&2
+  exit 1
 fi
 
-if [ -n "$java_home" ]; then
-  export JAVA_HOME="$java_home"
-  export PATH="$JAVA_HOME/bin:$PATH"
+# Always pin JAVA_HOME: the Maven wrapper prefers it over PATH, so a JAVA_HOME left
+# pointing to another version would win over the JDK 21 found here.
+export PATH="$java_home/bin:$PATH"
+if [ "$windows" = true ] && command -v cygpath >/dev/null 2>&1; then
+  # mvnw.cmd runs under cmd.exe and reads JAVA_HOME as a Windows path.
+  java_home=$(cygpath -w "$java_home")
 fi
+export JAVA_HOME="$java_home"
 
-if [ -f "$backend_dir/mvnw.cmd" ]; then
-  cd "$backend_dir"
-  ./mvnw.cmd clean verify
+if [ "$windows" = true ]; then
+  mvnw=./mvnw.cmd
 else
-  cd "$backend_dir"
-  ./mvnw clean verify
+  # Run through sh so a missing executable bit (zip downloads, some checkouts) does not matter.
+  mvnw="sh ./mvnw"
+fi
+
+cd "$backend_dir"
+# $mvnw is intentionally unquoted: on Unix it is "sh ./mvnw".
+# shellcheck disable=SC2086
+if ! $mvnw -q spotless:check; then
+  echo "Backend formatting check failed. Run '$mvnw spotless:apply' in backend/ and stage the changes." >&2
+  exit 1
 fi

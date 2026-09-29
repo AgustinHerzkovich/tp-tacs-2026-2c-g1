@@ -1,0 +1,22 @@
+steps:
+  - id: build
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --build-arg
+      - NEXT_PUBLIC_KEYCLOAK_URL=${_KEYCLOAK_URL}
+      - --build-arg
+      - NEXT_PUBLIC_KEYCLOAK_REALM=${_KEYCLOAK_REALM}
+      - --build-arg
+      - NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=${_KEYCLOAK_CLIENT_ID}
+      - --tag
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/frontend:$COMMIT_SHA
+      - frontend
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/frontend:$COMMIT_SHA
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+timeout: 1800s

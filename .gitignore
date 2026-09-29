@@ -36,3 +36,32 @@ build/
 .env
 .env.*
 !.env.example
+
+### Local-only helper scripts (never versioned) ###
+/local/
+
+### Terraform ###
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+!*.tfvars.example
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/
+
+### AI assistant instructions ###
+# Single source of truth is the root AGENTS.md (imported by CLAUDE.md).
+# `next dev` regenerates these when launched by an AI agent; keep them out of git.
+frontend/AGENTS.md
+frontend/CLAUDE.md
+
+### Load test ###
+# Vegeta outputs are local artifacts (see docs/LOAD_TEST.md).
+loadtest/results/

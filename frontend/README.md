@@ -2,7 +2,7 @@
 
 Cliente web de `tp-tacs-2026-2c-g1` (Next.js + React + Tailwind CSS + shadcn/ui). Ver el
 [README de la raíz](../README.md) para la estructura general del repositorio y
-[AGENTS.md](AGENTS.md) para las convenciones del proyecto (estructura page/component/hook,
+[AGENTS.md](../AGENTS.md) para las convenciones del proyecto (estructura page/component/hook,
 integración con el backend, etc.).
 
 ## Cómo levantar la aplicación

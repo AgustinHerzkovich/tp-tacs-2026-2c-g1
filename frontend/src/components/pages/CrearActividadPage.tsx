@@ -11,6 +11,7 @@ import { StepLugarFecha } from "@/components/pages/wizard/StepLugarFecha";
 import { StepClima } from "@/components/pages/wizard/StepClima";
 import { StepImagenes } from "@/components/pages/wizard/StepImagenes";
 import { StepAlertas } from "@/components/pages/wizard/StepAlertas";
+import { StepResumen } from "@/components/pages/wizard/StepResumen";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { api, ApiError } from "@/lib/api";
@@ -28,7 +29,7 @@ interface StepProps {
   errors?: WizardErrors;
 }
 
-const STEP_COMPONENTS: ComponentType<StepProps>[] = [StepInfo, StepLugarFecha, StepClima, StepImagenes, StepAlertas];
+const STEP_COMPONENTS: ComponentType<StepProps>[] = [StepInfo, StepLugarFecha, StepClima, StepImagenes, StepAlertas, StepResumen];
 
 function buildCreateRequest(form: WizardFormState): CreateActivityRequest {
   return {
@@ -95,11 +96,11 @@ export function CrearActividadPage() {
     return (
       <div className="fade-in flex-1 flex flex-col items-center justify-center px-8 text-center min-h-screen">
         <div className="text-6xl mb-5 emoji-3d floaty">🎉</div>
-        <h2 className="font-display font-semibold text-2xl mb-2">¡Actividad publicada!</h2>
+        <h2 className="font-brand text-2xl mb-2">¡Actividad publicada!</h2>
         <p className="text-[14px] font-bold mb-8" style={{ color: "var(--muted-foreground)" }}>
           Te avisamos si cambia el clima o se suma alguien nuevo.
         </p>
-        <Button className="h-auto py-3.5 px-6 rounded-2xl font-display font-semibold" onClick={() => router.push("/mis-actividades")}>
+        <Button size="xl" onClick={() => router.push("/mis-actividades")}>
           Ver mis actividades
         </Button>
       </div>
@@ -109,11 +110,11 @@ export function CrearActividadPage() {
   return (
     <div className="fade-in flex flex-col min-h-screen lg:min-h-0 lg:max-w-3xl lg:w-full lg:mx-auto lg:my-10 lg:bg-white lg:rounded-3xl lg:shadow-xl lg:overflow-hidden">
       <div className="flex items-center justify-between px-5 pt-6 pb-1">
-        <h2 className="font-display font-semibold text-lg">Nueva actividad</h2>
+        <h2 className="font-brand text-lg lg:text-2xl">Nueva actividad</h2>
         <button
           onClick={wizard.requestDiscard}
-          className="tap w-9 h-9 rounded-full border-2 flex items-center justify-center"
-          style={{ background: "#fff", borderColor: "var(--border)" }}
+          className="tap w-9 h-9 rounded-full flex items-center justify-center"
+          style={{ background: "#fff", boxShadow: "0 3px 0 var(--lav)" }}
           aria-label="Cerrar"
         >
           <X className="size-4" />
@@ -133,16 +134,16 @@ export function CrearActividadPage() {
 
       <div className="px-5 py-4 border-t-2 flex gap-3" style={{ borderColor: "var(--border)", background: "var(--background)" }}>
         {!wizard.isFirstStep && (
-          <Button variant="outline" className="flex-1 h-auto py-3.5 rounded-2xl font-display font-semibold" onClick={wizard.back} disabled={submitting}>
+          <Button variant="outline" size="xl" className="flex-1" onClick={wizard.back} disabled={submitting}>
             Atrás
           </Button>
         )}
         {wizard.isLastStep ? (
-          <Button className="flex-1 h-auto py-3.5 rounded-2xl font-display font-semibold" onClick={() => void handlePublish()} disabled={submitting}>
+          <Button size="xl" className="flex-1" onClick={() => void handlePublish()} disabled={submitting}>
             {submitting ? "Publicando…" : "Publicar Actividad"}
           </Button>
         ) : (
-          <Button className="flex-1 h-auto py-3.5 rounded-2xl font-display font-semibold" onClick={() => { setSubmitError(null); wizard.next(); }}>
+          <Button size="xl" className="flex-1" onClick={() => { setSubmitError(null); wizard.next(); }}>
             Continuar
           </Button>
         )}

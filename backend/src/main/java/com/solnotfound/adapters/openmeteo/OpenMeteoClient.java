@@ -7,12 +7,14 @@ import io.github.resilience4j.retry.annotation.Retry;
 import java.time.LocalDate;
 import java.util.function.Supplier;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
 @Component
+@ConditionalOnProperty(name = "weather.provider", havingValue = "open-meteo", matchIfMissing = true)
 public class OpenMeteoClient {
 
   private static final String WEATHER_FIELDS =

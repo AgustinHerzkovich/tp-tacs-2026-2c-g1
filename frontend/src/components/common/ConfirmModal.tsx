@@ -33,15 +33,16 @@ export function ConfirmModal({
       <SheetContent side="bottom" showCloseButton={false} className="rounded-t-3xl border-0 px-5 pb-6">
         <div className="w-10 h-1.5 rounded-full bg-[var(--border)] mx-auto mt-1 mb-2" />
         <SheetHeader className="p-0 gap-2">
-          <SheetTitle className="font-display font-semibold text-xl">{title}</SheetTitle>
+          <SheetTitle className="font-brand text-xl">{title}</SheetTitle>
           <SheetDescription className="text-[13.5px] font-bold leading-snug">{description}</SheetDescription>
         </SheetHeader>
         <SheetFooter className="p-0 flex-row gap-3 mt-4">
-          <Button variant="outline" className="flex-1 rounded-2xl h-12" onClick={() => onOpenChange(false)} disabled={pending}>
+          <Button variant="outline" size="xl" className="flex-1" onClick={() => onOpenChange(false)} disabled={pending}>
             {cancelLabel}
           </Button>
           <Button
-            className="flex-1 rounded-2xl h-12"
+            size="xl"
+            className="flex-1"
             variant={destructive ? "destructive" : "default"}
             onClick={onConfirm}
             disabled={pending}

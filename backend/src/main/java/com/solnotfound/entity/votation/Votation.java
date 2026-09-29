@@ -105,6 +105,25 @@ public class Votation {
   }
 
   /**
+   * Finds the option chosen by a user, comparing only user identifiers.
+   *
+   * <p>Unlike {@link #getVoteByUser(User)}, this does not rely on {@code User.equals}, which also
+   * compares display names; a user reference built from an identifier alone therefore still matches
+   * a stored voter.
+   *
+   * @param userId identifier of the user whose vote is requested
+   * @return date and time of the chosen option, or empty when the user has not voted
+   */
+  public synchronized Optional<LocalDateTime> getVoteByUserId(String userId) {
+    for (VotationOption option : options) {
+      if (option.getUsers().stream().anyMatch(user -> user.getId().equals(userId))) {
+        return Optional.of(option.getDateTime());
+      }
+    }
+    return Optional.empty();
+  }
+
+  /**
    * Indicates whether this active votation reached its configured closing instant.
    *
    * @param now instant used for the comparison

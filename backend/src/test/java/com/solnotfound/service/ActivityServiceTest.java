@@ -15,6 +15,7 @@ import com.solnotfound.dto.ActivityResponse;
 import com.solnotfound.dto.ActivityWeatherResponse;
 import com.solnotfound.dto.CreateActivityRequest;
 import com.solnotfound.dto.LocationDTO;
+import com.solnotfound.dto.PageResponse;
 import com.solnotfound.dto.ParticipantDTO;
 import com.solnotfound.dto.ReprogramationRangeDTO;
 import com.solnotfound.dto.WeatherConditionsDTO;
@@ -44,6 +45,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.PageRequest;
 
 class ActivityServiceTest {
 
@@ -70,6 +72,7 @@ class ActivityServiceTest {
 
     assertThat(created.id()).isNotBlank();
     assertThat(created.title()).isEqualTo("Football match");
+    assertThat(created.organizerId()).isEqualTo("development-user");
     assertThat(created.weatherConditions()).isEqualTo(new WeatherConditionsDTO(30, 10, 28, 25.0));
     assertThat(created.reprogramationRange()).isEqualTo(validReprogramationRange());
     assertThat(activityService.getById(created.id())).isEqualTo(created);
@@ -101,7 +104,9 @@ class ActivityServiceTest {
     assertThatThrownBy(
             () -> activityService.create(validRequest(), "creator-1", List.of(image("image/gif"))))
         .isInstanceOf(InvalidActivityException.class)
-        .hasMessage("Images must be JPEG, PNG, or WebP");
+        .hasMessage("Images must be JPEG, PNG, or WebP")
+        .extracting("code")
+        .isEqualTo(com.solnotfound.exception.ErrorCode.INVALID_IMAGE);
     verify(imageStorage, never()).upload(any(), any());
   }
 
@@ -343,6 +348,47 @@ class ActivityServiceTest {
     assertThat(results)
         .extracting(response -> response.location().city())
         .containsExactly("Buenos Aires");
+  }
+
+  @Test
+  void searchFiltersByTitleIgnoringCaseAndSurroundingSpaces() {
+    activityService.create(
+        requestWith(ActivityType.OUTDOOR, "Buenos Aires", LocalDateTime.now().plusDays(1)));
+    CreateActivityRequest barbecue =
+        new CreateActivityRequest(
+            "Asado en la plaza",
+            "Traer sillas",
+            ActivityType.OUTDOOR,
+            new LocationDTO("Buenos Aires", null, null),
+            LocalDateTime.now().plusDays(1),
+            10,
+            20,
+            validWeatherConditions(),
+            4,
+            validReprogramationRange());
+    activityService.create(barbecue);
+
+    List<ActivityResponse> results =
+        activityService.search(
+            new ActivityFilterDTO(null, null, null, null, null, List.of(), "  ASADO ", List.of()));
+
+    assertThat(results).extracting(ActivityResponse::title).containsExactly("Asado en la plaza");
+  }
+
+  @Test
+  void searchFiltersByIds() {
+    ActivityResponse first =
+        activityService.create(
+            requestWith(ActivityType.OUTDOOR, "Buenos Aires", LocalDateTime.now().plusDays(1)));
+    activityService.create(
+        requestWith(ActivityType.OUTDOOR, "Cordoba", LocalDateTime.now().plusDays(1)));
+
+    List<ActivityResponse> results =
+        activityService.search(
+            new ActivityFilterDTO(
+                null, null, null, null, null, List.of(), null, List.of(first.id(), "missing")));
+
+    assertThat(results).extracting(ActivityResponse::id).containsExactly(first.id());
   }
 
   @Test
@@ -692,6 +738,72 @@ class ActivityServiceTest {
 
     assertThatThrownBy(() -> service.getByParticipantId("1"))
         .isInstanceOf(NullPointerException.class);
+  }
+
+  @Test
+  void pagedOrganizerQueryFiltersByDateRange() {
+    LocalDateTime inRange = LocalDateTime.now().plusDays(10);
+    LocalDateTime outOfRange = LocalDateTime.now().plusDays(30);
+    ActivityResponse inside =
+        activityService.create(requestWith(ActivityType.OUTDOOR, "Buenos Aires", inRange));
+    ActivityResponse outside =
+        activityService.create(requestWith(ActivityType.OUTDOOR, "Buenos Aires", outOfRange));
+    activityRepository.findById(inside.id()).setOrganizer(user("1"));
+    activityRepository.findById(outside.id()).setOrganizer(user("1"));
+
+    PageResponse<ActivityResponse> result =
+        activityService.getByOrganizerId(
+            "1", LocalDateTime.now(), LocalDateTime.now().plusDays(15), PageRequest.of(0, 12));
+
+    assertThat(result.content()).extracting(ActivityResponse::id).containsExactly(inside.id());
+  }
+
+  @Test
+  void pagedOrganizerQueryWithoutDateRangeReturnsEverything() {
+    ActivityResponse first = activityService.create(validRequest());
+    ActivityResponse second = activityService.create(validRequest());
+    activityRepository.findById(first.id()).setOrganizer(user("1"));
+    activityRepository.findById(second.id()).setOrganizer(user("1"));
+
+    PageResponse<ActivityResponse> result =
+        activityService.getByOrganizerId("1", null, null, PageRequest.of(0, 12));
+
+    assertThat(result.content())
+        .extracting(ActivityResponse::id)
+        .containsExactlyInAnyOrder(first.id(), second.id());
+  }
+
+  @Test
+  void pagedParticipantQueryFiltersByDateRange() {
+    LocalDateTime inRange = LocalDateTime.now().plusDays(10);
+    LocalDateTime outOfRange = LocalDateTime.now().plusDays(30);
+    ActivityResponse inside =
+        activityService.create(requestWith(ActivityType.OUTDOOR, "Buenos Aires", inRange));
+    ActivityResponse outside =
+        activityService.create(requestWith(ActivityType.OUTDOOR, "Buenos Aires", outOfRange));
+    activityRepository.findById(inside.id()).setParticipants(List.of(user("1")));
+    activityRepository.findById(outside.id()).setParticipants(List.of(user("1")));
+
+    PageResponse<ActivityResponse> result =
+        activityService.getByParticipantId(
+            "1", LocalDateTime.now(), LocalDateTime.now().plusDays(15), PageRequest.of(0, 12));
+
+    assertThat(result.content()).extracting(ActivityResponse::id).containsExactly(inside.id());
+  }
+
+  @Test
+  void pagedParticipantQueryWithoutDateRangeReturnsEverything() {
+    ActivityResponse first = activityService.create(validRequest());
+    ActivityResponse second = activityService.create(validRequest());
+    activityRepository.findById(first.id()).setParticipants(List.of(user("1")));
+    activityRepository.findById(second.id()).setParticipants(List.of(user("1")));
+
+    PageResponse<ActivityResponse> result =
+        activityService.getByParticipantId("1", null, null, PageRequest.of(0, 12));
+
+    assertThat(result.content())
+        .extracting(ActivityResponse::id)
+        .containsExactlyInAnyOrder(first.id(), second.id());
   }
 
   private CreateActivityRequest requestWith(

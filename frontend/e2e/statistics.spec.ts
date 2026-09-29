@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { ADMIN, loginAs, USER } from "./helpers";
 
 test.describe("estadísticas admin", () => {
-  test("el admin ve el panel con presets, métricas y open-meteo", async ({ page }) => {
+  test("el admin ve el panel con presets, métricas y servicio de pronóstico", async ({ page }) => {
     await loginAs(page, ADMIN);
 
     await page.goto("/estadisticas");
@@ -15,7 +15,7 @@ test.describe("estadísticas admin", () => {
     for (const metric of ["Creadas", "Reprogramadas", "Canceladas", "Suspendidas por clima"]) {
       await expect(page.getByText(metric)).toBeVisible();
     }
-    await expect(page.getByText("Open-Meteo")).toBeVisible();
+    await expect(page.getByText("Servicio de pronóstico")).toBeVisible();
   });
 
   test("un usuario sin ADMIN es redirigido desde /estadisticas", async ({ page }) => {

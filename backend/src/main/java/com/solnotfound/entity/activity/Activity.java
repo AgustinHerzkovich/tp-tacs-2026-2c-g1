@@ -2,6 +2,7 @@ package com.solnotfound.entity.activity;
 
 import com.solnotfound.entity.user.User;
 import com.solnotfound.entity.weather.WeatherCondition;
+import com.solnotfound.exception.ErrorCode;
 import com.solnotfound.exception.IllegalStateActivityException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -10,11 +11,16 @@ import java.util.Optional;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.DocumentReference;
 
 @Document(collection = "activities")
+// Paged listings filter by organizer or participant and sort by dateTime; these indexes serve both
+// the filter and the sort (their prefix also covers the plain organizer/participant lookups).
+@CompoundIndex(name = "organizer_date_time", def = "{'organizer': 1, 'dateTime': 1}")
+@CompoundIndex(name = "participants_date_time", def = "{'participants': 1, 'dateTime': 1}")
 public class Activity {
 
   @Id @Getter @Setter private String id;
@@ -22,12 +28,11 @@ public class Activity {
   @Getter @Setter private String description;
   @Getter @Setter private ActivityType type;
   @Getter @Setter private Location location;
-  @Getter @Setter private LocalDateTime dateTime;
+  @Indexed @Getter @Setter private LocalDateTime dateTime;
   @Getter @Setter private Integer minParticipants;
   @Getter @Setter private Integer maxParticipants;
 
   @DocumentReference(lazy = true)
-  @Indexed
   private List<User> participants = new ArrayList<>();
 
   private List<WeatherCondition> weatherConditions = List.of();
@@ -44,7 +49,6 @@ public class Activity {
   @Getter private LocalDateTime startingSoonNotificationDateTime;
 
   @DocumentReference(lazy = true)
-  @Indexed
   private User organizer;
 
   // las condiciones del clima y avisar a los usuarios
@@ -132,7 +136,8 @@ public class Activity {
     boolean isFull = participants.size() >= maxParticipants;
 
     if (isFull) {
-      throw new IllegalStateActivityException("Activity has no available spots.");
+      throw new IllegalStateActivityException(
+          ErrorCode.ACTIVITY_FULL, "Activity has no available spots.");
     }
 
     participants.add(user);

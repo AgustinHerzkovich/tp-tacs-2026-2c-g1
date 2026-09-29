@@ -1,4 +1,5 @@
 import type { WizardFormState } from "@/types/domain";
+import { WIZARD_STEPS } from "@/hooks/useWizardForm";
 
 export type WizardErrors = Partial<Record<keyof WizardFormState, string>>;
 
@@ -57,8 +58,9 @@ function validateAlerts(form: WizardFormState): WizardErrors {
   return {};
 }
 
-/** Returns the errors for a single wizard step (0..3). Slider/select steps
- * (clima, alertas) are constrained by their own controls, so they validate empty. */
+/** Returns the errors for a single wizard step. Slider/select steps (clima,
+ * alertas) are constrained by their own controls and the read-only summary
+ * step has nothing to validate, so they all validate empty. */
 export function validateStep(step: number, form: WizardFormState): WizardErrors {
   if (step === 0) return validateInfo(form);
   if (step === 1) return validateLugarFecha(form);
@@ -73,7 +75,7 @@ export function validateAll(form: WizardFormState): WizardErrors {
 
 /** Index of the first step whose current value is invalid, or -1. */
 export function firstInvalidStep(form: WizardFormState): number {
-  for (let step = 0; step < 5; step += 1) {
+  for (let step = 0; step < WIZARD_STEPS.length; step += 1) {
     if (Object.keys(validateStep(step, form)).length > 0) return step;
   }
   return -1;

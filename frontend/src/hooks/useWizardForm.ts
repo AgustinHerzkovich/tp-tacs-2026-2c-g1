@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { WizardFormState } from "@/types/domain";
 import { validateStep, type WizardErrors } from "@/lib/validation";
 
-export const WIZARD_STEPS = ["Info básica", "Lugar y fecha", "Clima", "Imágenes", "Alertas"] as const;
+export const WIZARD_STEPS = ["Info básica", "Lugar y fecha", "Clima", "Imágenes", "Alertas", "Resumen"] as const;
 
 const INITIAL_FORM: WizardFormState = {
   title: "",
@@ -53,7 +53,7 @@ export interface UseWizardForm {
   isFirstStep: boolean;
 }
 
-/** Drives the 5-step "Crear actividad" wizard: step navigation with slide
+/** Drives the 6-step "Crear actividad" wizard: step navigation with slide
  * direction, form field state, per-step validation, the discard-draft confirm
  * dialog, and the publish/done transition. */
 export function useWizardForm(): UseWizardForm {

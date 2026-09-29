@@ -125,10 +125,10 @@ export default function LeafletMap({ latitude, longitude, onChange }: {
       </MapContainer>
       {hasLocation && (
         <div className="absolute bottom-2 left-2 z-[500] grid grid-cols-3 gap-1 rounded-xl bg-white/95 p-1 shadow" aria-label="Ajustar marcador con teclado">
-          <button type="button" className="col-start-2 size-8 rounded-lg font-bold" onClick={() => void moveMarker(0.0005, 0)} aria-label="Mover marcador al norte">↑</button>
-          <button type="button" className="size-8 rounded-lg font-bold" onClick={() => void moveMarker(0, -0.0005)} aria-label="Mover marcador al oeste">←</button>
-          <button type="button" className="size-8 rounded-lg font-bold" onClick={() => void moveMarker(-0.0005, 0)} aria-label="Mover marcador al sur">↓</button>
-          <button type="button" className="size-8 rounded-lg font-bold" onClick={() => void moveMarker(0, 0.0005)} aria-label="Mover marcador al este">→</button>
+          <button type="button" className="col-start-2 row-start-1 size-8 rounded-lg font-bold transition-colors hover:bg-[var(--secondary)] hover:text-[var(--secondary-foreground)]" onClick={() => void moveMarker(0.0005, 0)} aria-label="Mover marcador al norte">↑</button>
+          <button type="button" className="col-start-1 row-start-2 size-8 rounded-lg font-bold transition-colors hover:bg-[var(--secondary)] hover:text-[var(--secondary-foreground)]" onClick={() => void moveMarker(0, -0.0005)} aria-label="Mover marcador al oeste">←</button>
+          <button type="button" className="col-start-2 row-start-2 size-8 rounded-lg font-bold transition-colors hover:bg-[var(--secondary)] hover:text-[var(--secondary-foreground)]" onClick={() => void moveMarker(-0.0005, 0)} aria-label="Mover marcador al sur">↓</button>
+          <button type="button" className="col-start-3 row-start-2 size-8 rounded-lg font-bold transition-colors hover:bg-[var(--secondary)] hover:text-[var(--secondary-foreground)]" onClick={() => void moveMarker(0, 0.0005)} aria-label="Mover marcador al este">→</button>
         </div>
       )}
     </div>

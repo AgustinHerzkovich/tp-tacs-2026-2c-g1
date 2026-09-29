@@ -32,24 +32,27 @@ export interface UseVoting {
   updateSettings: (minQuorum: number, durationHours: number) => Promise<void>;
 }
 
-/** Finds and drives the reprogramming vote for one activity. GET /votations
- * only returns votations the current identity organizes or joined, so this
- * activity's votation may not appear if it's not "mine" — `votation` stays
- * null in that case. */
+/** Finds and drives the reprogramming vote for one activity: the most recent
+ * votation of that activity (GET /votations?activityId=…, newest first). The
+ * backend only returns votations of activities the current user organizes or
+ * joined, so `votation` stays null for anyone else.
+ *
+ * `votedId` comes from the backend's `votedOption`, computed from the
+ * authenticated user's id, so it survives reloads and never confuses two
+ * users that share a display name. */
 export function useVoting(activityId: string): UseVoting {
   const [votation, setVotation] = useState<VotationDTO | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [votedId, setVotedId] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pending, setPending] = useState(false);
 
   const load = useCallback(() => {
     api.votations
-      .mine()
-      .then((all) => {
-        setVotation(all.find((v) => v.activityId === activityId) ?? null);
+      .mine({ activityId, size: 1 })
+      .then((page) => {
+        setVotation(page.content[0] ?? null);
         setError(null);
       })
       .catch((err: unknown) => setError(err instanceof Error ? err.message : "No pudimos cargar la votación."))
@@ -72,6 +75,8 @@ export function useVoting(activityId: string): UseVoting {
   const total = options.reduce((sum, option) => sum + option.votes, 0);
   const selectedOption = options.find((option) => option.id === selectedId);
 
+  const votedId = votation?.votedOption ?? null;
+
   const select = (id: string) => {
     setSelectedId(id);
   };
@@ -86,7 +91,6 @@ export function useVoting(activityId: string): UseVoting {
     try {
       const updated = await api.votations.vote(votation.id, selectedId);
       setVotation(updated);
-      setVotedId(selectedId);
       setConfirmOpen(false);
     } finally {
       setPending(false);

@@ -11,12 +11,14 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 @Component
 @Slf4j
+@ConditionalOnProperty(name = "app.scheduling.enabled", havingValue = "true", matchIfMissing = true)
 @edu.umd.cs.findbugs.annotations.SuppressFBWarnings(
     value = "EI_EXPOSE_REP2",
     justification = "Spring injects the shared in-memory repository")
@@ -43,28 +45,41 @@ public class ActivityStatusScheduler {
    * time, a notification is sent to its participants. If an activity is finished, its status is
    * updated accordingly.
    */
-  @Scheduled(fixedDelayString = "${activity.status-check-interval:5m}")
+  @Scheduled(cron = "${activity.status-check-cron:0 */5 * * * *}")
   public void finishPastActivities() {
     LocalDateTime now = LocalDateTime.now();
+    int finished = 0;
+    int notificationsSent = 0;
+    int failures = 0;
+    var activeActivities = activityRepository.findActive();
+    log.info("Activity status check started: activeActivities={}", activeActivities.size());
 
-    for (Activity activity : activityRepository.findActive()) {
+    for (Activity activity : activeActivities) {
       try {
         if (activity.getDateTime().isBefore(now)) {
           transitionService.transition(
               activity, ActivityStatus.FINISHED, ActivityTransitionReason.SCHEDULED_TIME_PASSED);
+          finished++;
+          log.debug("Activity marked finished: activityId={}", activity.getId());
         } else if (activity.nearStart(now, notificationThreshold)
             && !activity.wasStartingSoonNotificationSent()) {
           eventPublisher.publishEvent(
               ActivityNotificationEvent.from(activity, new StartingSoonNotificationType()));
           activity.markStartingSoonNotificationSent();
           activityRepository.save(activity);
+          notificationsSent++;
+          log.debug("Starting-soon notification sent: activityId={}", activity.getId());
         }
       } catch (RuntimeException exception) {
-        log.error(
-            "Could not process status for activity {}: {}",
-            activity.getId(),
-            exception.getMessage());
+        failures++;
+        log.error("Could not process activity status: activityId={}", activity.getId(), exception);
       }
     }
+    log.info(
+        "Activity status check completed: activeActivities={} finished={} notificationsSent={} failures={}",
+        activeActivities.size(),
+        finished,
+        notificationsSent,
+        failures);
   }
 }

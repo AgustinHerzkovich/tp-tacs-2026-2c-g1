@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export function ExploreCardSkeleton() {
   return (
-    <Card className="mb-5 overflow-hidden gap-0 py-0 rounded-2xl lg:mb-0 lg:h-full" aria-hidden="true">
+    <Card className="mb-5 overflow-hidden gap-0 py-0 lg:mb-0 lg:h-full" aria-hidden="true">
       <Skeleton className="h-[180px] w-full rounded-none" />
       <div className="p-4">
         <Skeleton className="h-4 w-3/4" />
@@ -36,7 +36,7 @@ export function ExploreGridSkeleton({ count = 6 }: { count?: number }) {
 
 export function MisCardSkeleton() {
   return (
-    <Card className="mb-4 overflow-hidden gap-0 py-0 rounded-2xl lg:mb-0 lg:h-full" aria-hidden="true">
+    <Card className="mb-4 overflow-hidden gap-0 py-0 lg:mb-0 lg:h-full" aria-hidden="true">
       <div className="flex gap-3.5 p-3.5">
         <Skeleton className="w-[84px] h-[84px] shrink-0 rounded-2xl" />
         <div className="min-w-0 flex-1 py-0.5">
@@ -64,6 +64,20 @@ export function MisGridSkeleton({ count = 4 }: { count?: number }) {
   );
 }
 
+export function CalendarSkeleton() {
+  return (
+    <div aria-busy="true" aria-label="Cargando calendario">
+      <span className="sr-only" role="status">Cargando calendario</span>
+      <Skeleton className="h-5 w-40 mx-auto mb-4" />
+      <div className="grid grid-cols-7 gap-1 lg:gap-2">
+        {Array.from({ length: 35 }, (_, i) => (
+          <Skeleton key={i} className="h-11 lg:h-[92px] rounded-xl" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function StatisticsSkeleton() {
   return (
     <div aria-busy="true" aria-label="Cargando estadísticas">
@@ -71,13 +85,13 @@ export function StatisticsSkeleton() {
       <Skeleton className="h-3.5 w-48 mb-3" />
       <div className="grid grid-cols-2 gap-3 mb-4">
         {Array.from({ length: 4 }, (_, i) => (
-          <Card key={i} className="p-4 rounded-2xl">
+          <Card key={i} className="p-4">
             <Skeleton className="h-8 w-12 mx-4" />
             <Skeleton className="h-3 w-20 mx-4 mt-2" />
           </Card>
         ))}
       </div>
-      <Card className="p-5 rounded-2xl">
+      <Card className="p-5">
         <Skeleton className="h-5 w-32 mx-4 mb-3" />
         <div className="grid grid-cols-2 gap-3 px-4">
           {Array.from({ length: 4 }, (_, i) => (

@@ -9,11 +9,15 @@ import com.solnotfound.repository.IVotationRepository;
 import com.solnotfound.service.ActivityStatusTransitionService;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
+@ConditionalOnProperty(name = "app.scheduling.enabled", havingValue = "true", matchIfMissing = true)
 public class VotationClosingScheduler {
 
   private final IVotationRepository votationRepository;
@@ -24,17 +28,45 @@ public class VotationClosingScheduler {
    * across the whole votation; when reached, the most-voted option reschedules the activity.
    * Otherwise, the activity is cancelled. State is saved before notification publication.
    */
-  @Scheduled(fixedDelayString = "${votation.closing-check-interval:1h}")
+  @Scheduled(cron = "${votation.closing-check-cron:0 0 * * * *}")
+  @edu.umd.cs.findbugs.annotations.SuppressFBWarnings(
+      value = "THROWS_METHOD_THROWS_RUNTIMEEXCEPTION",
+      justification = "Scheduler failures must propagate so Cloud Scheduler can retry the request")
   public void closeDueVotations() {
     LocalDateTime now = LocalDateTime.now();
-    for (Votation votation : votationRepository.findActiveDueToClose(now)) {
-      resolve(votation);
+    var dueVotations = votationRepository.findActiveDueToClose(now);
+    int closed = 0;
+    int failures = 0;
+    log.info("Votation closing check started: dueVotations={}", dueVotations.size());
+    for (Votation votation : dueVotations) {
+      try {
+        resolve(votation);
+        closed++;
+      } catch (RuntimeException exception) {
+        failures++;
+        log.error(
+            "Could not close votation: votationId={} activityId={}",
+            votation.getId(),
+            votation.getActivity() == null ? null : votation.getActivity().getId(),
+            exception);
+        throw exception;
+      }
     }
+    log.info(
+        "Votation closing check completed: dueVotations={} closed={} failures={}",
+        dueVotations.size(),
+        closed,
+        failures);
   }
 
   private void resolve(Votation votation) {
     Activity activity = votation.getActivity();
     if (activity == null || votation.getStatus() != VotationStatus.ACTIVE) {
+      log.warn(
+          "Skipping invalid due votation: votationId={} activityId={} status={}",
+          votation.getId(),
+          activity == null ? null : activity.getId(),
+          votation.getStatus());
       return;
     }
 
@@ -63,5 +95,12 @@ public class VotationClosingScheduler {
     votation.setStatus(VotationStatus.CLOSED);
     votationRepository.save(votation);
     transitionService.transition(activity, outcome, reason);
+    log.info(
+        "Votation closed: votationId={} activityId={} outcome={} reason={} eligibleVoters={}",
+        votation.getId(),
+        activity.getId(),
+        outcome,
+        reason,
+        eligibleVoters);
   }
 }

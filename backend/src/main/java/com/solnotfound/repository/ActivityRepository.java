@@ -3,6 +3,7 @@ package com.solnotfound.repository;
 import com.solnotfound.dto.ActivityFilterDTO;
 import com.solnotfound.entity.activity.Activity;
 import com.solnotfound.entity.activity.ActivityStatus;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.regex.Pattern;
 import org.springframework.data.domain.Page;
@@ -69,24 +70,43 @@ public class ActivityRepository implements IActivityRepository {
     if (filter.type() != null) {
       query.addCriteria(Criteria.where("type").is(filter.type()));
     }
+    if (!filter.statuses().isEmpty()) {
+      query.addCriteria(Criteria.where("status").in(filter.statuses()));
+    }
     if (filter.city() != null && !filter.city().isBlank()) {
       query.addCriteria(
           Criteria.where("location.city.name").regex(Pattern.quote(filter.city().trim()), "i"));
     }
+    if (filter.title() != null && !filter.title().isBlank()) {
+      query.addCriteria(Criteria.where("title").regex(Pattern.quote(filter.title().trim()), "i"));
+    }
+    if (!filter.ids().isEmpty()) {
+      query.addCriteria(Criteria.where("_id").in(filter.ids()));
+    }
     if (filter.availability() != null) {
       query.addCriteria(availabilityCriteria(filter.availability()));
     }
-    if (filter.dateFrom() != null || filter.dateTo() != null) {
-      Criteria dates = Criteria.where("dateTime");
-      if (filter.dateFrom() != null) {
-        dates = dates.gte(filter.dateFrom());
-      }
-      if (filter.dateTo() != null) {
-        dates = dates.lte(filter.dateTo());
-      }
-      query.addCriteria(dates);
-    }
+    addDateRangeCriteria(query, filter.dateFrom(), filter.dateTo());
     return page(query, pageable);
+  }
+
+  /**
+   * Restricts {@code query} to activities whose {@code dateTime} falls within the given inclusive
+   * range; either bound may be {@code null} to leave that side open, and both being {@code null}
+   * leaves the query unchanged.
+   */
+  private void addDateRangeCriteria(Query query, LocalDateTime dateFrom, LocalDateTime dateTo) {
+    if (dateFrom == null && dateTo == null) {
+      return;
+    }
+    Criteria dates = Criteria.where("dateTime");
+    if (dateFrom != null) {
+      dates = dates.gte(dateFrom);
+    }
+    if (dateTo != null) {
+      dates = dates.lte(dateTo);
+    }
+    query.addCriteria(dates);
   }
 
   private Criteria availabilityCriteria(boolean available) {
@@ -108,13 +128,19 @@ public class ActivityRepository implements IActivityRepository {
   }
 
   @Override
-  public Page<Activity> findActivitiesByOrganizerId(String organizerId, Pageable pageable) {
-    return page(Query.query(Criteria.where("organizer").is(organizerId)), pageable);
+  public Page<Activity> findActivitiesByOrganizerId(
+      String organizerId, LocalDateTime dateFrom, LocalDateTime dateTo, Pageable pageable) {
+    Query query = Query.query(Criteria.where("organizer").is(organizerId));
+    addDateRangeCriteria(query, dateFrom, dateTo);
+    return page(query, pageable);
   }
 
   @Override
-  public Page<Activity> findActivitiesByParticipantId(String participantId, Pageable pageable) {
-    return page(Query.query(Criteria.where("participants").is(participantId)), pageable);
+  public Page<Activity> findActivitiesByParticipantId(
+      String participantId, LocalDateTime dateFrom, LocalDateTime dateTo, Pageable pageable) {
+    Query query = Query.query(Criteria.where("participants").is(participantId));
+    addDateRangeCriteria(query, dateFrom, dateTo);
+    return page(query, pageable);
   }
 
   private Page<Activity> page(Query query, Pageable pageable) {

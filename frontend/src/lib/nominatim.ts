@@ -57,3 +57,53 @@ export async function fetchNominatim<T>(path: string, params: URLSearchParams): 
   requestQueue = result.then(() => undefined, () => undefined);
   return result;
 }
+
+export interface NominatimAddress {
+  city?: string;
+  town?: string;
+  village?: string;
+  municipality?: string;
+  city_district?: string;
+  suburb?: string;
+  county?: string;
+  state_district?: string;
+  state?: string;
+}
+
+/** Narrow-to-broad order used to build the two-level locality below. `suburb`
+ * comes before `city` on purpose: in CABA, Nominatim tags the neighbourhood
+ * as `suburb` ("San Nicolás") *and* the city as `city` ("Buenos Aires") —
+ * `suburb` is the narrower one there. Outside the autonomous cities (most of
+ * Buenos Aires province), there's no `city` at all, just `suburb` for the
+ * town-like locality itself ("Munro") with `state_district` above it
+ * ("Partido de Vicente López") — same two fields, same order, right result
+ * either way. */
+const LOCALITY_FIELDS = [
+  "suburb",
+  "city_district",
+  "city",
+  "town",
+  "village",
+  "municipality",
+  "county",
+  "state_district",
+  "state",
+] as const satisfies readonly (keyof NominatimAddress)[];
+
+/** Best-effort "generic locality, one level of context" for a Nominatim
+ * result's structured address — e.g. "Munro, Partido de Vicente López"
+ * rather than just "Munro" (too generic to search by reliably) or the full
+ * address down to postcode/country (too specific to match a differently
+ * formatted stored address — see the `city` filter in `ActivityRepository`,
+ * which does a literal contains match against the full address string).
+ * Two levels, picked narrow-to-broad, is the middle ground. */
+export function municipalityOf(address: NominatimAddress | undefined): string {
+  if (!address) return "";
+  const levels: string[] = [];
+  for (const field of LOCALITY_FIELDS) {
+    const value = address[field];
+    if (value && !levels.includes(value)) levels.push(value);
+    if (levels.length === 2) break;
+  }
+  return levels.join(", ");
+}

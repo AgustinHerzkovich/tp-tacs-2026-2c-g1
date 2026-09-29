@@ -22,12 +22,17 @@ import java.util.ArrayList;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
+@ConditionalOnProperty(
+    name = "app.scheduling.beans-enabled",
+    havingValue = "true",
+    matchIfMissing = true)
 @edu.umd.cs.findbugs.annotations.SuppressFBWarnings(
     value = "EI_EXPOSE_REP2",
     justification = "Spring injects shared application collaborators")
@@ -63,45 +68,58 @@ public class ActivityAnticipationCheckScheduler {
    * activity state are persisted before notification delivery. Weather-provider failures leave the
    * activity unchecked so a later execution can retry it.
    */
-  @Scheduled(cron = "0 0 * * * *")
+  @Scheduled(cron = "${activity.weather-check-cron:0 0 * * * *}")
   public void checkActivitiesClimate() {
 
     List<Activity> activeActivities = activityRepository.findActive();
+    int dueActivities = 0;
+    int goodWeather = 0;
+    int badWeatherActivities = 0;
+    int failures = 0;
+    log.info("Weather check started: activeActivities={}", activeActivities.size());
 
-    activeActivities.forEach(
-        activity -> {
-          if (!activity.isTimeToCheckWeatherConditions()) {
-            return;
-          }
+    for (Activity activity : activeActivities) {
+      if (!activity.isTimeToCheckWeatherConditions()) {
+        continue;
+      }
 
-          Location location = activity.getLocation();
-          try {
-            WeatherForecast weather =
-                weatherAdapter.getFutureClimate(location, activity.getDateTime());
-            boolean badWeather = badWeatherChecker.isBadWeatherForActivity(weather, activity);
-            if (badWeather) {
-              openActivityVotation(activity);
-              eventPublisher.publishEvent(
-                  ActivityNotificationEvent.from(activity, new BadWeatherAlertNotificationType()));
-            } else {
-              activity.markWeatherChecked();
-              activityRepository.save(activity);
-            }
+      dueActivities++;
+      Location location = activity.getLocation();
+      try {
+        WeatherForecast weather = weatherAdapter.getFutureClimate(location, activity.getDateTime());
+        boolean badWeather = badWeatherChecker.isBadWeatherForActivity(weather, activity);
+        if (badWeather) {
+          badWeatherActivities++;
+          openActivityVotation(activity);
+          eventPublisher.publishEvent(
+              ActivityNotificationEvent.from(activity, new BadWeatherAlertNotificationType()));
+        } else {
+          goodWeather++;
+          activity.markWeatherChecked();
+          activityRepository.save(activity);
+        }
 
-          } catch (Exception e) {
-            log.error(
-                "Could not obtain activitie's climate {}: {}", activity.getId(), e.getMessage());
-          }
-        });
+      } catch (Exception exception) {
+        failures++;
+        log.error("Could not process weather check: activityId={}", activity.getId(), exception);
+      }
+    }
+    log.info(
+        "Weather check completed: activeActivities={} dueActivities={} goodWeather={} badWeather={} failures={}",
+        activeActivities.size(),
+        dueActivities,
+        goodWeather,
+        badWeatherActivities,
+        failures);
   }
 
   private void openActivityVotation(Activity activity) {
     if (votationRepository.findActiveByActivityId(activity.getId()) != null) {
-      log.info("Activity {} has an active votation active already", activity.getId());
+      log.info("Weather votation skipped: activityId={} reason=already_active", activity.getId());
       return;
     }
 
-    log.info("Opening new active votation for activity {}", activity.getId());
+    log.info("Weather votation evaluation started: activityId={}", activity.getId());
 
     List<LocalDateTime> candidateTimes = new ArrayList<>();
 
@@ -144,6 +162,9 @@ public class ActivityAnticipationCheckScheduler {
     if (options.isEmpty()) {
       transitionService.transition(
           activity, ActivityStatus.CANCELLED, ActivityTransitionReason.NO_WEATHER_ALTERNATIVES);
+      log.info(
+          "Activity cancelled after weather check: activityId={} reason=no_weather_alternatives",
+          activity.getId());
       return;
     }
 
@@ -157,5 +178,10 @@ public class ActivityAnticipationCheckScheduler {
     votationRepository.save(votation);
     transitionService.transition(
         activity, ActivityStatus.PROPOSED, ActivityTransitionReason.BAD_WEATHER);
+    log.info(
+        "Weather votation opened: activityId={} options={} closesAt={}",
+        activity.getId(),
+        options.size(),
+        votation.getClosingDate());
   }
 }

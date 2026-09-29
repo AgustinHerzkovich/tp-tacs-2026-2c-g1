@@ -1,7 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { TYPE_META } from "@/lib/activityVisuals";
+import { TYPE_META, TONE_META } from "@/lib/activityVisuals";
 import type { WizardErrors } from "@/lib/validation";
 import type { WizardFormState } from "@/types/domain";
 import type { FieldSetter, FormPatchSetter } from "@/hooks/useWizardForm";
@@ -59,6 +59,7 @@ export function StepInfo({ form, set, errors }: StepProps) {
         <div className="grid grid-cols-3 gap-3">
           {Object.entries(TYPE_META).map(([key, m]) => {
             const active = form.type === key;
+            const tone = TONE_META[m.tone];
             return (
               <button
                 key={key}
@@ -66,7 +67,11 @@ export function StepInfo({ form, set, errors }: StepProps) {
                 onClick={() => set("type")(key as WizardFormState["type"])}
                 aria-pressed={active}
                 className="tap aspect-square rounded-2xl border-2 flex flex-col items-center justify-center gap-2 font-display font-semibold text-[12.5px]"
-                style={active ? { background: m.bg, borderColor: m.bg, color: m.ink } : { background: "#fff", borderColor: "var(--border)", color: "var(--muted-foreground)" }}
+                style={
+                  active
+                    ? { background: tone.bg, borderColor: "#fff", color: tone.ink, boxShadow: "0 2px 6px rgba(58,51,82,.18)", transform: "rotate(-2deg)" }
+                    : { background: "#fff", borderColor: "var(--border)", color: "var(--muted-foreground)" }
+                }
               >
                 <span className="text-3xl emoji-3d">{m.icon}</span>
                 {m.label}

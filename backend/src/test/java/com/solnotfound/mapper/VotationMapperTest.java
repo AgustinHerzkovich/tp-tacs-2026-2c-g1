@@ -28,7 +28,7 @@ class VotationMapperTest {
     votation.setStatus(VotationStatus.ACTIVE);
     votation.setOptions(List.of(option(optionDate, user("2", "Jane Doe", "jane@example.com"))));
 
-    VotationDTO dto = VotationMapper.toDTO(votation);
+    VotationDTO dto = VotationMapper.toDTO(votation, "2");
 
     assertThat(dto.id()).isEqualTo("1");
     assertThat(dto.activityId()).isEqualTo("activity-1");
@@ -38,11 +38,12 @@ class VotationMapperTest {
     assertThat(dto.options().getFirst().dateTime()).isEqualTo(optionDate);
     assertThat(dto.options().getFirst().voteCount()).isEqualTo(1);
     assertThat(dto.options().getFirst().voterNames()).containsExactly("Jane Doe");
+    assertThat(dto.votedOption()).isEqualTo(optionDate);
   }
 
   @Test
   void mapsNullValues() {
-    assertThat(VotationMapper.toDTO(null)).isNull();
+    assertThat(VotationMapper.toDTO(null, "user-1")).isNull();
   }
 
   @Test
@@ -57,9 +58,29 @@ class VotationMapperTest {
     votation.setStatus(VotationStatus.ACTIVE);
     votation.setOptions(List.of(option(optionDate, unnamed)));
 
-    VotationDTO dto = VotationMapper.toDTO(votation);
+    VotationDTO dto = VotationMapper.toDTO(votation, "someone-else");
 
     assertThat(dto.options().getFirst().voterNames()).containsExactly("participant-1");
+    assertThat(dto.votedOption()).isNull();
+  }
+
+  @Test
+  void votedOptionUsesUserIdEvenWhenVotersShareTheirName() {
+    LocalDateTime firstDate = LocalDateTime.of(2026, 8, 29, 10, 0);
+    LocalDateTime secondDate = LocalDateTime.of(2026, 8, 30, 10, 0);
+    Votation votation = new Votation();
+    com.solnotfound.entity.activity.Activity activity =
+        new com.solnotfound.entity.activity.Activity();
+    activity.setId("activity-1");
+    votation.setActivity(activity);
+    votation.setStatus(VotationStatus.ACTIVE);
+    votation.setOptions(
+        List.of(
+            option(firstDate, user("jane-1", "Jane", null)),
+            option(secondDate, user("jane-2", "Jane", null))));
+
+    assertThat(VotationMapper.toDTO(votation, "jane-1").votedOption()).isEqualTo(firstDate);
+    assertThat(VotationMapper.toDTO(votation, "jane-2").votedOption()).isEqualTo(secondDate);
   }
 
   private VotationOption option(LocalDateTime dateTime, User user) {

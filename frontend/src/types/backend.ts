@@ -66,16 +66,25 @@ export interface ActivityResponse {
   reprogramationRange: ReprogramationRangeDTO;
   status: ActivityStatus;
   imageUrls: string[];
+  /** Keycloak subject of the organizer; compare it with the current user to
+   * know whether they organize this activity. */
+  organizerId: string | null;
 }
 
 export interface ActivityFilterParams {
   type?: ActivityType;
   city?: string;
+  /** Case-insensitive text the activity title must contain. */
+  title?: string;
+  /** Only activities with one of these ids. */
+  ids?: string[];
   /** ISO LocalDateTime */
   dateFrom?: string;
   /** ISO LocalDateTime */
   dateTo?: string;
   availability?: boolean;
+  /** One or more activity statuses; matching any supplied status. */
+  status?: ActivityStatus | ActivityStatus[];
   page?: number;
   size?: number;
 }
@@ -121,6 +130,18 @@ export interface VotationDTO {
   creationDate: string;
   status: VotationStatus;
   options: VotationOptionDTO[];
+  /** Option the current user voted for (its `dateTime`), or null if they
+   * have not voted yet. The backend computes it from the user id. */
+  votedOption: string | null;
+}
+
+export interface VotationFilterParams {
+  status?: VotationStatus;
+  activityId?: string;
+  /** true: only votations the user voted in; false: only pending ones. */
+  votedByMe?: boolean;
+  page?: number;
+  size?: number;
 }
 
 export interface UpdateVotationOptionsRequest {
@@ -140,6 +161,7 @@ export interface NotificationResponse {
   title: string;
   message: string;
   createdAt: string;
+  read: boolean;
 }
 
 export interface UserDTO {

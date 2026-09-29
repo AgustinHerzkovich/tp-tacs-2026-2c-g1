@@ -8,4 +8,5 @@ public record NotificationResponse(
     String type,
     String title,
     String message,
-    LocalDateTime createdAt) {}
+    LocalDateTime createdAt,
+    boolean read) {}

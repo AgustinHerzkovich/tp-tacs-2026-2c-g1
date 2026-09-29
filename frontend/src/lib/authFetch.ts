@@ -2,7 +2,7 @@ import { getKeycloak } from "@/lib/keycloak";
 
 export class AuthenticationRequiredError extends Error {
   constructor() {
-    super("A valid Keycloak session is required");
+    super("Tu sesión expiró. Iniciá sesión de nuevo.");
     this.name = "AuthenticationRequiredError";
   }
 }
