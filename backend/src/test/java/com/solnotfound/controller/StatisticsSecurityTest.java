@@ -13,7 +13,9 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-@SpringBootTest
+// This test only exercises security and runs without MongoDB (also in the Docker image build), so
+// the startup index creation, which needs a live server, is disabled.
+@SpringBootTest(properties = "spring.data.mongodb.auto-index-creation=false")
 @AutoConfigureMockMvc
 class StatisticsSecurityTest {
 

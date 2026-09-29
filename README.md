@@ -3,7 +3,7 @@
 Planazo es una aplicación web para organizar actividades, consultar el pronóstico, gestionar
 participantes y resolver reprogramaciones mediante votaciones. El repositorio contiene el frontend
 Next.js y la API Spring Boot, junto con toda la infraestructura necesaria para ejecutarlos
-localmente.
+localmente y para desplegarlos en Google Cloud (ver [Despliegue en la nube](#despliegue-en-la-nube)).
 
 ## Requisitos
 
@@ -22,29 +22,29 @@ Ejemplo del JSON que debe enviarse en la parte `activity` de `POST /activities`:
 
 ```json
 {
-    "title": "Asado en la plaza",
-    "description": "Junta con amigos, llevar sillas",
-    "type": "OUTDOOR",
-    "location": {
-      "city": "Buenos Aires",
-      "latitude": null,
-      "longitude": null
-    },
-    "dateTime": "2026-08-25T18:00:00",
-    "minParticipants": 4,
-    "maxParticipants": 15,
-    "weatherConditions": {
-      "maxRainProbability": 30,
-      "minTemperature": 10,
-      "maxTemperature": 30,
-      "maxWindSpeed": 25.0
-    },
-    "anticipationWindow": 24,
-    "reprogramationRange": {
-      "maxDays": 3,
-      "initialHour": "10:00:00",
-      "finalHour": "20:00:00"
-    }
+  "title": "Asado en la plaza",
+  "description": "Junta con amigos, llevar sillas",
+  "type": "OUTDOOR",
+  "location": {
+    "city": "Buenos Aires",
+    "latitude": null,
+    "longitude": null
+  },
+  "dateTime": "2026-08-25T18:00:00",
+  "minParticipants": 4,
+  "maxParticipants": 15,
+  "weatherConditions": {
+    "maxRainProbability": 30,
+    "minTemperature": 10,
+    "maxTemperature": 30,
+    "maxWindSpeed": 25.0
+  },
+  "anticipationWindow": 24,
+  "reprogramationRange": {
+    "maxDays": 3,
+    "initialHour": "10:00:00",
+    "finalHour": "20:00:00"
+  }
 }
 ```
 
@@ -80,6 +80,63 @@ Las variables admitidas por Compose y los valores locales de desarrollo se docum
 necesario copiar estos archivos para usar los valores predeterminados. Para personalizarlos, crear
 un `.env` local no versionado o definir variables en el entorno.
 
+## Despliegue en la nube
+
+La aplicación está desplegada en Google Cloud Platform (región `us-central1`):
+
+| Servicio | URL |
+| --- | --- |
+| Frontend | <https://planazo-prod-frontend-5zx6pudlha-uc.a.run.app> |
+| API | <https://planazo-prod-backend-5zx6pudlha-uc.a.run.app> ([Swagger UI](https://planazo-prod-backend-5zx6pudlha-uc.a.run.app/swagger-ui.html), [healthcheck](https://planazo-prod-backend-5zx6pudlha-uc.a.run.app/healthcheck)) |
+| Keycloak | <https://planazo-prod-keycloak-5zx6pudlha-uc.a.run.app> |
+
+Para usarla alcanza con abrir el frontend y crear una cuenta desde la pantalla de registro.
+
+### Componentes
+
+| Componente | Local (`docker compose`) | Nube |
+| --- | --- | --- |
+| Frontend (Next.js) | Contenedor `frontend` | Cloud Run, escala de 0 a 2 instancias |
+| API (Spring Boot) | Contenedor `backend` | Cloud Run, escala de 0 a 2 instancias |
+| Procesos periódicos | Spring Scheduler dentro del backend | Cloud Scheduler llama a `POST /internal/scheduled/{tarea}` del backend con un token OIDC (clima y cierre de votaciones cada hora, estado de actividades cada 5 minutos) |
+| Identidad | Keycloak + PostgreSQL | Keycloak en Cloud Run + Cloud SQL (PostgreSQL) |
+| Base de datos | MongoDB | MongoDB Atlas (M0) |
+| Imágenes de actividades | MinIO | Bucket privado de Cloud Storage con URLs firmadas |
+| Secretos | `.env` local (no versionado) | Secret Manager |
+| Imágenes de contenedor | Build local | Artifact Registry, etiquetadas con el SHA del commit |
+
+### Portabilidad
+
+- **Las mismas imágenes en todos lados.** Frontend, backend y Keycloak se construyen con los mismos
+  Dockerfiles que usa `docker compose`; en la nube solo cambian las variables de entorno.
+- **Configuración externa.** Todo lo que depende del ambiente (URLs, base de datos, proveedor de
+  almacenamiento, issuer de los JWT, secretos) se inyecta por variables de entorno o Secret Manager.
+  Ningún valor de producción está en el código ni en el repositorio.
+- **Infraestructura como código.** Todos los recursos de GCP y de Atlas están definidos con Terraform
+  en [`terraform/`](terraform/README.md), así que el ambiente completo se puede recrear en otro
+  proyecto o destruir con `terraform destroy`.
+- **Proveedores intercambiables.** El almacenamiento de imágenes (`STORAGE_PROVIDER`: MinIO o GCS) y el
+  proveedor de clima están detrás de interfaces, sin cambios de código entre ambientes.
+
+### Cómo se despliega
+
+- **Infraestructura:** Terraform, con la secuencia de aplicación documentada en
+  [`terraform/README.md`](terraform/README.md). El workflow `terraform-ci.yml` valida los cambios.
+- **Aplicación:** `.github/workflows/deploy.yml` se ejecuta con cada merge a `main` o `develop`,
+  construye en Cloud Build solo los componentes que cambiaron y actualiza sus servicios de Cloud Run.
+  Se autentica con Workload Identity Federation, sin claves de servicio guardadas en GitHub. El
+  detalle está en [`docs/CLOUD_BUILD.md`](docs/CLOUD_BUILD.md).
+- **Configuración de Keycloak en la nube:** el realm se importa solo la primera vez, porque Keycloak
+  persiste en Cloud SQL. Los cambios posteriores (URLs del cliente, idioma, SMTP) se aplican desde la
+  consola de administración o con `kcadm.sh`.
+
+### Límites del ambiente
+
+El despliegue prioriza costo bajo: Cloud Run escala a cero (la primera request después de un rato
+sin uso tarda unos segundos por el arranque en frío), Atlas usa el tier gratuito M0 y Cloud SQL el
+tier `db-f1-micro`. La capacidad medida en este ambiente depende de esos límites y no de la
+aplicación; ver [`docs/LOAD_TEST.md`](docs/LOAD_TEST.md#prueba-contra-gcp).
+
 ## Arquitectura
 
 ```text
@@ -106,14 +163,23 @@ Navegador
   y JWKS antes de obtener la identidad desde `sub`.
 - **Procesamiento periódico:** schedulers configurables controlan clima, cierres de votación,
   finalización de actividades y avisos de inicio. Localmente se ejecutan mediante Spring Scheduler;
-  en GCP los timers del servicio web se desactivan y Cloud Scheduler dispara un Cloud Run Job de una
-  sola instancia, evitando trabajo duplicado entre réplicas web.
+  en GCP los timers del servicio web se desactivan y Cloud Scheduler invoca
+  `POST /internal/scheduled/{tarea}` con un token OIDC de su cuenta de servicio. Cada invocación la
+  atiende una sola instancia, lo que evita trabajo duplicado entre réplicas.
 
 ## Alcance
 
-La Entrega 2 incorpora la UI Next.js, autenticación con Keycloak y persistencia NoSQL en MongoDB.
-Los servicios siguen dependiendo de interfaces de repositorio para mantener desacoplados los casos
-de uso de la tecnología de persistencia.
+- **Entrega 1:** esqueleto de la API con el modelo en memoria, rutas REST documentadas con OpenAPI y
+  ejecución en Docker.
+- **Entrega 2:** UI Next.js, autenticación con Keycloak y persistencia NoSQL en MongoDB. Los servicios
+  siguen dependiendo de interfaces de repositorio para mantener desacoplados los casos de uso de la
+  tecnología de persistencia.
+- **Entrega 3:** despliegue portable en Google Cloud con infraestructura como código (Terraform),
+  despliegue automático desde GitHub Actions, integración continua de backend y frontend y prueba de
+  carga reproducible con Vegeta. Ver [Despliegue en la nube](#despliegue-en-la-nube).
+
+El bot de Telegram (`telegram/`), requerido para la promoción, está en desarrollo y no forma parte
+del alcance de la Entrega 3.
 
 La matriz de trazabilidad entre user stories, implementación y pruebas está disponible en
 [`docs/DELIVERY_1_TRACEABILITY.md`](docs/DELIVERY_1_TRACEABILITY.md). Los casos manuales para
@@ -135,7 +201,9 @@ Keycloak. Se configuran con `SECURITY_JWT_ISSUER_URI`, `SECURITY_JWT_JWK_SET_URI
 `sub`.
 
 El realm de desarrollo no exige verificación de email porque Compose no incluye un servidor SMTP.
-En producción debe configurarse SMTP en Keycloak y volver a habilitar `verifyEmail`.
+En la nube, Keycloak tiene SMTP configurado desde la consola de administración (Realm settings →
+Email), lo que habilita la recuperación de contraseña. Las credenciales SMTP quedan guardadas en la
+base de Keycloak y no se versionan.
 
 ### Cliente de máquina del bot de Telegram
 
@@ -304,9 +372,10 @@ Playwright usa por defecto `alumno/alumno` y `admin/admin` del realm local. Se p
 `E2E_USER_USERNAME`, `E2E_USER_PASSWORD`, `E2E_ADMIN_USERNAME` y `E2E_ADMIN_PASSWORD`; la URL se
 configura con `E2E_BASE_URL`. Estas credenciales son datos de prueba, no cuentas productivas.
 
-El procedimiento de prueba de carga, sus límites y los criterios para registrar resultados están en
-[`docs/LOAD_TEST.md`](docs/LOAD_TEST.md). El escenario usa el proveedor meteorológico en memoria
-para no trasladar la carga a un servicio público externo.
+La prueba de carga se corre con Vegeta mediante `loadtest/run.sh` (escenarios `smoke`, `read` y
+`mixed`, con usuarios autenticados). El procedimiento, los umbrales y cómo registrar los resultados
+están en [`docs/LOAD_TEST.md`](docs/LOAD_TEST.md). Se usa el proveedor meteorológico en memoria para
+no trasladar la carga a un servicio público externo.
 
 ### Integración continua
 
@@ -329,7 +398,24 @@ vez por clonación:
 git config core.hooksPath .githooks
 ```
 
-Si el hook falla, ejecutar `./mvnw spotless:apply` desde `backend/` y volver a agregar los cambios.
+Funciona en Windows (Git Bash, que viene con Git for Windows), macOS y Linux.
+No hace falta definir `JAVA_HOME`: busca un JDK 21 (con `javac`) primero en `JAVA_HOME`, después en
+el Java por defecto del sistema (`archlinux-java` en Arch, `update-alternatives` en Mint/Ubuntu,
+`/usr/libexec/java_home` en macOS) y por último en las rutas habituales (`/usr/lib/jvm`, `~/.jdks`,
+`~/.sdkman`, `/Library/Java/JavaVirtualMachines`, Homebrew y las carpetas de instalación de
+Windows). Si el Java por defecto es otra versión pero hay un JDK 21 instalado, usa ese. Si no
+encuentra ninguno, el commit se cancela con un mensaje.
+
+`.gitattributes` fuerza fin de línea LF en el hook, en `mvnw` y en los `*.sh`. En Windows, un clon
+hecho antes de ese cambio puede tener esos archivos con CRLF; para regenerarlos, desde la raíz:
+
+```bash
+rm .githooks/pre-commit backend/mvnw keycloak/configure-local.sh loadtest/run.sh
+git checkout -- .githooks/pre-commit backend/mvnw keycloak/configure-local.sh loadtest/run.sh
+```
+
+Si el hook falla por formato, ejecutar `./mvnw spotless:apply` desde `backend/` y volver a agregar
+los cambios.
 
 ## Git flow
 
@@ -342,7 +428,7 @@ desde sus interfaces web y CLIs integradas al repositorio, como herramientas de 
 disponibles variaron durante el proyecto; no se incorporó una dependencia de IA al producto ni se
 enviaron secretos deliberadamente a los asistentes. Su uso se concentró en las siguientes tareas:
 
-- Generación y adaptación de código repetitivo o *boilerplate*.
+- Generación y adaptación de código repetitivo o _boilerplate_.
 - Propuesta de casos de prueba y revisión de la cobertura de tests.
 - Revisión de las user stories para detectar requisitos, casos límite o validaciones que pudieran
   haberse omitido.
@@ -355,6 +441,9 @@ enviaron secretos deliberadamente a los asistentes. Su uso se concentró en las 
 - Modelado de Interfaz de Usuario.
 - Integración del frontend con la API, autenticación con Keycloak, resolución de conflictos de
   merge y revisión de consistencia de la Entrega 2.
+- En la Entrega 3: revisión de la infraestructura en Terraform y de los workflows de CI/CD,
+  diagnóstico de problemas de despliegue y de configuración de Keycloak (SMTP, redirecciones),
+  diseño del script de prueba de carga y revisión de las correcciones de la entrega anterior.
 
 Las respuestas de estas herramientas se tomaron como sugerencias y no como resultados definitivos.
 El equipo revisó las propuestas, las adaptó al diseño y las convenciones del proyecto, y validó los
@@ -374,41 +463,43 @@ asistentes compatibles leen las mismas reglas sin duplicarlas.
 
 ## Trazabilidad de requisitos no funcionales
 
-| Requisito del enunciado | Implementación y documentación |
-| --- | --- |
-| SCM | Repositorio Git; flujo de ramas documentado en [Git flow](#git-flow). |
-| Métodos no triviales documentados | Javadoc exigido por las convenciones de [`AGENTS.md`](AGENTS.md) y revisado junto con cada cambio. |
-| Ejecución portable y contenerizada | Dockerfiles de frontend/backend y un único `docker compose up --build --wait`. |
-| Aplicación, DB y red en Compose | `docker-compose.yaml` define frontend, backend, MongoDB, MinIO, Keycloak, volúmenes, red y healthchecks. |
-| Seguridad y secretos | Keycloak, OAuth2/JWT, PKCE, roles y política detallada en [Seguridad y secretos](#seguridad-y-secretos). |
-| Clima desacoplado y testeable | `IWeatherAdapter`, adapter en memoria y pruebas sin proveedor externo. |
-| Uso responsable de proveedores | Caché, límites, timeout, retry, circuit breaker y degradación controlada descritos en [Servicio meteorológico](#servicio-meteorológico). |
-| API documentada | OpenAPI, Swagger UI y casos manuales enlazados en [API y autenticación](#api-y-autenticación). |
-| Calidad y tests | Maven, Vitest, Testing Library y Playwright documentados en [Calidad de código](#calidad-de-código). |
-| Load test | Escenario y protocolo reproducible en [`docs/LOAD_TEST.md`](docs/LOAD_TEST.md). |
-| Frontend amigable con framework CSS | Next.js responsive con Tailwind CSS v4 y componentes shadcn/ui. |
-| Uso de IA | Herramientas, tareas, criterio y ejemplos documentados en [Uso de inteligencia artificial](#uso-de-inteligencia-artificial). |
-## Activity images
+| Requisito del enunciado             | Implementación y documentación                                                                                                           |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| SCM                                 | Repositorio Git; flujo de ramas documentado en [Git flow](#git-flow).                                                                    |
+| Métodos no triviales documentados   | Javadoc exigido por las convenciones de [`AGENTS.md`](AGENTS.md) y revisado junto con cada cambio.                                       |
+| Ejecución portable y contenerizada  | Dockerfiles de frontend/backend y un único `docker compose up --build --wait`.                                                           |
+| Despliegue en la nube portable      | Cloud Run, Atlas y Cloud SQL con las mismas imágenes, Terraform y despliegue automático; ver [Despliegue en la nube](#despliegue-en-la-nube). |
+| Aplicación, DB y red en Compose     | `docker-compose.yaml` define frontend, backend, MongoDB, MinIO, Keycloak, volúmenes, red y healthchecks.                                 |
+| Seguridad y secretos                | Keycloak, OAuth2/JWT, PKCE, roles y política detallada en [Seguridad y secretos](#seguridad-y-secretos).                                 |
+| Clima desacoplado y testeable       | `IWeatherAdapter`, adapter en memoria y pruebas sin proveedor externo.                                                                   |
+| Uso responsable de proveedores      | Caché, límites, timeout, retry, circuit breaker y degradación controlada descritos en [Servicio meteorológico](#servicio-meteorológico). |
+| API documentada                     | OpenAPI, Swagger UI y casos manuales enlazados en [API y autenticación](#api-y-autenticación).                                           |
+| Calidad y tests                     | Maven, Vitest, Testing Library y Playwright documentados en [Calidad de código](#calidad-de-código), con CI en GitHub Actions.           |
+| Load test                           | Vegeta con `loadtest/run.sh`, escenarios autenticados y umbrales en [`docs/LOAD_TEST.md`](docs/LOAD_TEST.md).                            |
+| Frontend amigable con framework CSS | Next.js responsive con Tailwind CSS v4 y componentes shadcn/ui.                                                                          |
+| Uso de IA                           | Herramientas, tareas, criterio y ejemplos documentados en [Uso de inteligencia artificial](#uso-de-inteligencia-artificial).             |
 
-Local development uses the private MinIO bucket started by `docker compose up --build`.
-The S3 API is available at `http://localhost:9000` and the administration console at
-`http://localhost:9001`. The default local credentials are `minioadmin` / `minioadmin` and can be
-overridden with `MINIO_ACCESS_KEY` and `MINIO_SECRET_KEY`.
-Presigned URLs use `MINIO_PUBLIC_ENDPOINT`, which defaults to `http://localhost:9000` in Docker
-Compose so browsers outside the Docker network can resolve them.
-Running only Maven defaults to `STORAGE_PROVIDER=none`; JSON activity creation remains available,
-but image uploads require MinIO, GCS, or another configured provider.
+## Imágenes de actividades
 
-Create every activity by sending `multipart/form-data` to `POST /activities` with:
+En local se usa el bucket privado de MinIO que levanta `docker compose up --build`. La API S3 queda
+en `http://localhost:9000` y la consola de administración en `http://localhost:9001`. Las
+credenciales locales por defecto son `minioadmin` / `minioadmin` y se pueden cambiar con
+`MINIO_ACCESS_KEY` y `MINIO_SECRET_KEY`. Las URLs firmadas usan `MINIO_PUBLIC_ENDPOINT`, que en
+Compose vale `http://localhost:9000` para que el navegador, fuera de la red de Docker, pueda
+resolverlas. Si se corre solo con Maven, el valor por defecto es `STORAGE_PROVIDER=none`: se pueden
+crear actividades sin imágenes, pero subirlas requiere MinIO, GCS u otro proveedor configurado.
 
-- `activity`: the activity JSON with content type `application/json`.
-- `images`: zero to five repeated JPEG, PNG, or WebP file parts, up to 5 MiB each.
+Toda actividad se crea enviando `multipart/form-data` a `POST /activities` con:
 
-For an activity without images, omit the `images` parts and send only `activity`.
+- `activity`: el JSON de la actividad, con content type `application/json`.
+- `images`: de cero a cinco partes de archivo JPEG, PNG o WebP, de hasta 5 MiB cada una.
 
-Responses expose temporary `imageUrls`; only stable object keys are stored in the activity.
+Para una actividad sin imágenes se omiten las partes `images` y se envía solo `activity`.
 
-Production on GCP should set `STORAGE_PROVIDER=gcs` and `STORAGE_BUCKET=<bucket-name>`. The
-application uses Google Application Default Credentials, so Cloud Run should be assigned a service
-account with object create, read, delete, and URL-signing permissions instead of mounting a JSON
-service-account key.
+Las respuestas exponen `imageUrls` temporales; en la actividad solo se guardan las claves estables
+de los objetos.
+
+En GCP se usa `STORAGE_PROVIDER=gcs` y `STORAGE_BUCKET=<nombre-del-bucket>`. La aplicación usa las
+Application Default Credentials de Google, así que el servicio de Cloud Run corre con una cuenta de
+servicio con permisos para crear, leer, borrar y firmar URLs de objetos, en lugar de montar una
+clave JSON.

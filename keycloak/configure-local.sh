@@ -113,3 +113,51 @@ bot_role_id=$("$KCADM" get "roles/$BOT_ROLE" -r "$REALM" --fields id --format cs
 "$KCADM" create "clients/$bot_client_uuid/scope-mappings/realm" -r "$REALM" \
   -b "[{\"id\":\"$bot_role_id\",\"name\":\"$BOT_ROLE\"}]"
 
+# Load test support (local only): a public client with the password grant enabled so
+# loadtest/run.sh can obtain tokens without a browser, plus dedicated users. This is kept out of
+# keycloak-import/realm-export.json on purpose so the password grant never reaches cloud realms.
+LOADTEST_CLIENT_ID=planazo-loadtest
+LOADTEST_USERS="${LOADTEST_USERS:-10}"
+
+loadtest_client_id=$("$KCADM" get clients -r "$REALM" -q "clientId=$LOADTEST_CLIENT_ID" --fields id --format csv --noquotes)
+if [ -z "$loadtest_client_id" ]; then
+  "$KCADM" create clients -r "$REALM" \
+    -s "clientId=$LOADTEST_CLIENT_ID" \
+    -s enabled=true \
+    -s publicClient=true \
+    -s standardFlowEnabled=false \
+    -s directAccessGrantsEnabled=true
+  loadtest_client_id=$("$KCADM" get clients -r "$REALM" -q "clientId=$LOADTEST_CLIENT_ID" --fields id --format csv --noquotes)
+fi
+
+# The realm has no default client scopes, so assign the frontend's ones explicitly; "basic"
+# provides the sub claim and "roles" the realm roles. Assigning an already assigned scope is a no-op.
+# The Keycloak image has no awk, so the id,name CSV is parsed with read.
+"$KCADM" get client-scopes -r "$REALM" --fields id,name --format csv --noquotes |
+  while IFS=, read -r scope_id scope_name; do
+    case "$scope_name" in
+      basic | profile | email | roles | web-origins | acr)
+        "$KCADM" update "clients/$loadtest_client_id/default-client-scopes/$scope_id" -r "$REALM"
+        ;;
+    esac
+  done
+
+# The backend only accepts tokens whose audience includes solnotfoundBackend.
+if ! "$KCADM" get "clients/$loadtest_client_id/protocol-mappers/models" -r "$REALM" --fields name --format csv --noquotes | grep -qx 'backend audience'; then
+  "$KCADM" create "clients/$loadtest_client_id/protocol-mappers/models" -r "$REALM" \
+    -s 'name=backend audience' \
+    -s protocol=openid-connect \
+    -s protocolMapper=oidc-audience-mapper \
+    -s 'config."included.client.audience"=solnotfoundBackend' \
+    -s 'config."access.token.claim"=true' \
+    -s 'config."id.token.claim"=false'
+fi
+
+i=1
+while [ "$i" -le "$LOADTEST_USERS" ]; do
+  username=$(printf 'loadtest%02d' "$i")
+  ensure_user "$username" "$username" "$username@planazo.local"
+  "$KCADM" update "users/$("$KCADM" get users -r "$REALM" -q "username=$username" -q exact=true --fields id --format csv --noquotes)" \
+    -r "$REALM" -s firstName=Load -s "lastName=Test $i" -s 'requiredActions=[]'
+  i=$((i + 1))
+done
