@@ -294,7 +294,7 @@ export function StatisticsPage() {
           >
             <div className="flex items-center gap-2 mb-1">
               <CloudSun className="emoji-3d size-5" style={{ color: "var(--sky-ink)" }} />
-              <h2 className="font-display font-black text-base" style={{ color: "var(--sky-ink)" }}>Open-Meteo</h2>
+              <h2 className="font-display font-black text-base" style={{ color: "var(--sky-ink)" }}>Servicio de pronóstico</h2>
             </div>
             <p className="text-[10.5px] font-extrabold mb-3.5" style={{ color: "var(--sky-ink)", opacity: 0.75 }}>Proveedor de clima</p>
             <dl className="flex flex-wrap gap-3.5">

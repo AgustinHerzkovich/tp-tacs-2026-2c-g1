@@ -35,8 +35,8 @@ planazo-prod-atlas-uri
 ```
 
 5. Build and push Keycloak, set `keycloak_image`, then run `plan` and `apply` again.
-6. Build and push the backend, set `backend_image`, then apply again. This also creates the Cloud Run
-   Job and Cloud Scheduler triggers.
+6. Build and push the backend, set `backend_image`, then apply again. This also creates the Cloud
+   Scheduler triggers.
 7. Build the frontend with `NEXT_PUBLIC_KEYCLOAK_URL` set to the `keycloak_url` output, set
    `frontend_image`, and apply again.
 8. Update the `solnotfoundFrontend` Keycloak client with the final frontend origin, redirect URI, web
@@ -60,6 +60,7 @@ GCP projects remain.
 
 - Cloud Run has no static egress by default, so Atlas uses `0.0.0.0/0`. Authentication remains
   mandatory; a long-lived environment should use static egress and a narrow access list.
-- Timers are disabled in the web service. Cloud Scheduler invokes a finite Cloud Run Job for weather,
-  activity status, and votation closing.
+- Timers are disabled in the web service. Cloud Scheduler calls the backend's
+  `POST /internal/scheduled/{weather|activity-status|votations}` with an OIDC token of its service
+  account; each call is served by a single instance, so replicas never duplicate the work.
 - The imported Keycloak realm contains development settings. Rotate credentials before public use.

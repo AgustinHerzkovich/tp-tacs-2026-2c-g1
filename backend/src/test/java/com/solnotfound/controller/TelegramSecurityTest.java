@@ -18,7 +18,13 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-@SpringBootTest(properties = "telegram.api-token=test-telegram-token")
+// Runs without MongoDB (also in the Docker image build), so the startup index creation, which needs
+// a live server, is disabled like in StatisticsSecurityTest.
+@SpringBootTest(
+    properties = {
+      "telegram.api-token=test-telegram-token",
+      "spring.data.mongodb.auto-index-creation=false"
+    })
 @AutoConfigureMockMvc
 class TelegramSecurityTest {
 

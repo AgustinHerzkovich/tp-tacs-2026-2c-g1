@@ -90,7 +90,7 @@ describe("StatisticsPage range filtering", () => {
     expect(screen.getByText("Reprogramadas")).toBeInTheDocument();
     expect(screen.getByText("Canceladas")).toBeInTheDocument();
     expect(screen.getByText("Suspendidas por clima")).toBeInTheDocument();
-    expect(screen.getByText("Open-Meteo")).toBeInTheDocument();
+    expect(screen.getByText("Servicio de pronóstico")).toBeInTheDocument();
     expect(screen.getByText(/95% de éxito/)).toBeInTheDocument();
     expect(screen.getByText(/Período:/)).toBeInTheDocument();
 
