@@ -12,6 +12,7 @@ import com.solnotfound.entity.activity.Location;
 import com.solnotfound.entity.activity.ReprogramationRange;
 import com.solnotfound.entity.notification.Notification;
 import com.solnotfound.entity.notification.StartingSoonNotificationType;
+import com.solnotfound.entity.user.TelegramLinkCode;
 import com.solnotfound.entity.user.User;
 import com.solnotfound.entity.votation.Votation;
 import com.solnotfound.entity.votation.VotationOption;
@@ -19,6 +20,7 @@ import com.solnotfound.entity.votation.VotationStatus;
 import com.solnotfound.entity.weather.MaxRainProbabilityCondition;
 import com.solnotfound.entity.weather.MaxWindCondition;
 import com.solnotfound.entity.weather.TemperatureRangeCondition;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
@@ -226,6 +228,18 @@ class MongoPersistenceTest {
                 .search(activityIds, new VotationFilterDTO(null, null, false), "participant", page)
                 .getContent())
         .isEmpty();
+  }
+
+  @Test
+  void redeemsTelegramLinkCodesOnceAndNeverAfterTheyExpire() {
+    TelegramLinkCodeRepository linkCodes = new TelegramLinkCodeRepository(mongoTemplate);
+    Instant now = Instant.parse("2026-09-29T12:00:00Z");
+    linkCodes.save(new TelegramLinkCode("valid-hash", 123L, now.plusSeconds(600)));
+    linkCodes.save(new TelegramLinkCode("expired-hash", 456L, now.minusSeconds(1)));
+
+    assertThat(linkCodes.consume("valid-hash", now)).map(TelegramLinkCode::chatId).contains(123L);
+    assertThat(linkCodes.consume("valid-hash", now)).isEmpty();
+    assertThat(linkCodes.consume("expired-hash", now)).isEmpty();
   }
 
   private Activity activity(User organizer, User participant) {

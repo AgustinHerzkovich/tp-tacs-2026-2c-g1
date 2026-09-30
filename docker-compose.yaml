@@ -54,6 +54,7 @@ services:
       APP_DEV_SEED_ENABLED: ${APP_DEV_SEED_ENABLED:-false}
       APP_DEV_SEED_USER_ID: ${APP_DEV_SEED_USER_ID:-}
       TELEGRAM_API_TOKEN: ${TELEGRAM_API_TOKEN:-}
+      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-local-webhook-secret}
     depends_on:
       minio:
         condition: service_healthy

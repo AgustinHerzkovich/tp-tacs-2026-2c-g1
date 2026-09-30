@@ -18,11 +18,18 @@ fi
 : "${KEYCLOAK_TELEGRAM_BOT_CLIENT_ID:?Falta KEYCLOAK_TELEGRAM_BOT_CLIENT_ID}"
 : "${KEYCLOAK_TELEGRAM_BOT_CLIENT_SECRET:?Falta KEYCLOAK_TELEGRAM_BOT_CLIENT_SECRET}"
 : "${BACKEND_URL:?Falta BACKEND_URL (URL publica del backend)}"
+: "${FRONTEND_URL:?Falta FRONTEND_URL (URL publica del frontend, se usa en el link de vinculacion)}"
 GCP_REGION="${GCP_REGION:-us-central1}"
 FUNCTION_NAME="${FUNCTION_NAME:-telegram-webhook}"
 SECRET_NAME="${SECRET_NAME:-telegram-bot-token}"
 CLIENT_SECRET_NAME="${CLIENT_SECRET_NAME:-telegram-bot-keycloak-client-secret}"
-API_TOKEN_SECRET_NAME="${API_TOKEN_SECRET_NAME:-telegram-bot-api-token}"
+# Lo crea Terraform (terraform/secrets.tf) y lo lee tambien el backend, asi ambos usan el mismo valor.
+API_TOKEN_SECRET_NAME="${API_TOKEN_SECRET_NAME:-planazo-prod-telegram-api-token}"
+WEBHOOK_SECRET_NAME="${WEBHOOK_SECRET_NAME:-telegram-bot-webhook-secret}"
+# Telegram lo manda en cada update (X-Telegram-Bot-Api-Secret-Token) y la funcion rechaza los que no
+# lo traen. Si no se define, se genera uno nuevo en cada deploy: se actualizan juntos la funcion y el
+# webhook, asi que no hace falta guardarlo en ningun lado.
+TELEGRAM_WEBHOOK_SECRET="${TELEGRAM_WEBHOOK_SECRET:-$(openssl rand -hex 32)}"
 
 echo "==> Proyecto: $GCP_PROJECT_ID | Region: $GCP_REGION | Funcion: $FUNCTION_NAME"
 
@@ -54,11 +61,12 @@ echo "==> Sincronizando secrets del bot en Secret Manager"
 sync_secret "$SECRET_NAME" "$TELEGRAM_BOT_TOKEN"
 sync_secret "$CLIENT_SECRET_NAME" "$KEYCLOAK_TELEGRAM_BOT_CLIENT_SECRET"
 sync_secret "$API_TOKEN_SECRET_NAME" "$TELEGRAM_API_TOKEN"
+sync_secret "$WEBHOOK_SECRET_NAME" "$TELEGRAM_WEBHOOK_SECRET"
 
 echo "==> Dando permiso al service account de Cloud Functions para leer los secrets"
 PROJECT_NUMBER=$(gcloud projects describe "$GCP_PROJECT_ID" --format='value(projectNumber)')
 RUNTIME_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
-for secret in "$SECRET_NAME" "$CLIENT_SECRET_NAME" "$API_TOKEN_SECRET_NAME"; do
+for secret in "$SECRET_NAME" "$CLIENT_SECRET_NAME" "$API_TOKEN_SECRET_NAME" "$WEBHOOK_SECRET_NAME"; do
   gcloud secrets add-iam-policy-binding "$secret" \
     --project "$GCP_PROJECT_ID" \
     --member="serviceAccount:${RUNTIME_SA}" \
@@ -75,8 +83,8 @@ gcloud functions deploy "$FUNCTION_NAME" \
   --entry-point=webhook \
   --trigger-http \
   --allow-unauthenticated \
-  --set-env-vars="BACKEND_URL=${BACKEND_URL},KEYCLOAK_URL=${KEYCLOAK_URL},KEYCLOAK_REALM=${KEYCLOAK_REALM},KEYCLOAK_TELEGRAM_BOT_CLIENT_ID=${KEYCLOAK_TELEGRAM_BOT_CLIENT_ID}" \
-  --set-secrets="TELEGRAM_BOT_TOKEN=${SECRET_NAME}:latest,KEYCLOAK_TELEGRAM_BOT_CLIENT_SECRET=${CLIENT_SECRET_NAME}:latest,TELEGRAM_API_TOKEN=${API_TOKEN_SECRET_NAME}:latest"
+  --set-env-vars="BACKEND_URL=${BACKEND_URL},FRONTEND_URL=${FRONTEND_URL},KEYCLOAK_URL=${KEYCLOAK_URL},KEYCLOAK_REALM=${KEYCLOAK_REALM},KEYCLOAK_TELEGRAM_BOT_CLIENT_ID=${KEYCLOAK_TELEGRAM_BOT_CLIENT_ID}" \
+  --set-secrets="TELEGRAM_BOT_TOKEN=${SECRET_NAME}:latest,KEYCLOAK_TELEGRAM_BOT_CLIENT_SECRET=${CLIENT_SECRET_NAME}:latest,TELEGRAM_API_TOKEN=${API_TOKEN_SECRET_NAME}:latest,TELEGRAM_WEBHOOK_SECRET=${WEBHOOK_SECRET_NAME}:latest"
 
 FUNCTION_URL=$(gcloud functions describe "$FUNCTION_NAME" \
   --gen2 --region="$GCP_REGION" --project="$GCP_PROJECT_ID" \
@@ -86,7 +94,8 @@ echo "==> Funcion deployada en: $FUNCTION_URL"
 
 echo "==> Registrando el webhook en Telegram"
 curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
-  -d "url=${FUNCTION_URL}"
+  --data-urlencode "url=${FUNCTION_URL}" \
+  --data-urlencode "secret_token=${TELEGRAM_WEBHOOK_SECRET}"
 
 echo
 echo "==> Listo."

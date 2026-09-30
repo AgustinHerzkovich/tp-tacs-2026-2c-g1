@@ -149,6 +149,12 @@ public class GlobalExceptionHandler {
     return respond(HttpStatus.CONFLICT, "Invalid activity status transition", exception);
   }
 
+  @ExceptionHandler(InvalidTelegramLinkCodeException.class)
+  public ResponseEntity<ProblemDetail> handleInvalidTelegramLinkCode(
+      InvalidTelegramLinkCodeException exception) {
+    return respond(HttpStatus.BAD_REQUEST, "Invalid Telegram link code", exception);
+  }
+
   private ResponseEntity<ProblemDetail> respond(
       HttpStatus status, String title, CodedException exception) {
     ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, exception.getMessage());

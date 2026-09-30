@@ -106,8 +106,8 @@ export const api = {
     markRead: (id: string) => request<void>(`/notifications/${id}/read`, { method: "PATCH" }),
   },
   users: {
-    /** Links the Telegram chat that opened the login link to the current user. */
-    linkTelegram: (chatId: number) => request<UserDTO>("/users/me/telegram", json("PUT", { chatId })),
+    /** Redeems the bot's single-use link code, linking its Telegram chat to the current user. */
+    linkTelegram: (code: string) => request<UserDTO>("/users/me/telegram", json("PUT", { code })),
   },
   statistics: {
     get: (params?: { from?: string; to?: string }) =>
