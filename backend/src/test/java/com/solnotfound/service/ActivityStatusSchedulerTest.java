@@ -55,6 +55,30 @@ class ActivityStatusSchedulerTest {
   }
 
   @Test
+  void leavesProposedActivityForItsVotationEvenIfItsDateHasPassed() {
+    Activity activity = activityAt(LocalDateTime.now().minusMinutes(1));
+    activity.setStatus(ActivityStatus.PROPOSED);
+    when(activityRepository.findActive()).thenReturn(List.of(activity));
+
+    scheduler.finishPastActivities();
+
+    assertThat(activity.getStatus()).isEqualTo(ActivityStatus.PROPOSED);
+    verify(activityRepository, never()).save(any());
+  }
+
+  @Test
+  void doesNotSendStartingSoonNoticeForProposedActivity() {
+    Activity activity = activityAt(LocalDateTime.now().plusMinutes(60));
+    activity.setStatus(ActivityStatus.PROPOSED);
+    when(activityRepository.findActive()).thenReturn(List.of(activity));
+
+    scheduler.finishPastActivities();
+
+    verify(eventPublisher, never()).publishEvent(any());
+    assertThat(activity.wasStartingSoonNotificationSent()).isFalse();
+  }
+
+  @Test
   void notifiesOnceWhenActivityIsInsideThreshold() {
     Activity activity = activityAt(LocalDateTime.now().plusMinutes(60));
     when(activityRepository.findActive()).thenReturn(List.of(activity));

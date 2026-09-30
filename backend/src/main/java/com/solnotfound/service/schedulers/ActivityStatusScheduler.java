@@ -55,6 +55,9 @@ public class ActivityStatusScheduler {
     log.info("Activity status check started: activeActivities={}", activeActivities.size());
 
     for (Activity activity : activeActivities) {
+      if (activity.getStatus() == ActivityStatus.PROPOSED) {
+        continue;
+      }
       try {
         if (activity.getDateTime().isBefore(now)) {
           transitionService.transition(
