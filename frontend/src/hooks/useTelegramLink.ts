@@ -1,46 +1,48 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { api } from "@/lib/api";
+import { useCallback, useState } from "react";
+import { api, ApiError } from "@/lib/api";
 
 export type TelegramLinkStatus = "idle" | "linking" | "linked" | "error";
 
 export interface UseTelegramLink {
   status: TelegramLinkStatus;
-  retry: () => void;
+  /** User-facing message of the last failure, or null. */
+  error: string | null;
+  /** False when the code itself was rejected (expired or already used): retrying cannot work,
+   * the user has to ask the bot for a new link. */
+  canRetry: boolean;
+  /** Links the chat of the code to the signed-in user. Only call it after the user confirms. */
+  link: () => void;
 }
 
-/** Parses the `cid` query param of the Telegram login link; null unless it is an integer chat id. */
-export function parseTelegramChatId(value: string | null | undefined): number | null {
-  if (!value || !/^-?\d+$/.test(value)) return null;
-  const chatId = Number(value);
-  return Number.isSafeInteger(chatId) ? chatId : null;
+/** Parses the `code` query param of the bot's login link: the single-use code issued by the
+ * backend (URL-safe base64). Returns null for anything else, such as the old `cid` links. */
+export function parseTelegramLinkCode(value: string | null | undefined): string | null {
+  return value && /^[A-Za-z0-9_-]{20,128}$/.test(value) ? value : null;
 }
 
-/** Links the Telegram chat from the bot's login link to the signed-in user, via
- * PUT /api/users/me/telegram. It runs once, as soon as `enabled` (the user is
- * authenticated) and there is a valid chat id; `retry` runs it again after an
- * error. The ref guard keeps React's double-invoked effects from sending two requests. */
-export function useTelegramLink(chatId: number | null, enabled: boolean): UseTelegramLink {
+/** Redeems the bot's single-use link code for the signed-in user, via PUT /api/users/me/telegram.
+ * Nothing happens until `link` is called: the page asks the user to confirm first, so opening a
+ * link someone else sent never links an account silently. */
+export function useTelegramLink(code: string | null): UseTelegramLink {
   const [status, setStatus] = useState<TelegramLinkStatus>("idle");
-  const started = useRef(false);
+  const [error, setError] = useState<string | null>(null);
+  const [canRetry, setCanRetry] = useState(true);
 
-  const link = useCallback(async () => {
-    if (chatId === null) return;
+  const link = useCallback(() => {
+    if (code === null || status === "linking" || status === "linked") return;
     setStatus("linking");
-    try {
-      await api.users.linkTelegram(chatId);
-      setStatus("linked");
-    } catch {
-      setStatus("error");
-    }
-  }, [chatId]);
+    setError(null);
+    api.users
+      .linkTelegram(code)
+      .then(() => setStatus("linked"))
+      .catch((err: unknown) => {
+        setStatus("error");
+        setError(err instanceof Error ? err.message : "No pudimos vincular tu cuenta con Telegram.");
+        setCanRetry(!(err instanceof ApiError && err.code === "TELEGRAM_LINK_CODE_INVALID"));
+      });
+  }, [code, status]);
 
-  useEffect(() => {
-    if (!enabled || chatId === null || started.current) return;
-    started.current = true;
-    void link();
-  }, [enabled, chatId, link]);
-
-  return { status, retry: () => void link() };
+  return { status, error, canRetry, link };
 }

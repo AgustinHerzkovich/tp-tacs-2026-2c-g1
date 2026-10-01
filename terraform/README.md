@@ -32,7 +32,14 @@ terraform apply "base.tfplan"
 planazo-prod-keycloak-db-password
 planazo-prod-keycloak-admin-password
 planazo-prod-atlas-uri
+planazo-prod-telegram-api-token
 ```
+
+`planazo-prod-telegram-api-token` is shared by the backend (`TELEGRAM_API_TOKEN`) and the Telegram
+bot function (`telegram/scripts/deploy.sh`). Cloud Run refuses to start a revision whose secret has no
+version, so when adding it to an existing deployment, create the secret first
+(`terraform apply -target='google_secret_manager_secret.application'`), add its version, and then run
+the full apply.
 
 5. Build and push Keycloak, set `keycloak_image`, then run `plan` and `apply` again.
 6. Build and push the backend, set `backend_image`, then apply again. This also creates the Cloud

@@ -13,3 +13,6 @@ export const telegramBotClientSecret = process.env.KEYCLOAK_TELEGRAM_BOT_CLIENT_
 export const telegramApiToken = process.env.TELEGRAM_API_TOKEN ?? "";
 
 export const frontendClient = (process.env.FRONTEND_URL ?? "http://localhost:3000").replace(/\/+$/, "");
+
+/** Secret registered with setWebhook (secret_token); Telegram echoes it on every update. */
+export const telegramWebhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET ?? "";

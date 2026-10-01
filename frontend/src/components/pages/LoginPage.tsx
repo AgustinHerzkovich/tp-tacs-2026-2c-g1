@@ -4,7 +4,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
-import { parseTelegramChatId, useTelegramLink, type TelegramLinkStatus } from "@/hooks/useTelegramLink";
+import { parseTelegramLinkCode, useTelegramLink, type UseTelegramLink } from "@/hooks/useTelegramLink";
 
 const noopSubscribe = () => () => {};
 
@@ -24,18 +24,24 @@ export function LoginPage() {
   const searchParams = useSearchParams();
   const requestedRoute = searchParams?.get("returnTo");
   const returnTo = requestedRoute?.startsWith("/") ? requestedRoute : "/mis-actividades";
-  const telegramChatId = searchParams?.get("t") === "true" ? parseTelegramChatId(searchParams.get("cid")) : null;
-  const fromTelegram = telegramChatId !== null;
-  const { initialized, isAuthenticated, login } = useAuth();
+  const telegramCode = searchParams?.get("t") === "true" ? parseTelegramLinkCode(searchParams.get("code")) : null;
+  const fromTelegram = telegramCode !== null;
+  const { initialized, isAuthenticated, login, user } = useAuth();
   const ready = useHasMounted() && initialized;
-  const telegramLink = useTelegramLink(telegramChatId, isAuthenticated);
+  const telegramLink = useTelegramLink(telegramCode);
 
   useEffect(() => {
     if (isAuthenticated && !fromTelegram) router.replace(returnTo);
   }, [isAuthenticated, fromTelegram, returnTo, router]);
 
   if (fromTelegram && isAuthenticated) {
-    return <TelegramLinkResult status={telegramLink.status} retry={telegramLink.retry} onContinueHere={() => router.replace("/")} />;
+    return (
+      <TelegramLinkFlow
+        telegramLink={telegramLink}
+        accountName={user?.name ?? null}
+        onLeave={() => router.replace("/")}
+      />
+    );
   }
 
   return (
@@ -66,32 +72,36 @@ export function LoginPage() {
   );
 }
 
-const TELEGRAM_LINK_MESSAGES: Record<TelegramLinkStatus, { title: string; detail: string }> = {
-  idle: { title: "Vinculando tu cuenta...", detail: "Esperá un momento." },
-  linking: { title: "Vinculando tu cuenta...", detail: "Esperá un momento." },
-  linked: { title: "¡Listo! Te logueaste correctamente.", detail: "Tu cuenta quedó vinculada con Telegram. ¿Cómo querés seguir?" },
-  error: { title: "No pudimos vincular tu cuenta con Telegram.", detail: "Probá de nuevo en un rato." },
-};
-
 const BACK_TO_TELEGRAM_MESSAGE = {
   title: "Ya podés volver a Telegram",
   detail: "Volvé al chat del bot y mandá /start. Podés cerrar esta pestaña.",
 };
 
-/** Outcome of linking the Telegram chat. Once linked, the user picks whether to
- * keep using the web app (goes to the home page) or go back to the bot. */
-function TelegramLinkResult({
-  status,
-  retry,
-  onContinueHere,
+/** Telegram linking for a signed-in user who opened the bot's login link. Nothing is linked until
+ * the user confirms: a link sent by someone else must not attach this account to their chat.
+ * Once linked, the user picks whether to keep using the web app or go back to the bot. */
+function TelegramLinkFlow({
+  telegramLink,
+  accountName,
+  onLeave,
 }: {
-  status: TelegramLinkStatus;
-  retry: () => void;
-  onContinueHere: () => void;
+  telegramLink: UseTelegramLink;
+  accountName: string | null;
+  onLeave: () => void;
 }) {
   const [backToTelegram, setBackToTelegram] = useState(false);
-  const { title, detail } = backToTelegram ? BACK_TO_TELEGRAM_MESSAGE : TELEGRAM_LINK_MESSAGES[status];
-  const pending = status === "idle" || status === "linking";
+  const { status, error, canRetry, link } = telegramLink;
+
+  const { title, detail } = backToTelegram
+    ? BACK_TO_TELEGRAM_MESSAGE
+    : status === "linked"
+      ? { title: "¡Listo! Tu cuenta quedó vinculada.", detail: "¿Cómo querés seguir?" }
+      : status === "error"
+        ? { title: "No pudimos vincular tu cuenta con Telegram.", detail: error ?? "Probá de nuevo en un rato." }
+        : {
+            title: "¿Vincular tu cuenta con Telegram?",
+            detail: `${accountName ? `Vas a vincular la cuenta de ${accountName}` : "Vas a vincular tu cuenta"} con el chat del bot que te mandó este link. Confirmá solo si lo pediste vos desde Telegram.`,
+          };
 
   return (
     <div className="fade-in min-h-screen flex flex-col justify-center px-6 py-10 lg:max-w-xl lg:mx-auto lg:w-full text-center">
@@ -101,25 +111,37 @@ function TelegramLinkResult({
           {detail}
         </p>
       </div>
+      {(status === "idle" || status === "linking") && (
+        <div className="flex flex-col gap-3">
+          <Button size="xl" disabled={status === "linking"} onClick={link}>
+            {status === "linking" ? "Vinculando..." : "Vincular"}
+          </Button>
+          <Button size="xl" variant="outline" disabled={status === "linking"} onClick={onLeave}>
+            Cancelar
+          </Button>
+        </div>
+      )}
       {status === "error" && (
-        <Button size="xl" onClick={retry}>
-          Reintentar
-        </Button>
+        <div className="flex flex-col gap-3">
+          {canRetry && (
+            <Button size="xl" onClick={link}>
+              Reintentar
+            </Button>
+          )}
+          <Button size="xl" variant="outline" onClick={onLeave}>
+            Ir al inicio
+          </Button>
+        </div>
       )}
       {status === "linked" && !backToTelegram && (
         <div className="flex flex-col gap-3">
-          <Button size="xl" onClick={onContinueHere}>
+          <Button size="xl" onClick={onLeave}>
             Seguir en la página
           </Button>
           <Button size="xl" variant="outline" onClick={() => setBackToTelegram(true)}>
             Seguir desde Telegram
           </Button>
         </div>
-      )}
-      {pending && (
-        <Button size="xl" disabled>
-          Vinculando...
-        </Button>
       )}
     </div>
   );

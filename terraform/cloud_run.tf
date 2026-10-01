@@ -187,12 +187,22 @@ resource "google_cloud_run_v2_service" "backend" {
           }
         }
       }
+      env {
+        name = "TELEGRAM_API_TOKEN"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.application["${local.name}-telegram-api-token"].secret_id
+            version = "latest"
+          }
+        }
+      }
     }
   }
 
   depends_on = [
     google_project_service.required,
     google_secret_manager_secret_iam_member.backend_atlas,
+    google_secret_manager_secret_iam_member.backend_telegram_api_token,
   ]
 
   lifecycle {

@@ -7,18 +7,24 @@ Bot de Telegram implementado como Cloud Function HTTP (Google Cloud Functions ge
 ```bash
 npm install
 npm start
+npm test
 ```
 
 Esto compila TypeScript (`tsc`) y levanta el Functions Framework en `http://localhost:8080`,
 apuntando a la función exportada `webhook`.
 
-Para simular un update de Telegram:
+Para simular un update de Telegram hay que enviar el secret del webhook (ver [Webhook](#webhook));
+con el valor de desarrollo de `.env.example`:
 
 ```bash
 curl -X POST http://localhost:8080 \
   -H "Content-Type: application/json" \
-  -d '{"update_id":1,"message":{"message_id":1,"text":"hola"}}'
+  -H "X-Telegram-Bot-Api-Secret-Token: local-webhook-secret" \
+  -d '{"update_id":1,"message":{"message_id":1,"chat":{"id":1},"text":"hola"}}'
 ```
+
+`npm test` compila con `tsconfig.test.json` y corre los tests de `test/` con el runner de Node
+(`node:test`), sin dependencias extra. Los tests quedan fuera de `src/`, así que no se despliegan.
 
 ## Autenticación contra el backend
 
@@ -46,17 +52,51 @@ Variables de entorno:
 | `KEYCLOAK_REALM` | Realm, `solnotfound` por defecto. |
 | `KEYCLOAK_TELEGRAM_BOT_CLIENT_ID` | `solnotfoundTelegramBot` por defecto. |
 | `KEYCLOAK_TELEGRAM_BOT_CLIENT_SECRET` | Client secret de ese cliente. |
+| `TELEGRAM_WEBHOOK_SECRET` | Secret que Telegram envía en cada update; ver [Webhook](#webhook). |
+| `FRONTEND_URL` | URL pública del frontend, para armar el link de vinculación. |
 
 Los valores por defecto de desarrollo están en el `.env.example` de la raíz. En Compose el rol, el
 cliente y el client secret se crean automáticamente con el import del realm y
 `keycloak/configure-local.sh`.
+
+## Webhook
+
+La URL de la función es pública, así que sin más controles cualquiera que la conozca podría mandar
+updates falsos a nombre de cualquier chat. Por eso el webhook se registra con un `secret_token`
+(`setWebhook`), Telegram lo reenvía en el header `X-Telegram-Bot-Api-Secret-Token` de cada update y
+la función rechaza con `401` todo update que no lo traiga o no coincida (comparación en tiempo
+constante). Si `TELEGRAM_WEBHOOK_SECRET` no está configurada, se rechazan todos los updates.
+
+`scripts/deploy.sh` genera un secret nuevo en cada deploy (o usa `TELEGRAM_WEBHOOK_SECRET` si está
+definida), lo guarda en Secret Manager, se lo pasa a la función y lo registra en Telegram en el mismo
+paso. Los `GET` no se procesan: responden `200` y sirven de healthcheck del contenedor.
+
+## Vinculación de la cuenta
+
+El bot nunca pone el id del chat en el link de login. Si lo hiciera, cualquiera podría armar un link
+con **su propio** chat, mandárselo a otra persona y, cuando esa persona iniciara sesión, quedarse con
+su cuenta vinculada a su Telegram. El flujo es:
+
+1. Un chat sin cuenta vinculada manda `/start` o `/login`.
+2. El bot pide al backend un código para ese chat: `POST /users/telegram/{chatId}/link-code`
+   (requiere el JWT del bot y el API token, como el resto de `/users/telegram/**`). El backend
+   genera 32 bytes aleatorios, guarda **solo el hash SHA-256** junto con el chat y un vencimiento de
+   10 minutos (`telegram.link-code.ttl`), y devuelve el código.
+3. El bot manda el link `FRONTEND_URL/login?t=true&code=<código>`.
+4. El usuario inicia sesión y el frontend le pide que **confirme** la vinculación; no se vincula nada
+   solo por abrir el link.
+5. Al confirmar, el frontend llama a `PUT /users/me/telegram` con el código y el JWT del usuario. El
+   backend lo canjea de forma atómica (sirve una sola vez) y vincula el chat del código a esa cuenta.
+   Un código vencido, usado o inventado responde `400` con `TELEGRAM_LINK_CODE_INVALID`.
+
+Los códigos vencidos se borran solos con un índice TTL de MongoDB (colección `telegram_link_codes`).
 
 ## Comandos
 
 | Comando | Qué hace |
 | --- | --- |
 | `/start` | Identifica el chat contra el backend. Si el chat ya está vinculado a una cuenta, saluda y muestra el teclado; si no, manda el link de login del frontend. |
-| `/login` | Reenvía el link de login para vincular el chat a una cuenta. |
+| `/login` | Genera un link de login nuevo (código de un solo uso, vence en 10 minutos) para vincular el chat a una cuenta. |
 | `/seeActivities` | Lista las actividades en las que el usuario es participante, de la más próxima a la más lejana, con el estado completo que devuelve el backend. |
 | `/myActivities` | Lista las actividades que organiza el usuario y avisa cuáles están en votación de reprogramación. |
 

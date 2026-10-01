@@ -4,6 +4,8 @@ import { COMMAND_PARENT } from "../utils/command-tree";
 import { getActiveMenu, getUserId, setActiveMenu } from "../utils/session";
 import sendMessage from "../utils/sendMessage";
 import type { CommandHandler } from "../utils/command.types";
+import { telegramWebhookSecret } from "../utils/consts";
+import { isValidWebhookSecret, WEBHOOK_SECRET_HEADER } from "../utils/webhookSecret";
 
 
 interface TelegramMessage {
@@ -44,6 +46,18 @@ async function runCommand(chatId: number, command: string, handleCommand: Comman
 
 
 export const webhook: HttpFunction = async (req: any, res: any) => {
+  // Telegram always POSTs updates; a GET is the container healthcheck and processes nothing.
+  if (req.method === "GET") {
+    res.status(200).json({ ok: true });
+    return;
+  }
+
+  if (!isValidWebhookSecret(req.headers?.[WEBHOOK_SECRET_HEADER], telegramWebhookSecret)) {
+    console.warn("[webhook] update rechazado: falta el secret de Telegram o no coincide");
+    res.status(401).json({ ok: false });
+    return;
+  }
+
   const update = req.body as TelegramUpdate | undefined;
   const message = update?.message;
 

@@ -3,6 +3,8 @@ locals {
     "${local.name}-atlas-uri",
     "${local.name}-keycloak-admin-password",
     "${local.name}-keycloak-db-password",
+    # Shared by the backend (TELEGRAM_API_TOKEN) and the Telegram bot function (X-Api-Token).
+    "${local.name}-telegram-api-token",
   ])
 }
 
@@ -22,6 +24,13 @@ resource "google_secret_manager_secret" "application" {
 resource "google_secret_manager_secret_iam_member" "backend_atlas" {
   project   = var.gcp_project_id
   secret_id = google_secret_manager_secret.application["${local.name}-atlas-uri"].secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.backend.email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "backend_telegram_api_token" {
+  project   = var.gcp_project_id
+  secret_id = google_secret_manager_secret.application["${local.name}-telegram-api-token"].secret_id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.backend.email}"
 }
