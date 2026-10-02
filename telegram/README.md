@@ -82,7 +82,9 @@ su cuenta vinculada a su Telegram. El flujo es:
    (requiere el JWT del bot y el API token, como el resto de `/users/telegram/**`). El backend
    genera 32 bytes aleatorios, guarda **solo el hash SHA-256** junto con el chat y un vencimiento de
    10 minutos (`telegram.link-code.ttl`), y devuelve el código.
-3. El bot manda el link `FRONTEND_URL/login?t=true&code=<código>`.
+3. El bot manda el link `FRONTEND_URL/login?t=true&link=<código>`. El parámetro no puede llamarse
+   `code`: es un nombre reservado de OAuth y Keycloak rechaza con `invalid_redirect_uri` una URL de
+   retorno que ya lo traiga.
 4. El usuario inicia sesión y el frontend le pide que **confirme** la vinculación; no se vincula nada
    solo por abrir el link.
 5. Al confirmar, el frontend llama a `PUT /users/me/telegram` con el código y el JWT del usuario. El

@@ -16,8 +16,10 @@ export interface UseTelegramLink {
   link: () => void;
 }
 
-/** Parses the `code` query param of the bot's login link: the single-use code issued by the
- * backend (URL-safe base64). Returns null for anything else, such as the old `cid` links. */
+/** Parses the `link` query param of the bot's login link: the single-use code issued by the
+ * backend (URL-safe base64). Returns null for anything else, such as the old `cid` links. The
+ * param is not called `code` because that name is reserved by OAuth: Keycloak rejects a
+ * redirect_uri that already carries it (`invalid_redirect_uri`). */
 export function parseTelegramLinkCode(value: string | null | undefined): string | null {
   return value && /^[A-Za-z0-9_-]{20,128}$/.test(value) ? value : null;
 }

@@ -2,11 +2,11 @@ import sendMessage, { escapeHtml } from "../utils/sendMessage";
 import { backendFetch } from "../utils/auth";
 import { frontendClient } from "../utils/consts";
 
-/** Link al login del frontend; t=true indica que viene de Telegram y code es el código de un solo
+/** Link al login del frontend; t=true indica que viene de Telegram y link es el código de un solo
  * uso que emitió el backend para este chat. El chat nunca viaja en el link: si viajara, cualquiera
  * podría armar un link con su propio chat y mandárselo a otra persona para quedarse con su cuenta. */
 export function loginUrl(code: string): string {
-  return `${frontendClient}/login?t=true&code=${encodeURIComponent(code)}`;
+  return `${frontendClient}/login?t=true&link=${encodeURIComponent(code)}`;
 }
 
 /** Pide al backend un código de vinculación para el chat (vence a los pocos minutos y sirve una
