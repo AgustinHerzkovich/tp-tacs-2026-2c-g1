@@ -2,6 +2,8 @@ locals {
   required_apis = toset([
     "artifactregistry.googleapis.com",
     "cloudbuild.googleapis.com",
+    "cloudfunctions.googleapis.com",
+    "cloudresourcemanager.googleapis.com",
     "iamcredentials.googleapis.com",
     "run.googleapis.com",
     "cloudscheduler.googleapis.com",
