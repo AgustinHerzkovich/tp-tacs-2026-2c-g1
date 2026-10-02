@@ -42,6 +42,7 @@ resource "google_service_account_iam_member" "github_deployer_identity" {
 resource "google_project_iam_member" "github_deployer_roles" {
   for_each = toset([
     "roles/cloudbuild.builds.editor",
+    "roles/cloudfunctions.developer",
     "roles/run.admin",
     "roles/storage.admin",
   ])
