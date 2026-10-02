@@ -76,7 +76,7 @@ done
 echo "==> Deployando la Cloud Function ($FUNCTION_NAME)"
 gcloud functions deploy "$FUNCTION_NAME" \
   --gen2 \
-  --runtime=nodejs20 \
+  --runtime=nodejs22 \
   --region="$GCP_REGION" \
   --project="$GCP_PROJECT_ID" \
   --source=. \

@@ -24,7 +24,7 @@ export function LoginPage() {
   const searchParams = useSearchParams();
   const requestedRoute = searchParams?.get("returnTo");
   const returnTo = requestedRoute?.startsWith("/") ? requestedRoute : "/mis-actividades";
-  const telegramCode = searchParams?.get("t") === "true" ? parseTelegramLinkCode(searchParams.get("code")) : null;
+  const telegramCode = searchParams?.get("t") === "true" ? parseTelegramLinkCode(searchParams.get("link")) : null;
   const fromTelegram = telegramCode !== null;
   const { initialized, isAuthenticated, login, user } = useAuth();
   const ready = useHasMounted() && initialized;

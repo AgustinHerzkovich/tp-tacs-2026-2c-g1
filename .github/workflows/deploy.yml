@@ -9,6 +9,7 @@ on:
       - keycloak/**
       - keycloak-import/**
       - keycloak-theme/**
+      - telegram/**
       - cloudbuild/**
       - .github/workflows/deploy.yml
   workflow_dispatch:
@@ -23,6 +24,7 @@ on:
           - backend
           - frontend
           - keycloak
+          - telegram
 
 permissions:
   contents: read
@@ -45,6 +47,7 @@ jobs:
       backend: ${{ steps.result.outputs.backend }}
       frontend: ${{ steps.result.outputs.frontend }}
       keycloak: ${{ steps.result.outputs.keycloak }}
+      telegram: ${{ steps.result.outputs.telegram }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -66,6 +69,8 @@ jobs:
               - 'keycloak-import/**'
               - 'keycloak-theme/**'
               - 'cloudbuild/keycloak.yaml'
+            telegram:
+              - 'telegram/**'
 
       - id: result
         shell: bash
@@ -73,20 +78,24 @@ jobs:
           PUSH_BACKEND: ${{ steps.filter.outputs.backend }}
           PUSH_FRONTEND: ${{ steps.filter.outputs.frontend }}
           PUSH_KEYCLOAK: ${{ steps.filter.outputs.keycloak }}
+          PUSH_TELEGRAM: ${{ steps.filter.outputs.telegram }}
           COMPONENT: ${{ inputs.component }}
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             [[ "$COMPONENT" == "all" || "$COMPONENT" == "backend" ]] && backend=true || backend=false
             [[ "$COMPONENT" == "all" || "$COMPONENT" == "frontend" ]] && frontend=true || frontend=false
             [[ "$COMPONENT" == "all" || "$COMPONENT" == "keycloak" ]] && keycloak=true || keycloak=false
+            [[ "$COMPONENT" == "all" || "$COMPONENT" == "telegram" ]] && telegram=true || telegram=false
           else
             backend="$PUSH_BACKEND"
             frontend="$PUSH_FRONTEND"
             keycloak="$PUSH_KEYCLOAK"
+            telegram="$PUSH_TELEGRAM"
           fi
           echo "backend=$backend" >> "$GITHUB_OUTPUT"
           echo "frontend=$frontend" >> "$GITHUB_OUTPUT"
           echo "keycloak=$keycloak" >> "$GITHUB_OUTPUT"
+          echo "telegram=$telegram" >> "$GITHUB_OUTPUT"
 
   backend:
     needs: changes
@@ -167,4 +176,47 @@ jobs:
           --project="$PROJECT_ID"
           --region="$REGION"
           --image="$REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/keycloak:$GITHUB_SHA"
+          --quiet
+
+  # Redeploys only the code of the bot function. Its environment variables, secrets and the
+  # Telegram webhook were set by the first deploy (telegram/scripts/deploy.sh) and are kept as
+  # they are: gcloud preserves them when the flags are omitted, the function URL does not change
+  # and the webhook secret is not rotated here. It waits for the backend and the frontend so the
+  # bot never calls endpoints or sends links that are not published yet.
+  telegram:
+    needs: [changes, backend, frontend]
+    if: >-
+      ${{ !cancelled() && needs.changes.outputs.telegram == 'true'
+      && (needs.backend.result == 'success' || needs.backend.result == 'skipped')
+      && (needs.frontend.result == 'success' || needs.frontend.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOY_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: telegram/package-lock.json
+      - name: Test bot
+        working-directory: telegram
+        run: |
+          npm ci
+          npm test
+      - name: Deploy bot function
+        run: >-
+          gcloud functions deploy telegram-webhook
+          --gen2
+          --runtime=nodejs22
+          --project="$PROJECT_ID"
+          --region="$REGION"
+          --source=telegram
+          --entry-point=webhook
+          --trigger-http
+          --allow-unauthenticated
           --quiet
