@@ -158,7 +158,20 @@ public class Votation {
    * @return the winning date, or empty when there are no options
    */
   public synchronized Optional<LocalDateTime> winningOption() {
+    return winningOption(LocalDateTime.MIN);
+  }
+
+  /**
+   * Selects the most voted option among those that are still in the future. An alternative whose
+   * date already passed cannot be chosen: rescheduling to it would move the activity to the past.
+   * Ties are resolved in favor of the earliest date.
+   *
+   * @param now current time in the activity's zone
+   * @return the winning date, or empty when no option is after {@code now}
+   */
+  public synchronized Optional<LocalDateTime> winningOption(LocalDateTime now) {
     return options.stream()
+        .filter(option -> option.getDateTime().isAfter(now))
         .max(
             Comparator.comparingInt((VotationOption option) -> option.getUsers().size())
                 .thenComparing(VotationOption::getDateTime, Comparator.reverseOrder()))

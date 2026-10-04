@@ -179,7 +179,7 @@ public class VotationService {
     if (duration.isZero() || duration.isNegative()) {
       throw new InvalidVotationSettingsException("Duration must be greater than zero");
     }
-    LocalDateTime closingDate = LocalDateTime.now().plus(duration);
+    LocalDateTime closingDate = activity.now().plus(duration);
     LocalDateTime earliestOption =
         votation.getOptions().stream()
             .map(VotationOption::getDateTime)

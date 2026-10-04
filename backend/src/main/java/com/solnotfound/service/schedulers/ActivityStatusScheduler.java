@@ -47,7 +47,6 @@ public class ActivityStatusScheduler {
    */
   @Scheduled(cron = "${activity.status-check-cron:0 */5 * * * *}")
   public void finishPastActivities() {
-    LocalDateTime now = LocalDateTime.now();
     int finished = 0;
     int notificationsSent = 0;
     int failures = 0;
@@ -59,6 +58,7 @@ public class ActivityStatusScheduler {
         continue;
       }
       try {
+        LocalDateTime now = activity.now();
         if (activity.getDateTime().isBefore(now)) {
           transitionService.transition(
               activity, ActivityStatus.FINISHED, ActivityTransitionReason.SCHEDULED_TIME_PASSED);

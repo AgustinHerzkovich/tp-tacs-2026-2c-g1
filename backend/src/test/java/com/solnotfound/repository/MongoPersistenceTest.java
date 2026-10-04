@@ -23,7 +23,13 @@ import com.solnotfound.entity.weather.TemperatureRangeCondition;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -228,6 +234,91 @@ class MongoPersistenceTest {
                 .search(activityIds, new VotationFilterDTO(null, null, false), "participant", page)
                 .getContent())
         .isEmpty();
+  }
+
+  @Test
+  void addsAndRemovesParticipantsAtomicallyRespectingCapacityAndStatus() {
+    User organizer = userRepository.findOrCreate("organizer");
+    User participant = userRepository.findOrCreate("participant");
+    userRepository.findOrCreate("second");
+    userRepository.findOrCreate("third");
+    Activity activity = activity(organizer, participant);
+    activity.setMaxParticipants(2);
+    activityRepository.save(activity);
+
+    assertThat(activityRepository.addParticipant("activity-1", "participant")).isFalse();
+    assertThat(activityRepository.addParticipant("activity-1", "second")).isTrue();
+    assertThat(activityRepository.addParticipant("activity-1", "third")).isFalse();
+    assertThat(activityRepository.findById("activity-1").getParticipants())
+        .extracting(User::getId)
+        .containsExactly("participant", "second");
+
+    activityRepository.removeParticipant("activity-1", "participant");
+    activityRepository.removeParticipant("activity-1", "not-a-participant");
+    assertThat(activityRepository.findById("activity-1").getParticipants())
+        .extracting(User::getId)
+        .containsExactly("second");
+
+    Activity cancelled = activityRepository.findById("activity-1");
+    cancelled.setStatus(ActivityStatus.CANCELLED);
+    activityRepository.save(cancelled);
+    assertThat(activityRepository.addParticipant("activity-1", "third")).isFalse();
+  }
+
+  @Test
+  void neverExceedsCapacityWhenManyUsersJoinAtTheSameTime() throws Exception {
+    User organizer = userRepository.findOrCreate("organizer");
+    Activity activity = activity(organizer, organizer);
+    activity.setParticipants(List.of());
+    activity.setMaxParticipants(5);
+    activityRepository.save(activity);
+    int users = 40;
+    for (int index = 0; index < users; index++) {
+      userRepository.findOrCreate("user-" + index);
+    }
+
+    ExecutorService pool = Executors.newFixedThreadPool(16);
+    CountDownLatch start = new CountDownLatch(1);
+    List<Future<Boolean>> attempts = new ArrayList<>();
+    for (int index = 0; index < users; index++) {
+      String userId = "user-" + index;
+      attempts.add(
+          pool.submit(
+              () -> {
+                start.await();
+                return activityRepository.addParticipant("activity-1", userId);
+              }));
+    }
+    start.countDown();
+    int joined = 0;
+    for (Future<Boolean> attempt : attempts) {
+      if (attempt.get(30, TimeUnit.SECONDS)) {
+        joined++;
+      }
+    }
+    pool.shutdown();
+
+    assertThat(joined).isEqualTo(5);
+    assertThat(activityRepository.findById("activity-1").getParticipants()).hasSize(5);
+  }
+
+  @Test
+  void assignsTimeZoneOnlyToActivitiesThatHaveNone() {
+    User organizer = userRepository.findOrCreate("organizer");
+    User participant = userRepository.findOrCreate("participant");
+    activityRepository.save(activity(organizer, participant));
+    Activity withZone = activity(organizer, participant);
+    withZone.setId("activity-2");
+    withZone.setTimeZone("Europe/Madrid");
+    activityRepository.save(withZone);
+
+    long updated = activityRepository.assignTimeZoneWhereMissing("America/Argentina/Buenos_Aires");
+
+    assertThat(updated).isEqualTo(1);
+    assertThat(activityRepository.findById("activity-1").getTimeZone())
+        .isEqualTo("America/Argentina/Buenos_Aires");
+    assertThat(activityRepository.findById("activity-2").getTimeZone()).isEqualTo("Europe/Madrid");
+    assertThat(activityRepository.assignTimeZoneWhereMissing("UTC")).isZero();
   }
 
   @Test

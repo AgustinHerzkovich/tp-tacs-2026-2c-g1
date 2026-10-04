@@ -16,6 +16,7 @@ import com.solnotfound.entity.activity.City;
 import com.solnotfound.entity.activity.Location;
 import com.solnotfound.entity.activity.ReprogramationRange;
 import com.solnotfound.entity.statistics.StatisticsEventType;
+import com.solnotfound.entity.user.User;
 import com.solnotfound.entity.weather.MaxRainProbabilityCondition;
 import com.solnotfound.entity.weather.MaxWindCondition;
 import com.solnotfound.entity.weather.TemperatureRangeCondition;
@@ -24,6 +25,7 @@ import com.solnotfound.entity.weather.WeatherForecast;
 import com.solnotfound.exception.ActivityAccessDeniedException;
 import com.solnotfound.exception.ActivityNotFoundException;
 import com.solnotfound.exception.ErrorCode;
+import com.solnotfound.exception.IllegalStateActivityException;
 import com.solnotfound.exception.InvalidActivityException;
 import com.solnotfound.repository.IActivityRepository;
 import com.solnotfound.repository.IUserRepository;
@@ -53,6 +55,7 @@ public class ActivityService {
   private final StatisticsEventRecorder statisticsRecorder;
   private final ImageStorage imageStorage;
   private static final int MAX_IMAGES = 5;
+  private static final int MAX_JOIN_ATTEMPTS = 3;
   private static final long MAX_IMAGE_SIZE = 5L * 1024 * 1024;
   private static final Duration IMAGE_URL_VALIDITY = Duration.ofHours(1);
   private static final Set<String> ALLOWED_IMAGE_TYPES =
@@ -152,6 +155,7 @@ public class ActivityService {
     activity.setWeatherConditions(toWeatherConditions(request.weatherConditions()));
     activity.setAnticipationWindow(request.anticipationWindow());
     activity.setReprogramationRange(toReprogramationRange(request.reprogramationRange()));
+    activity.setTimeZone(resolveZone(timeZoneId).getId());
 
     List<String> uploadedKeys = new ArrayList<>();
     try {
@@ -311,37 +315,52 @@ public class ActivityService {
   }
 
   /**
-   * Adds a user to an activity and persists the resulting participant state.
+   * Adds a user to an activity. The activity is validated first, so a closed or full activity is
+   * rejected with its specific error, and joining twice is idempotent. The participant is then
+   * added with an atomic conditional update instead of saving the whole activity: when several
+   * users compete for the last spot only one update matches, and concurrent changes to other fields
+   * (such as a status transition) are not overwritten. A request that loses that race reloads the
+   * activity and is validated again, which reports the activity as full.
    *
    * @param activityId activity identifier
    * @param userId authenticated user identifier
    * @return the updated activity
    * @throws ActivityNotFoundException when the activity does not exist
+   * @throws IllegalStateActivityException when the activity is full, no longer accepts
+   *     participants, or keeps changing concurrently
    */
   public ActivityResponse join(String activityId, String userId) {
-    Activity activity = findActivityOrThrow(activityId);
+    User user = userRepository.findOrCreate(userId);
 
-    activity.addParticipant(userRepository.findOrCreate(userId));
+    for (int attempt = 0; attempt < MAX_JOIN_ATTEMPTS; attempt++) {
+      Activity activity = findActivityOrThrow(activityId);
+      boolean alreadyParticipating = activity.findParticipant(userId).isPresent();
+      activity.addParticipant(user);
 
-    activityRepository.save(activity);
-
-    return toResponse(activity);
+      if (alreadyParticipating || activityRepository.addParticipant(activityId, userId)) {
+        return toResponse(activity);
+      }
+    }
+    throw new IllegalStateActivityException(
+        "Activity participants changed concurrently; the join could not be completed.");
   }
 
   /**
-   * Removes a user from an activity and persists the resulting participant state.
+   * Removes a user from an activity with an atomic update, so concurrent joins, leaves or status
+   * changes are not overwritten. Leaving an activity the user is not part of does nothing.
    *
    * @param activityId activity identifier
    * @param userId authenticated user identifier
    * @return the updated activity
    * @throws ActivityNotFoundException when the activity does not exist
+   * @throws IllegalStateActivityException when the activity no longer accepts participant changes
    */
   public ActivityResponse leave(String activityId, String userId) {
     Activity activity = findActivityOrThrow(activityId);
 
     activity.removeParticipant(userId);
 
-    activityRepository.save(activity);
+    activityRepository.removeParticipant(activityId, userId);
 
     return toResponse(activity);
   }

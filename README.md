@@ -230,6 +230,26 @@ Estas decisiones cubren aspectos no definidos de forma exhaustiva por el enuncia
   mantiene estado de sesión en el backend.
 - **Monitoreo periódico configurable:** Spring Scheduler evalúa clima, cierre de votaciones,
   finalización y avisos de inicio con periodicidades configurables.
+- **Actividad bajo observación:** mientras una actividad confirmada o reprogramada está dentro de su
+  ventana de anticipación, el pronóstico se vuelve a evaluar en cada pasada del chequeo de clima
+  (cada hora), no una única vez. Así se detecta un pronóstico que empeora después de un primer
+  chequeo favorable, y una actividad reprogramada se vuelve a vigilar en su nueva fecha. Una
+  actividad en votación no se evalúa: su votación ya está decidiendo la nueva fecha. Las consultas
+  repetidas se resuelven con la caché de pronósticos.
+- **Zona horaria de la actividad:** la fecha se guarda como hora local del organizador junto con su
+  zona horaria IANA (la envía el frontend al crear). Los plazos (ventana de anticipación, aviso de
+  inicio, finalización y cierre de votación) se evalúan en esa zona y no contra el reloj del
+  servidor, que en los contenedores corre en UTC. A las actividades creadas antes de guardar la zona
+  se les asigna al arrancar la de `ACTIVITY_LEGACY_TIME_ZONE`, si está definida. No se cambia la
+  zona de la JVM porque Spring Data la usa para convertir las fechas guardadas.
+- **Cierre de la votación antes de sus alternativas:** la votación automática dura
+  `votation.duration` (24 h por defecto), pero siempre cierra al menos una hora antes de su primera
+  alternativa, y no se ofrecen alternativas tan cercanas que no dejen al menos una hora para votar.
+  Al cerrar solo puede ganar una alternativa que todavía no pasó.
+- **Cupo bajo concurrencia:** sumarse y bajarse de una actividad modifica solo la lista de
+  participantes con una actualización atómica en la base, que vuelve a comprobar el cupo y el estado
+  en el mismo paso. Si dos personas piden el último lugar al mismo tiempo, entra una sola y la otra
+  recibe el aviso de actividad completa; tampoco se pisan otros cambios simultáneos de la actividad.
 - **Organizador como participante:** el organizador puede sumarse y bajarse como participante. Para
   el quórum, solo se cuenta una vez aunque también figure entre los participantes.
 - **Votación sin opciones favorables:** si no se encuentran alternativas dentro del rango con clima
