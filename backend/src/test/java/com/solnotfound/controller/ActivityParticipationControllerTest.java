@@ -61,6 +61,11 @@ class ActivityParticipationControllerTest {
   }
 
   @Test
+  void swaggerEntryPointIsAccessibleWithoutAuthentication() throws Exception {
+    mockMvc.perform(get("/swagger-ui.html")).andExpect(status().is3xxRedirection());
+  }
+
+  @Test
   void joinAndLeaveUseJwtSubject() throws Exception {
     String activityId = service.create(request(1, 2)).id();
 
