@@ -234,6 +234,8 @@ services:
       KEYCLOAK_PUBLIC_URL: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8090}
       TELEGRAM_BOT_CLIENT_ID: ${KEYCLOAK_TELEGRAM_BOT_CLIENT_ID:-solnotfoundTelegramBot}
       TELEGRAM_BOT_CLIENT_SECRET: ${KEYCLOAK_TELEGRAM_BOT_CLIENT_SECRET:-solnotfound-telegram-bot-client-secret}
+      # Cantidad de usuarios loadtestNN que crea configure-local.sh (ver docs/LOAD_TEST.md).
+      LOADTEST_USERS: ${LOADTEST_USERS:-10}
     depends_on:
       keycloak:
         condition: service_healthy

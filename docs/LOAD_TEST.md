@@ -37,7 +37,12 @@ curl --fail http://localhost:8080/healthcheck
 
 `--wait` espera también a que `keycloak-config` termine de crear el cliente y los usuarios de la
 prueba. Para crear más usuarios, levantar el stack con `LOADTEST_USERS=<n>` y pasar el mismo valor
-al script.
+al script:
+
+```bash
+LOADTEST_USERS=20 WEATHER_PROVIDER=in-memory APP_SEED_ENABLED=true docker compose up --build --wait
+LOADTEST_USERS=20 ./loadtest/run.sh read
+```
 
 ## Ejecución
 
