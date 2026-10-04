@@ -19,6 +19,8 @@ public final class VotationMapper {
         votation.getCreationDate(),
         votation.getStatus(),
         toOptionDTOs(votation),
+        votation.getClosingDate(),
+        votation.getMinQuorum(),
         currentUserId == null ? null : votation.getVoteByUserId(currentUserId).orElse(null));
   }
 

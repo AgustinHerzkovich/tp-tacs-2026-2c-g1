@@ -25,6 +25,8 @@ const VOTATION: VotationDTO = {
     { dateTime: "2026-09-20T18:00:00", voteCount: 3, voterNames: ["A"] },
     { dateTime: "2026-09-21T18:00:00", voteCount: 1, voterNames: ["B"] },
   ],
+  closingDate: "2026-09-19T18:00:00",
+  minQuorum: 0.5,
   votedOption: null,
 };
 
@@ -62,6 +64,28 @@ describe("useVoting", () => {
     expect(result.current.votation).toBeNull();
     expect(result.current.options).toEqual([]);
     expect(result.current.votedId).toBeNull();
+  });
+
+  it("lists the options from the earliest date to the latest", async () => {
+    mine.mockResolvedValueOnce(
+      pageOf({
+        ...VOTATION,
+        options: [
+          { dateTime: "2026-09-21T18:00:00", voteCount: 1, voterNames: ["B"] },
+          { dateTime: "2026-09-02T09:00:00", voteCount: 0, voterNames: [] },
+          { dateTime: "2026-09-02T18:00:00", voteCount: 2, voterNames: ["A", "C"] },
+        ],
+      }),
+    );
+    const { result } = renderHook(() => useVoting("a1"));
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.options.map((option) => option.id)).toEqual([
+      "2026-09-02T09:00:00",
+      "2026-09-02T18:00:00",
+      "2026-09-21T18:00:00",
+    ]);
+    expect(result.current.total).toBe(3);
   });
 
   it("restores a previous vote from the backend's votedOption", async () => {
@@ -120,6 +144,20 @@ describe("useVoting", () => {
     await act(() => result.current.updateOptions(["2026-09-24T18:00:00"]));
     expect(updateOptions).toHaveBeenCalledWith("v1", { dates: ["2026-09-24T18:00:00"] });
     expect(result.current.votation?.options).toHaveLength(1);
+  });
+
+  it("acknowledges the lost votes on the second attempt of the same replacement", async () => {
+    mine.mockResolvedValueOnce(pageOf(VOTATION));
+    updateOptions.mockResolvedValueOnce({ ...VOTATION, options: [] });
+
+    const { result } = renderHook(() => useVoting("a1"));
+    await waitFor(() => expect(result.current.votation).not.toBeNull());
+
+    await act(() => result.current.updateOptions(["2026-09-24T18:00:00"], true));
+    expect(updateOptions).toHaveBeenCalledWith("v1", {
+      dates: ["2026-09-24T18:00:00"],
+      allowVoteLoss: true,
+    });
   });
 
   it("lets the organizer edit quorum and duration", async () => {

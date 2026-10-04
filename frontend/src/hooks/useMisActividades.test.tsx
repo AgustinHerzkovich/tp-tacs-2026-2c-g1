@@ -67,6 +67,8 @@ function makeVotation(activityId: string): VotationDTO {
     creationDate: "2026-09-01T00:00:00",
     status: "ACTIVE",
     options: [{ dateTime: "2026-09-21T10:00:00", voteCount: 0, voterNames: [] }],
+    closingDate: "2026-09-20T00:00:00",
+    minQuorum: 0.5,
     votedOption: null,
   };
 }

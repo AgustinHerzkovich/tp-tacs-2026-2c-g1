@@ -51,7 +51,12 @@ class DevExtrasSeederTest {
 
     seeder =
         new DevExtrasSeeder(
-            activityRepository, userRepository, votationRepository, notificationService, "user-1");
+            activityRepository,
+            userRepository,
+            votationRepository,
+            notificationService,
+            "user-1",
+            0.5);
   }
 
   @Test
@@ -74,6 +79,7 @@ class DevExtrasSeederTest {
                         .getReprogramationRange()
                         .isWithinRange(activity.getDateTime(), option.getDateTime())));
     assertEquals(ActivityStatus.PROPOSED, activity.getStatus());
+    assertEquals(0.5, votation.getMinQuorum());
     verify(notificationService, org.mockito.Mockito.times(3))
         .generateNotificationsForActivityEvent(any(), any());
   }

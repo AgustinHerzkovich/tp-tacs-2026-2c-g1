@@ -130,6 +130,10 @@ export interface VotationDTO {
   creationDate: string;
   status: VotationStatus;
   options: VotationOptionDTO[];
+  /** Instant at which the votation stops accepting votes. */
+  closingDate: string | null;
+  /** Minimum participation (0..1) required to resolve the votation. */
+  minQuorum: number | null;
   /** Option the current user voted for (its `dateTime`), or null if they
    * have not voted yet. The backend computes it from the user id. */
   votedOption: string | null;
@@ -146,6 +150,7 @@ export interface VotationFilterParams {
 
 export interface UpdateVotationOptionsRequest {
   dates: string[];
+  allowVoteLoss?: boolean;
 }
 
 export interface UpdateVotationSettingsRequest {

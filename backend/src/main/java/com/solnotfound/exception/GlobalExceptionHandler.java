@@ -62,6 +62,17 @@ public class GlobalExceptionHandler {
     return respond(HttpStatus.BAD_REQUEST, "Invalid votation settings", exception);
   }
 
+  @ExceptionHandler(VotationVotesAtRiskException.class)
+  public ResponseEntity<ProblemDetail> handleVotationVotesAtRisk(
+      VotationVotesAtRiskException exception) {
+    ResponseEntity<ProblemDetail> response =
+        respond(HttpStatus.CONFLICT, "Votation votes at risk", exception);
+    ProblemDetail problem = Objects.requireNonNull(response.getBody());
+    problem.setProperty("optionDates", exception.getOptionDates());
+    problem.setProperty("votesAtRisk", exception.getVotesAtRisk());
+    return response;
+  }
+
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ResponseEntity<ProblemDetail> handleValidation(MethodArgumentNotValidException exception) {
     Map<String, String> errors = new LinkedHashMap<>();

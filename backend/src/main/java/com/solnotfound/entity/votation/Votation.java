@@ -27,7 +27,14 @@ public class Votation {
 
   @Getter @Setter private LocalDateTime creationDate;
   private LocalDateTime closingDate;
-  private Double minQuorum = 0.50; // 50%
+
+  /**
+   * Minimum participation (0..1) required to resolve this votation. There is no default on the
+   * entity: every creation path sets it explicitly from the {@code votation.min-quorum} property,
+   * and {@code null} means "no quorum configured", which {@link #reachesQuorum(int)} refuses.
+   */
+  private Double minQuorum;
+
   @Getter @Setter private VotationStatus status;
   private List<VotationOption> options = new ArrayList<>();
 

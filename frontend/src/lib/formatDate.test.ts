@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { formatActivityWhen, formatRelativeTime } from "@/lib/formatDate";
+import {
+  compareLocalDateTimes,
+  formatActivityWhen,
+  formatRelativeTime,
+  fromDateTimeLocalValue,
+  isPastLocalDateTime,
+  toDateTimeLocalValue,
+} from "@/lib/formatDate";
 
 describe("formatActivityWhen", () => {
   it('renders "Mar 15 sep · 14:00" for a LocalDateTime string', () => {
@@ -13,6 +20,75 @@ describe("formatActivityWhen", () => {
 
   it("handles a missing time part", () => {
     expect(formatActivityWhen("2026-10-31")).toContain("31 oct · 00:00");
+  });
+});
+
+describe("isPastLocalDateTime", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 8, 13, 12, 0)); // 2026-09-13 12:00 local
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("is false for a future activity", () => {
+    expect(isPastLocalDateTime("2026-09-20T14:00:00")).toBe(false);
+  });
+
+  it("is true for an activity whose date-time already went by", () => {
+    expect(isPastLocalDateTime("2026-09-12T23:59:00")).toBe(true);
+  });
+
+  it("treats the exact current minute as not past yet", () => {
+    expect(isPastLocalDateTime("2026-09-13T12:00:00")).toBe(false);
+  });
+});
+
+describe("toDateTimeLocalValue / fromDateTimeLocalValue", () => {
+  it("renders a value a datetime-local input accepts", () => {
+    expect(toDateTimeLocalValue("2026-09-15T14:30:00")).toBe("2026-09-15T14:30");
+  });
+
+  it("fills in midnight when the backend sent no time part", () => {
+    expect(toDateTimeLocalValue("2026-10-31")).toBe("2026-10-31T00:00");
+  });
+
+  it("round-trips back to the naive local date-time the API expects", () => {
+    expect(fromDateTimeLocalValue(toDateTimeLocalValue("2026-01-05T09:05:00"))).toBe(
+      "2026-01-05T09:05:00",
+    );
+  });
+
+  it("treats an empty input as no value", () => {
+    expect(fromDateTimeLocalValue("")).toBe("");
+  });
+});
+
+describe("compareLocalDateTimes", () => {
+  it("sorts by day first and then by time of day", () => {
+    const dates = [
+      "2026-09-21T09:00:00",
+      "2026-09-20T18:00:00",
+      "2026-09-20T10:00:00",
+      "2026-09-02T23:00:00",
+    ];
+    expect([...dates].sort(compareLocalDateTimes)).toEqual([
+      "2026-09-02T23:00:00",
+      "2026-09-20T10:00:00",
+      "2026-09-20T18:00:00",
+      "2026-09-21T09:00:00",
+    ]);
+  });
+
+  it("returns 0 for the same instant written with and without seconds", () => {
+    expect(compareLocalDateTimes("2026-09-20T18:00", "2026-09-20T18:00:00")).toBe(0);
+  });
+
+  it("does not mutate the array it sorts", () => {
+    const dates = ["2026-09-21T09:00:00", "2026-09-20T18:00:00"];
+    [...dates].sort(compareLocalDateTimes);
+    expect(dates).toEqual(["2026-09-21T09:00:00", "2026-09-20T18:00:00"]);
   });
 });
 

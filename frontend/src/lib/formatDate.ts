@@ -26,6 +26,40 @@ export function formatActivityWhen(isoLocalDateTime: string): string {
   return `${weekday} ${d.getDate()} ${month} · ${hh}:${mm}`;
 }
 
+/** True when the backend's naive local date-time is already behind the clock —
+ * the activity happened (or is happening right now). A weather provider only
+ * forecasts the future, so this is what tells the UI to stop talking about a
+ * pending forecast. */
+export function isPastLocalDateTime(isoLocalDateTime: string): boolean {
+  return parseLocalDateTime(isoLocalDateTime).getTime() < new Date().getTime();
+}
+
+/** The backend's naive local date-time as the `YYYY-MM-DDTHH:mm` value an
+ * `<input type="datetime-local">` expects. Rebuilt from the parsed parts
+ * instead of sliced off the string, so a date without a time part (or with
+ * seconds) still yields a value the input accepts. */
+export function toDateTimeLocalValue(isoLocalDateTime: string): string {
+  const d = parseLocalDateTime(isoLocalDateTime);
+  const hhmm = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate(),
+  ).padStart(2, "0")}T${hhmm}`;
+}
+
+/** The inverse of {@link toDateTimeLocalValue}: a `datetime-local` value back
+ * to the naive local date-time the API expects. Empty input yields an empty
+ * string so callers can treat "not filled in yet" as a missing value. */
+export function fromDateTimeLocalValue(value: string): string {
+  return value ? `${value}:00` : "";
+}
+
+/** Orders naive local date-times from earliest to latest — day first, then time
+ * of day — so a list of alternative dates reads as a calendar instead of
+ * whatever order it arrived in. Usable directly as an `Array#sort` comparator. */
+export function compareLocalDateTimes(a: string, b: string): number {
+  return parseLocalDateTime(a).getTime() - parseLocalDateTime(b).getTime();
+}
+
 /** "hace 12 min" / "hace 3 h" / "ayer" / "hace 5 d" — for notification
  * timestamps, which the backend sends as real Instant/LocalDateTime values. */
 export function formatRelativeTime(isoDateTime: string): string {

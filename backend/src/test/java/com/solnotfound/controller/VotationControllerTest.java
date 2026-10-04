@@ -1,5 +1,6 @@
 package com.solnotfound.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -11,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.solnotfound.dto.PageResponse;
+import com.solnotfound.dto.UpdateVotationOptionsRequest;
 import com.solnotfound.dto.VotationDTO;
 import com.solnotfound.dto.VotationFilterDTO;
 import com.solnotfound.dto.VotationOptionDTO;
@@ -19,11 +21,13 @@ import com.solnotfound.exception.AccessDeniedException;
 import com.solnotfound.exception.ErrorCode;
 import com.solnotfound.exception.GlobalExceptionHandler;
 import com.solnotfound.exception.ResourceNotFoundException;
+import com.solnotfound.exception.VotationVotesAtRiskException;
 import com.solnotfound.service.VotationService;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
@@ -96,7 +100,14 @@ class VotationControllerTest {
     when(service.updateVotationOptions(eq("v-1"), any(), eq("organizer")))
         .thenReturn(
             new VotationDTO(
-                "v-1", "activity-1", LocalDateTime.now(), VotationStatus.ACTIVE, List.of(), null));
+                "v-1",
+                "activity-1",
+                LocalDateTime.now(),
+                VotationStatus.ACTIVE,
+                List.of(),
+                LocalDateTime.now().plusDays(1),
+                0.5,
+                null));
 
     mockMvc
         .perform(
@@ -130,6 +141,52 @@ class VotationControllerTest {
   }
 
   @Test
+  void rejectsDroppingVotedOptionsWithAConflictThatAsksForConfirmation() throws Exception {
+    LocalDateTime removed = LocalDateTime.of(2026, 9, 1, 12, 0);
+    when(service.updateVotationOptions(eq("v-1"), any(), eq("organizer")))
+        .thenThrow(new VotationVotesAtRiskException(List.of(removed), 2));
+
+    mockMvc
+        .perform(
+            put("/votations/v-1/options")
+                .principal(authentication("organizer"))
+                .contentType("application/json")
+                .content("{\"dates\":[\"2026-09-02T12:00:00\"]}"))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("VOTATION_VOTES_AT_RISK"))
+        .andExpect(jsonPath("$.optionDates[0]").value("2026-09-01T12:00:00"))
+        .andExpect(jsonPath("$.votesAtRisk").value(2));
+  }
+
+  @Test
+  void acceptsOptionUpdateThatAcknowledgesLosingVotes() throws Exception {
+    when(service.updateVotationOptions(eq("v-1"), any(), eq("organizer")))
+        .thenReturn(
+            new VotationDTO(
+                "v-1",
+                "activity-1",
+                LocalDateTime.now(),
+                VotationStatus.ACTIVE,
+                List.of(),
+                LocalDateTime.now().plusDays(1),
+                0.5,
+                null));
+
+    mockMvc
+        .perform(
+            put("/votations/v-1/options")
+                .principal(authentication("organizer"))
+                .contentType("application/json")
+                .content("{\"dates\":[\"2026-09-02T12:00:00\"],\"allowVoteLoss\":true}"))
+        .andExpect(status().isOk());
+
+    ArgumentCaptor<UpdateVotationOptionsRequest> captor =
+        ArgumentCaptor.forClass(UpdateVotationOptionsRequest.class);
+    verify(service).updateVotationOptions(eq("v-1"), captor.capture(), eq("organizer"));
+    assertThat(captor.getValue().allowVoteLoss()).isTrue();
+  }
+
+  @Test
   void rejectsEmptyOptionsRequest() throws Exception {
     mockMvc
         .perform(
@@ -154,6 +211,8 @@ class VotationControllerTest {
                 LocalDateTime.now(),
                 VotationStatus.ACTIVE,
                 List.of(new VotationOptionDTO(option, 1, List.of("Jane Doe"))),
+                LocalDateTime.now().plusDays(1),
+                0.5,
                 option));
 
     mockMvc
@@ -250,7 +309,14 @@ class VotationControllerTest {
     when(service.updateVotationSettings(eq("v-1"), any(), eq("organizer")))
         .thenReturn(
             new VotationDTO(
-                "v-1", "activity-1", LocalDateTime.now(), VotationStatus.ACTIVE, List.of(), null));
+                "v-1",
+                "activity-1",
+                LocalDateTime.now(),
+                VotationStatus.ACTIVE,
+                List.of(),
+                LocalDateTime.now().plusDays(1),
+                0.5,
+                null));
 
     mockMvc
         .perform(
@@ -259,7 +325,9 @@ class VotationControllerTest {
                 .contentType("application/json")
                 .content("{\"minQuorum\":0.75,\"duration\":\"PT2H\"}"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.id").value("v-1"));
+        .andExpect(jsonPath("$.id").value("v-1"))
+        .andExpect(jsonPath("$.minQuorum").value(0.5))
+        .andExpect(jsonPath("$.closingDate").exists());
 
     verify(service).updateVotationSettings(eq("v-1"), any(), eq("organizer"));
   }

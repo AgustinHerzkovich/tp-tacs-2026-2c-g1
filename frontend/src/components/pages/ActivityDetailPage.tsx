@@ -18,6 +18,7 @@ import { useVoting } from "@/hooks/useVoting";
 import { useJoinActivity } from "@/hooks/useJoinActivity";
 import { useAuth } from "@/hooks/useAuth";
 import { mapActivityStatus, mapActivityType, pickPattern, pickScene } from "@/lib/activityMapping";
+import { isPastLocalDateTime } from "@/lib/formatDate";
 import { participantDisplayName } from "@/lib/initials";
 import { ErrorState } from "@/components/common/AsyncState";
 import { ActivityDetailSkeleton } from "@/components/common/Skeletons";
@@ -36,6 +37,11 @@ export function ActivityDetailPage({ id }: { id: string }) {
 
   const initialJoined = activity?.participants.some((p) => p.userId === user?.id) ?? false;
   const join = useJoinActivity(id, initialJoined, refresh);
+
+  // The backend never returns a forecast for an activity whose date-time is
+  // already past, so without this the weather widget would blame the forecast
+  // for something that already happened.
+  const expired = activity != null && isPastLocalDateTime(activity.dateTime);
 
   const handleRefreshImages = () => {
     refresh();
@@ -140,6 +146,7 @@ export function ActivityDetailPage({ id }: { id: string }) {
               current={weather.weather?.currentWeather ?? null}
               conditions={activity.weatherConditions}
               forcedExceeded={hasVoting}
+              expired={expired}
             />
             <ActivityRequirementsCard
               minParticipants={activity.minParticipants}
@@ -155,6 +162,7 @@ export function ActivityDetailPage({ id }: { id: string }) {
                   ? `Se superó el máximo de lluvia permitido (${maxRain}%). Elegí una fecha alternativa para reprogramar.`
                   : undefined
               }
+              organizer={isOrganizer}
               maxHeightPx={votingMaxHeight}
             />
           )}

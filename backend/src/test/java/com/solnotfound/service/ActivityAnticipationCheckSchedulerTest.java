@@ -30,7 +30,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
@@ -48,7 +47,7 @@ class ActivityAnticipationCheckSchedulerTest {
 
   @Mock private IVotationRepository votationRepository;
 
-  @InjectMocks private ActivityAnticipationCheckScheduler scheduler;
+  private ActivityAnticipationCheckScheduler scheduler;
 
   private Activity activityToCheck;
   private Activity activityNotToCheck;
@@ -59,16 +58,7 @@ class ActivityAnticipationCheckSchedulerTest {
 
   @BeforeEach
   void setUp() {
-    scheduler =
-        new ActivityAnticipationCheckScheduler(
-            activityRepository,
-            votationRepository,
-            weatherAdapter,
-            badWeatherChecker,
-            eventPublisher,
-            new ActivityStatusTransitionService(
-                activityRepository, eventPublisher, mock(StatisticsEventRecorder.class)),
-            Duration.ofHours(24));
+    scheduler = schedulerFor(0.5);
     location = new Location(new City("ba", "Buenos Aires"), -34.6037, -58.3816);
     dateTime = LocalDateTime.now().plusHours(2);
     weather = mock(WeatherForecast.class);
@@ -95,6 +85,19 @@ class ActivityAnticipationCheckSchedulerTest {
 
     activityNotToCheck = mock(Activity.class);
     lenient().when(activityNotToCheck.isTimeToCheckWeatherConditions()).thenReturn(false);
+  }
+
+  private ActivityAnticipationCheckScheduler schedulerFor(double minQuorum) {
+    return new ActivityAnticipationCheckScheduler(
+        activityRepository,
+        votationRepository,
+        weatherAdapter,
+        badWeatherChecker,
+        eventPublisher,
+        new ActivityStatusTransitionService(
+            activityRepository, eventPublisher, mock(StatisticsEventRecorder.class)),
+        Duration.ofHours(24),
+        minQuorum);
   }
 
   @Test
@@ -291,6 +294,7 @@ class ActivityAnticipationCheckSchedulerTest {
     assertThat(saved.getStatus()).isEqualTo(VotationStatus.ACTIVE);
     assertThat(saved.getActivity()).isSameAs(activityToCheck);
     assertThat(saved.getClosingDate()).isEqualTo(saved.getCreationDate().plusHours(24));
+    assertThat(saved.getMinQuorum()).isEqualTo(0.5);
     assertThat(saved.getOptions()).allSatisfy(option -> assertThat(option.getUsers()).isEmpty());
     assertThat(saved.getOptions())
         .extracting(VotationOption::getDateTime)
@@ -358,6 +362,23 @@ class ActivityAnticipationCheckSchedulerTest {
             dateTime.plusDays(1).withHour(11).withMinute(0).withSecond(0),
             dateTime.plusDays(2).withHour(10).withMinute(0).withSecond(0),
             dateTime.plusDays(2).withHour(11).withMinute(0).withSecond(0));
+  }
+
+  @Test
+  void opensTheVotationWithTheConfiguredQuorum() throws Exception {
+    scheduler = schedulerFor(0.75);
+    when(activityRepository.findActive()).thenReturn(List.of(activityToCheck));
+    when(weatherAdapter.getFutureClimate(any(), any())).thenReturn(weather);
+    when(badWeatherChecker.isBadWeatherForActivity(any(), eq(activityToCheck)))
+        .thenReturn(true, false);
+    when(range.isWithinRange(any(LocalDateTime.class), any(LocalDateTime.class)))
+        .thenReturn(true, false);
+
+    scheduler.checkActivitiesClimate();
+
+    ArgumentCaptor<Votation> votationCaptor = ArgumentCaptor.forClass(Votation.class);
+    verify(votationRepository).save(votationCaptor.capture());
+    assertThat(votationCaptor.getValue().getMinQuorum()).isEqualTo(0.75);
   }
 
   @Test

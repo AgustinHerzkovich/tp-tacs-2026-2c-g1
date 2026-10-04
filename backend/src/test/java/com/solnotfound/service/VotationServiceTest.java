@@ -4,16 +4,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.solnotfound.adapters.IWeatherAdapter;
 import com.solnotfound.dto.UpdateVotationOptionsRequest;
 import com.solnotfound.dto.UpdateVotationSettingsRequest;
 import com.solnotfound.dto.VotationFilterDTO;
+import com.solnotfound.dto.VotationOptionDTO;
 import com.solnotfound.entity.activity.Activity;
 import com.solnotfound.entity.activity.Location;
 import com.solnotfound.entity.activity.ReprogramationRange;
+import com.solnotfound.entity.notification.VotationOptionsChangedNotificationType;
 import com.solnotfound.entity.user.User;
 import com.solnotfound.entity.votation.Votation;
 import com.solnotfound.entity.votation.VotationOption;
@@ -24,6 +29,8 @@ import com.solnotfound.exception.AccessDeniedException;
 import com.solnotfound.exception.InvalidVotationOptionsException;
 import com.solnotfound.exception.InvalidVotationSettingsException;
 import com.solnotfound.exception.ResourceNotFoundException;
+import com.solnotfound.exception.VotationVotesAtRiskException;
+import com.solnotfound.listener.ActivityNotificationEvent;
 import com.solnotfound.repository.IActivityRepository;
 import com.solnotfound.repository.IVotationRepository;
 import com.solnotfound.repository.InMemoryActivityRepository;
@@ -35,6 +42,8 @@ import java.time.LocalTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 
 class VotationServiceTest {
@@ -43,6 +52,7 @@ class VotationServiceTest {
   private IVotationRepository votationRepository;
   private IWeatherAdapter weatherAdapter;
   private IBadWeatherChecker badWeatherChecker;
+  private ApplicationEventPublisher eventPublisher;
   private VotationService service;
 
   @BeforeEach
@@ -51,13 +61,15 @@ class VotationServiceTest {
     votationRepository = new InMemoryVotationRepository();
     weatherAdapter = mock(IWeatherAdapter.class);
     badWeatherChecker = mock(IBadWeatherChecker.class);
+    eventPublisher = mock(ApplicationEventPublisher.class);
     service =
         new VotationService(
             votationRepository,
             activityRepository,
             weatherAdapter,
             badWeatherChecker,
-            new InMemoryUserRepository());
+            new InMemoryUserRepository(),
+            eventPublisher);
   }
 
   @Test
@@ -179,16 +191,142 @@ class VotationServiceTest {
     votation.getOptions().get(1).setUsers(List.of(activity.getParticipants().get(1)));
     votationRepository.save(votation);
     when(weatherAdapter.getForecastRange(any(Location.class), anyList()))
-        .thenReturn(List.of(mock(WeatherForecast.class), mock(WeatherForecast.class)));
+        .thenReturn(List.of(mock(WeatherForecast.class)));
     when(badWeatherChecker.isBadWeatherForActivity(any(), any())).thenReturn(false);
 
+    // The removed alternative carries a vote, so the organizer acknowledges the loss.
     service.updateVotationOptions(
-        "v-1", new UpdateVotationOptionsRequest(List.of(retained, added)), "organizer");
+        "v-1", new UpdateVotationOptionsRequest(List.of(retained, added), true), "organizer");
 
     assertThat(votation.getOptions().get(0).getUsers())
         .containsExactly(activity.getParticipants().get(0));
     assertThat(votation.getOptions().get(1).getUsers()).isEmpty();
     assertThat(votation.getVoteByUser(activity.getParticipants().get(1))).isEmpty();
+  }
+
+  @Test
+  void onlyAsksTheWeatherProviderAboutTheDatesTheEditIntroduces() {
+    Activity activity = activity("a-1", "organizer", List.of("first"));
+    activityRepository.save(activity);
+    LocalDateTime retained = activity.getDateTime().plusDays(1).withHour(12);
+    LocalDateTime added = activity.getDateTime().plusDays(2).withHour(12);
+    Votation votation = votationWithOptions("v-1", "a-1", retained);
+    votation.setActivity(activity);
+    votationRepository.save(votation);
+    when(weatherAdapter.getForecastRange(any(Location.class), anyList()))
+        .thenReturn(List.of(mock(WeatherForecast.class)));
+    when(badWeatherChecker.isBadWeatherForActivity(any(), any())).thenReturn(false);
+
+    service.updateVotationOptions(
+        "v-1", new UpdateVotationOptionsRequest(List.of(retained, added)), "organizer");
+
+    ArgumentCaptor<List<LocalDateTime>> datesCaptor = ArgumentCaptor.forClass(List.class);
+    verify(weatherAdapter).getForecastRange(eq(activity.getLocation()), datesCaptor.capture());
+    assertThat(datesCaptor.getValue()).containsExactly(added);
+  }
+
+  @Test
+  void doesNotAskTheWeatherProviderWhenNoDateIsIntroduced() {
+    Activity activity = activity("a-1", "organizer", List.of("first", "second"));
+    activityRepository.save(activity);
+    LocalDateTime first = activity.getDateTime().plusDays(1).withHour(12);
+    LocalDateTime second = activity.getDateTime().plusDays(2).withHour(12);
+    Votation votation = votationWithOptions("v-1", "a-1", first, second);
+    votation.setActivity(activity);
+    votation.getOptions().get(0).setUsers(List.of(activity.getParticipants().get(0)));
+    votation.getOptions().get(1).setUsers(List.of(activity.getParticipants().get(1)));
+    votationRepository.save(votation);
+
+    var result =
+        service.updateVotationOptions(
+            "v-1", new UpdateVotationOptionsRequest(List.of(second, first), true), "organizer");
+
+    verify(weatherAdapter, never()).getForecastRange(any(Location.class), anyList());
+    // The organizer chose the order, and reordering is not a reason to forecast anything again.
+    assertThat(result.options())
+        .extracting(VotationOptionDTO::dateTime)
+        .containsExactly(second, first);
+    assertThat(result.options()).allSatisfy(option -> assertThat(option.voteCount()).isEqualTo(1));
+  }
+
+  @Test
+  void rejectsANewlyAddedDateWithBadWeather() {
+    Activity activity = activity("a-1", "organizer", List.of("first"));
+    activityRepository.save(activity);
+    LocalDateTime retained = activity.getDateTime().plusDays(1).withHour(12);
+    LocalDateTime added = activity.getDateTime().plusDays(2).withHour(12);
+    Votation votation = votationWithOptions("v-1", "a-1", retained);
+    votation.setActivity(activity);
+    votationRepository.save(votation);
+    when(weatherAdapter.getForecastRange(any(Location.class), anyList()))
+        .thenReturn(List.of(mock(WeatherForecast.class)));
+    when(badWeatherChecker.isBadWeatherForActivity(any(), any())).thenReturn(true);
+
+    assertThatThrownBy(
+            () ->
+                service.updateVotationOptions(
+                    "v-1", new UpdateVotationOptionsRequest(List.of(retained, added)), "organizer"))
+        .isInstanceOf(InvalidVotationOptionsException.class);
+  }
+
+  @Test
+  void notifiesOrganizerAndParticipantsWhenTheAlternativesChange() {
+    Activity activity = activity("a-1", "organizer", List.of("first"));
+    activityRepository.save(activity);
+    LocalDateTime retained = activity.getDateTime().plusDays(1).withHour(12);
+    LocalDateTime added = activity.getDateTime().plusDays(2).withHour(12);
+    Votation votation = votationWithOptions("v-1", "a-1", retained);
+    votation.setActivity(activity);
+    votationRepository.save(votation);
+    when(weatherAdapter.getForecastRange(any(Location.class), anyList()))
+        .thenReturn(List.of(mock(WeatherForecast.class)));
+    when(badWeatherChecker.isBadWeatherForActivity(any(), any())).thenReturn(false);
+
+    service.updateVotationOptions(
+        "v-1", new UpdateVotationOptionsRequest(List.of(retained, added)), "organizer");
+
+    ArgumentCaptor<ActivityNotificationEvent> eventCaptor =
+        ArgumentCaptor.forClass(ActivityNotificationEvent.class);
+    verify(eventPublisher).publishEvent(eventCaptor.capture());
+    assertThat(eventCaptor.getValue().activityId()).isEqualTo("a-1");
+    assertThat(eventCaptor.getValue().type())
+        .isInstanceOf(VotationOptionsChangedNotificationType.class);
+  }
+
+  @Test
+  void doesNotNotifyWhenTheSameAlternativesAreSavedAgain() {
+    Activity activity = activity("a-1", "organizer", List.of("first"));
+    activityRepository.save(activity);
+    LocalDateTime first = activity.getDateTime().plusDays(1).withHour(12);
+    LocalDateTime second = activity.getDateTime().plusDays(2).withHour(12);
+    Votation votation = votationWithOptions("v-1", "a-1", first, second);
+    votation.setActivity(activity);
+    votationRepository.save(votation);
+
+    service.updateVotationOptions(
+        "v-1", new UpdateVotationOptionsRequest(List.of(second, first)), "organizer");
+
+    verify(eventPublisher, never()).publishEvent(any());
+  }
+
+  @Test
+  void doesNotNotifyWhenTheReplacementIsRejected() {
+    Activity activity = activity("a-1", "organizer", List.of("first"));
+    activityRepository.save(activity);
+    LocalDateTime candidate = activity.getDateTime().plusDays(1).withHour(12);
+    Votation votation = votation("v-1", activity);
+    votationRepository.save(votation);
+    when(weatherAdapter.getForecastRange(any(Location.class), anyList()))
+        .thenReturn(List.of(mock(WeatherForecast.class)));
+    when(badWeatherChecker.isBadWeatherForActivity(any(), any())).thenReturn(true);
+
+    assertThatThrownBy(
+            () ->
+                service.updateVotationOptions(
+                    "v-1", new UpdateVotationOptionsRequest(List.of(candidate)), "organizer"))
+        .isInstanceOf(InvalidVotationOptionsException.class);
+
+    verify(eventPublisher, never()).publishEvent(any());
   }
 
   @Test
@@ -260,6 +398,103 @@ class VotationServiceTest {
                 service.updateVotationOptions(
                     "v-1", new UpdateVotationOptionsRequest(List.of(candidate)), "organizer"))
         .isInstanceOf(InvalidVotationOptionsException.class);
+  }
+
+  @Test
+  void rejectsOptionsThatAreNotAfterTheClosingDate() {
+    Activity activity = activity("a-1", "organizer", List.of("participant"));
+    activityRepository.save(activity);
+    LocalDateTime retained = activity.getDateTime().plusDays(2).withHour(12);
+    Votation votation = votationWithOptions("v-1", "a-1", retained);
+    votation.setActivity(activity);
+    votation.setClosingDate(activity.getDateTime().plusHours(6));
+    votationRepository.save(votation);
+    LocalDateTime afterClosing = activity.getDateTime().plusHours(3).withHour(12);
+    when(weatherAdapter.getForecastRange(any(Location.class), anyList()))
+        .thenReturn(List.of(mock(WeatherForecast.class), mock(WeatherForecast.class)));
+    when(badWeatherChecker.isBadWeatherForActivity(any(), any())).thenReturn(false);
+
+    assertThatThrownBy(
+            () ->
+                service.updateVotationOptions(
+                    "v-1",
+                    new UpdateVotationOptionsRequest(List.of(retained, afterClosing)),
+                    "organizer"))
+        .isInstanceOf(InvalidVotationSettingsException.class)
+        .hasMessageContaining("must close before its earliest alternative");
+    verify(weatherAdapter, never()).getForecastRange(any(Location.class), anyList());
+  }
+
+  @Test
+  void keepsOptionsAfterTheClosingDateWhenTheVotationHasNoClosingDate() {
+    Activity activity = activity("a-1", "organizer", List.of("participant"));
+    activityRepository.save(activity);
+    Votation votation = votation("v-1", activity);
+    votationRepository.save(votation);
+    LocalDateTime candidate = activity.getDateTime().plusDays(1).withHour(12);
+    when(weatherAdapter.getForecastRange(any(Location.class), anyList()))
+        .thenReturn(List.of(mock(WeatherForecast.class)));
+    when(badWeatherChecker.isBadWeatherForActivity(any(), any())).thenReturn(false);
+
+    var result =
+        service.updateVotationOptions(
+            "v-1", new UpdateVotationOptionsRequest(List.of(candidate)), "organizer");
+
+    assertThat(result.options()).hasSize(1);
+  }
+
+  @Test
+  void rejectsDroppingVotedAlternativesUntilTheLossIsAcknowledged() {
+    Activity activity = activity("a-1", "organizer", List.of("first", "second"));
+    activityRepository.save(activity);
+    LocalDateTime retained = activity.getDateTime().plusDays(1).withHour(12);
+    LocalDateTime removed = activity.getDateTime().plusDays(2).withHour(12);
+    Votation votation = votationWithOptions("v-1", "a-1", retained, removed);
+    votation.setActivity(activity);
+    votation.getOptions().get(1).setUsers(List.of(activity.getParticipants().get(1)));
+    votationRepository.save(votation);
+    when(badWeatherChecker.isBadWeatherForActivity(any(), any())).thenReturn(false);
+
+    assertThatThrownBy(
+            () ->
+                service.updateVotationOptions(
+                    "v-1", new UpdateVotationOptionsRequest(List.of(retained)), "organizer"))
+        .isInstanceOf(VotationVotesAtRiskException.class)
+        .satisfies(
+            thrown -> {
+              VotationVotesAtRiskException atRisk = (VotationVotesAtRiskException) thrown;
+              assertThat(atRisk.getOptionDates()).containsExactly(removed);
+              assertThat(atRisk.getVotesAtRisk()).isEqualTo(1);
+            });
+    verify(weatherAdapter, never()).getForecastRange(any(Location.class), anyList());
+
+    var result =
+        service.updateVotationOptions(
+            "v-1", new UpdateVotationOptionsRequest(List.of(retained), true), "organizer");
+
+    assertThat(result.options()).hasSize(1);
+    assertThat(result.options().getFirst().dateTime()).isEqualTo(retained);
+    // The surviving date was already validated when it was published, so the retry is free too.
+    verify(weatherAdapter, never()).getForecastRange(any(Location.class), anyList());
+  }
+
+  @Test
+  void dropsUnvotedAlternativesWithoutNeedingAcknowledgement() {
+    Activity activity = activity("a-1", "organizer", List.of("first"));
+    activityRepository.save(activity);
+    LocalDateTime retained = activity.getDateTime().plusDays(1).withHour(12);
+    LocalDateTime removed = activity.getDateTime().plusDays(2).withHour(12);
+    Votation votation = votationWithOptions("v-1", "a-1", retained, removed);
+    votation.setActivity(activity);
+    votationRepository.save(votation);
+    when(badWeatherChecker.isBadWeatherForActivity(any(), any())).thenReturn(false);
+
+    var result =
+        service.updateVotationOptions(
+            "v-1", new UpdateVotationOptionsRequest(List.of(retained)), "organizer");
+
+    assertThat(result.options()).extracting(VotationOptionDTO::dateTime).containsExactly(retained);
+    verify(weatherAdapter, never()).getForecastRange(any(Location.class), anyList());
   }
 
   @Test

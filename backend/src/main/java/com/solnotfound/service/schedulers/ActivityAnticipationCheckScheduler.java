@@ -45,6 +45,7 @@ public class ActivityAnticipationCheckScheduler {
   private final ApplicationEventPublisher eventPublisher;
   private final ActivityStatusTransitionService transitionService;
   private final Duration votationDuration;
+  private final double minQuorum;
 
   public ActivityAnticipationCheckScheduler(
       IActivityRepository activityRepository,
@@ -53,7 +54,8 @@ public class ActivityAnticipationCheckScheduler {
       IBadWeatherChecker badWeatherChecker,
       ApplicationEventPublisher eventPublisher,
       ActivityStatusTransitionService transitionService,
-      @Value("${votation.duration:24h}") Duration votationDuration) {
+      @Value("${votation.duration:24h}") Duration votationDuration,
+      @Value("${votation.min-quorum:0.5}") double minQuorum) {
     this.activityRepository = activityRepository;
     this.votationRepository = votationRepository;
     this.weatherAdapter = weatherAdapter;
@@ -61,12 +63,16 @@ public class ActivityAnticipationCheckScheduler {
     this.eventPublisher = eventPublisher;
     this.transitionService = transitionService;
     this.votationDuration = votationDuration;
+    this.minQuorum = minQuorum;
   }
 
   /**
    * Checks due active activities once per hour. For bad weather, alternatives and the resulting
    * activity state are persisted before notification delivery. Weather-provider failures leave the
    * activity unchecked so a later execution can retry it.
+   *
+   * <p>Every votation it opens starts with the configured participation quorum ({@code
+   * votation.min-quorum}), which the organizer can then adjust from the app.
    */
   @Scheduled(cron = "${activity.weather-check-cron:0 0 * * * *}")
   public void checkActivitiesClimate() {
@@ -174,6 +180,7 @@ public class ActivityAnticipationCheckScheduler {
     LocalDateTime creationDate = LocalDateTime.now();
     votation.setCreationDate(creationDate);
     votation.setClosingDate(creationDate.plus(votationDuration));
+    votation.setMinQuorum(minQuorum);
     votation.setOptions(options);
     votationRepository.save(votation);
     transitionService.transition(
