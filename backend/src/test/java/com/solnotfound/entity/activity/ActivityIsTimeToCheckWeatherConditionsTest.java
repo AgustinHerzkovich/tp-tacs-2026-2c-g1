@@ -3,7 +3,10 @@ package com.solnotfound.entity.activity;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 class ActivityIsTimeToCheckWeatherConditionsTest {
 
@@ -11,15 +14,6 @@ class ActivityIsTimeToCheckWeatherConditionsTest {
     Activity activity = new Activity();
     activity.setDateTime(dateTime);
     activity.setAnticipationWindow(anticipationWindow);
-    return activity;
-  }
-
-  private Activity buildActivity(
-      LocalDateTime dateTime, Integer anticipationWindow, Boolean wasChecked) {
-    Activity activity = new Activity();
-    activity.setDateTime(dateTime);
-    activity.setAnticipationWindow(anticipationWindow);
-    activity.setWeatherChecked(wasChecked);
     return activity;
   }
 
@@ -33,11 +27,10 @@ class ActivityIsTimeToCheckWeatherConditionsTest {
   }
 
   @Test
-  void returnsTrueWhenActivitiesWeatherCouldNotBeCheckedYet() {
-    // Activity starts in 1 hour, anticipation window is 3 hours
-    // -> window opened 3 hour ago, so "now" does not fall inside it
-    Activity activity = buildActivity(LocalDateTime.now().plusHours(1), 3, false);
+  void keepsReturningTrueInsideTheWindowSoTheForecastIsCheckedPeriodically() {
+    Activity activity = buildActivity(LocalDateTime.now().plusHours(1), 3);
 
+    assertThat(activity.isTimeToCheckWeatherConditions()).isTrue();
     assertThat(activity.isTimeToCheckWeatherConditions()).isTrue();
   }
 
@@ -59,20 +52,6 @@ class ActivityIsTimeToCheckWeatherConditionsTest {
   }
 
   @Test
-  void returnsTrueWhenNowIsExactlyAtTheActivityDateTime() {
-    // dateTime.isAfter(now) is false when they are equal
-    LocalDateTime fixedNow = LocalDateTime.now().plusHours(1);
-    Activity activity = buildActivity(fixedNow, 2);
-
-    // Simulate "now == dateTime" by checking right at the boundary is not achievable
-    // with real clock, so we validate the closest realistic case instead:
-    // an activity whose dateTime is effectively "now" already returns false
-    // because isAfter(now) requires a strictly later instant.
-    assertThat(activity.isTimeToCheckWeatherConditions())
-        .isTrue(); // still true, now < dateTime by nanoseconds
-  }
-
-  @Test
   void returnsTrueRightAtTheStartOfTheAnticipationWindow() {
     // Activity starts in exactly the anticipation window size
     // -> now is (just barely) after window start due to execution time elapsed
@@ -88,5 +67,47 @@ class ActivityIsTimeToCheckWeatherConditionsTest {
     Activity activity = buildActivity(LocalDateTime.now().plusHours(1), 0);
 
     assertThat(activity.isTimeToCheckWeatherConditions()).isFalse();
+  }
+
+  @Test
+  void watchesARescheduledActivityAgainOnItsNewDate() {
+    Activity activity = buildActivity(LocalDateTime.now().plusHours(1), 2);
+    activity.setStatus(ActivityStatus.PROPOSED);
+    activity.setStatus(ActivityStatus.RESCHEDULED);
+
+    assertThat(activity.isTimeToCheckWeatherConditions()).isTrue();
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = ActivityStatus.class,
+      names = {"PROPOSED", "CANCELLED", "FINISHED"})
+  void returnsFalseWhenTheActivityIsNotGoingAheadOnItsCurrentDate(ActivityStatus status) {
+    // PROPOSED: its votation is already choosing a new date.
+    Activity activity = buildActivity(LocalDateTime.now().plusHours(1), 2);
+    activity.setStatus(status);
+
+    assertThat(activity.isTimeToCheckWeatherConditions()).isFalse();
+  }
+
+  @Test
+  void evaluatesTheWindowInTheActivityZoneInsteadOfTheServerClock() {
+    // Kiritimati (UTC+14) and Pago Pago (UTC-11) are 25 hours apart, so at least one of them is far
+    // from the JVM zone: reading "now" from the server clock would fail one of the two activities.
+    for (String zone : new String[] {"Pacific/Kiritimati", "Pacific/Pago_Pago"}) {
+      Activity activity = buildActivity(LocalDateTime.now(ZoneId.of(zone)).plusHours(1), 2);
+      activity.setTimeZone(zone);
+
+      assertThat(activity.isTimeToCheckWeatherConditions()).as(zone).isTrue();
+      assertThat(activity.now()).as(zone).isBefore(activity.getDateTime());
+    }
+  }
+
+  @Test
+  void fallsBackToTheJvmZoneWhenTheActivityHasNoStoredZone() {
+    Activity activity = buildActivity(LocalDateTime.now().plusHours(1), 2);
+
+    assertThat(activity.getTimeZone()).isNull();
+    assertThat(activity.now()).isBetween(LocalDateTime.now().minusMinutes(1), LocalDateTime.now());
   }
 }

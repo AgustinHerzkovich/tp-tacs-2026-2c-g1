@@ -8,6 +8,7 @@ import com.solnotfound.entity.votation.VotationStatus;
 import com.solnotfound.repository.IVotationRepository;
 import com.solnotfound.service.ActivityStatusTransitionService;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -33,15 +34,18 @@ public class VotationClosingScheduler {
       value = "THROWS_METHOD_THROWS_RUNTIMEEXCEPTION",
       justification = "Scheduler failures must propagate so Cloud Scheduler can retry the request")
   public void closeDueVotations() {
-    LocalDateTime now = LocalDateTime.now();
-    var dueVotations = votationRepository.findActiveDueToClose(now);
+    // Closing dates are wall-clock times in each activity's zone. The query uses the latest
+    // "now" on Earth so no due votation is missed; resolve() then checks the activity's own time.
+    LocalDateTime latestNow = LocalDateTime.now(ZoneOffset.ofHours(14));
+    var dueVotations = votationRepository.findActiveDueToClose(latestNow);
     int closed = 0;
     int failures = 0;
     log.info("Votation closing check started: dueVotations={}", dueVotations.size());
     for (Votation votation : dueVotations) {
       try {
-        resolve(votation);
-        closed++;
+        if (resolve(votation)) {
+          closed++;
+        }
       } catch (RuntimeException exception) {
         failures++;
         log.error(
@@ -59,7 +63,7 @@ public class VotationClosingScheduler {
         failures);
   }
 
-  private void resolve(Votation votation) {
+  private boolean resolve(Votation votation) {
     Activity activity = votation.getActivity();
     if (activity == null || votation.getStatus() != VotationStatus.ACTIVE) {
       log.warn(
@@ -67,7 +71,11 @@ public class VotationClosingScheduler {
           votation.getId(),
           activity == null ? null : activity.getId(),
           votation.getStatus());
-      return;
+      return false;
+    }
+    LocalDateTime now = activity.now();
+    if (!votation.isDueToClose(now)) {
+      return false;
     }
 
     int eligibleVoters =
@@ -78,7 +86,7 @@ public class VotationClosingScheduler {
     ActivityStatus outcome;
     ActivityTransitionReason reason;
     if (votation.reachesQuorum(eligibleVoters)) {
-      LocalDateTime winner = votation.winningOption().orElse(null);
+      LocalDateTime winner = votation.winningOption(now).orElse(null);
       if (winner == null) {
         outcome = ActivityStatus.CANCELLED;
         reason = ActivityTransitionReason.VOTATION_WITHOUT_WINNER;
@@ -102,5 +110,6 @@ public class VotationClosingScheduler {
         outcome,
         reason,
         eligibleVoters);
+    return true;
   }
 }

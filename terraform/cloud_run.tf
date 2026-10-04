@@ -157,6 +157,12 @@ resource "google_cloud_run_v2_service" "backend" {
         name  = "APP_SEED_ENABLED"
         value = "false"
       }
+      # Activities created before the time zone was stored get this zone on startup, so their
+      # deadlines stop being evaluated against the UTC server clock.
+      env {
+        name  = "ACTIVITY_LEGACY_TIME_ZONE"
+        value = var.activity_legacy_time_zone
+      }
       env {
         name  = "ACTIVITY_WEATHER_CHECK_CRON"
         value = "-"
