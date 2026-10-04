@@ -53,8 +53,8 @@ services:
       APP_SEED_ENABLED: ${APP_SEED_ENABLED:-false}
       APP_DEV_SEED_ENABLED: ${APP_DEV_SEED_ENABLED:-false}
       APP_DEV_SEED_USER_ID: ${APP_DEV_SEED_USER_ID:-}
-      TELEGRAM_API_TOKEN: ${TELEGRAM_API_TOKEN:-}
-      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-local-webhook-secret}
+      # Development-only default, shared with the telegram service; a blank value rejects every bot call.
+      TELEGRAM_API_TOKEN: ${TELEGRAM_API_TOKEN:-local-telegram-api-token}
     depends_on:
       minio:
         condition: service_healthy
@@ -82,7 +82,9 @@ services:
       - "8081:8080"
     environment:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
-      TELEGRAM_API_TOKEN: ${TELEGRAM_API_TOKEN:-}
+      TELEGRAM_API_TOKEN: ${TELEGRAM_API_TOKEN:-local-telegram-api-token}
+      # Secret que Telegram manda en cada update; sin el, el bot rechaza todos los updates.
+      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-local-webhook-secret}
       # Dentro de la red de Compose el backend es "backend"; localhost seria el propio bot.
       BACKEND_URL: http://backend:8080
       # URL del frontend tal como la abre el usuario desde Telegram (no la de la red de Compose).
