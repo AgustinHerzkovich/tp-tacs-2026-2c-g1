@@ -40,7 +40,8 @@ Bearer.
 Para construir, levantar el sistema completo y esperar automáticamente a que esté disponible,
 ejecutá `docker compose up --build --wait` desde la raíz. En ese modo el proxy del frontend usa
 `http://backend:8080` dentro de la red de Compose. Compose considera saludable al frontend cuando
-`/api/healthcheck` responde correctamente a través de Next.js y del backend.
+la página de inicio responde; ese chequeo no depende del backend, que tiene su propio healthcheck.
+Para comprobar el camino completo a través de Next.js y del backend está `/api/healthcheck`.
 
 ## Calidad de código
 

@@ -105,7 +105,8 @@ public class SecurityConfig {
           .authorizeHttpRequests(
               requests ->
                   requests
-                      .requestMatchers("/healthcheck", "/swagger-ui/**", "/v3/api-docs/**")
+                      .requestMatchers(
+                          "/healthcheck", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**")
                       .permitAll()
                       .requestMatchers("/statistics/**")
                       .hasRole("ADMIN")
