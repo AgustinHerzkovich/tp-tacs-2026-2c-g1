@@ -113,6 +113,29 @@ bot_role_id=$("$KCADM" get "roles/$BOT_ROLE" -r "$REALM" --fields id --format cs
 "$KCADM" create "clients/$bot_client_uuid/scope-mappings/realm" -r "$REALM" \
   -b "[{\"id\":\"$bot_role_id\",\"name\":\"$BOT_ROLE\"}]"
 
+# En un realm importado antes de que el export trajera estos ajustes, el cliente
+# no tiene los scopes por defecto ni el mapper de audiencia: el token sale sin
+# "sub", sin roles y sin "aud", y el backend responde 401. Asignar un scope ya
+# asignado no hace nada.
+# La imagen de Keycloak no trae awk ni grep: se recorre la salida CSV con el shell.
+"$KCADM" get client-scopes -r "$REALM" --fields id,name --format csv --noquotes |
+  while IFS=, read -r scope_id scope_name; do
+    case "$scope_name" in
+      basic | roles | acr)
+        "$KCADM" update "clients/$bot_client_uuid/default-client-scopes/$scope_id" -r "$REALM"
+        ;;
+    esac
+  done
+
+BOT_AUDIENCE_MAPPER="backend audience"
+bot_mappers=$("$KCADM" get "clients/$bot_client_uuid/protocol-mappers/models" -r "$REALM" --fields name --format csv --noquotes)
+case "$bot_mappers" in
+  *"$BOT_AUDIENCE_MAPPER"*) ;;
+  *)
+    "$KCADM" create "clients/$bot_client_uuid/protocol-mappers/models" -r "$REALM"       -s "name=$BOT_AUDIENCE_MAPPER"       -s protocol=openid-connect       -s protocolMapper=oidc-audience-mapper       -s 'config."included.client.audience"=solnotfoundBackend'       -s 'config."id.token.claim"=false'       -s 'config."access.token.claim"=true'       -s 'config."introspection.token.claim"=true'
+    ;;
+esac
+
 # Load test support (local only): a public client with the password grant enabled so
 # loadtest/run.sh can obtain tokens without a browser, plus dedicated users. This is kept out of
 # keycloak-import/realm-export.json on purpose so the password grant never reaches cloud realms.
