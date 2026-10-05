@@ -9,25 +9,42 @@ import com.solnotfound.repository.IVotationRepository;
 import com.solnotfound.service.ActivityStatusTransitionService;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 @Component
-@RequiredArgsConstructor
 @Slf4j
 @ConditionalOnProperty(name = "app.scheduling.enabled", havingValue = "true", matchIfMissing = true)
 public class VotationClosingScheduler {
 
   private final IVotationRepository votationRepository;
   private final ActivityStatusTransitionService transitionService;
+  private final boolean closingCheckOnStartup;
+  private final String appMode;
+
+  public VotationClosingScheduler(
+      IVotationRepository votationRepository,
+      ActivityStatusTransitionService transitionService,
+      @Value("${votation.closing-check-on-startup:true}") boolean closingCheckOnStartup,
+      @Value("${app.mode:}") String appMode) {
+    this.votationRepository = votationRepository;
+    this.transitionService = transitionService;
+    this.closingCheckOnStartup = closingCheckOnStartup;
+    this.appMode = appMode;
+  }
 
   /**
    * Closes due votations and persists their activity outcome. Participation quorum is evaluated
    * across the whole votation; when reached, the most-voted option reschedules the activity.
    * Otherwise, the activity is cancelled. State is saved before notification publication.
+   *
+   * <p>A failure is logged and then rethrown so the caller (the cron pass or the Cloud Scheduler
+   * HTTP trigger) can retry the whole pass later.
    */
   @Scheduled(cron = "${votation.closing-check-cron:0 0 * * * *}")
   @edu.umd.cs.findbugs.annotations.SuppressFBWarnings(
@@ -61,6 +78,35 @@ public class VotationClosingScheduler {
         dueVotations.size(),
         closed,
         failures);
+  }
+
+  /**
+   * Runs one closing pass as soon as the application is ready, so due votations do not have to wait
+   * for the first cron execution. It reuses the same rules as the scheduled pass and runs
+   * synchronously before the application reports itself as started.
+   *
+   * <p>The pass is skipped when {@code votation.closing-check-on-startup=false}, and also when
+   * {@code app.mode=scheduled-jobs}: in that mode {@link ScheduledJobRunner} runs this very pass
+   * from a {@code CommandLineRunner} and closes the context afterwards, so running it again here
+   * would duplicate the work against an already closed context.
+   *
+   * <p>A failure of the pass is logged and swallowed: a database or scheduling problem must never
+   * prevent the application from starting, and the cron execution retries later.
+   */
+  @EventListener(ApplicationReadyEvent.class)
+  public void closeDueVotationsOnStartup() {
+    if (!closingCheckOnStartup || "scheduled-jobs".equals(appMode)) {
+      log.info(
+          "Startup votation closing check skipped: closingCheckOnStartup={} appMode={}",
+          closingCheckOnStartup,
+          appMode.isEmpty() ? "<unset>" : appMode);
+      return;
+    }
+    try {
+      closeDueVotations();
+    } catch (RuntimeException exception) {
+      log.error("Startup votation closing check failed", exception);
+    }
   }
 
   private boolean resolve(Votation votation) {
