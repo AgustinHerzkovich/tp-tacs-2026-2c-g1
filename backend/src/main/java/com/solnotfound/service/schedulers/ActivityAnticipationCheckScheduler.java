@@ -38,6 +38,15 @@ import org.springframework.stereotype.Component;
     justification = "Spring injects shared application collaborators")
 public class ActivityAnticipationCheckScheduler {
 
+  /** Minimum time participants get to vote before the votation closes. */
+  private static final Duration MIN_VOTING_TIME = Duration.ofHours(1);
+
+  /**
+   * Gap kept between the closing of the votation and its earliest alternative. It covers the hourly
+   * closing check, so the activity is rescheduled before the chosen date arrives.
+   */
+  private static final Duration CLOSING_MARGIN = Duration.ofHours(1);
+
   private final IActivityRepository activityRepository;
   private final IVotationRepository votationRepository;
   private final IWeatherAdapter weatherAdapter;
@@ -101,8 +110,6 @@ public class ActivityAnticipationCheckScheduler {
               ActivityNotificationEvent.from(activity, new BadWeatherAlertNotificationType()));
         } else {
           goodWeather++;
-          activity.markWeatherChecked();
-          activityRepository.save(activity);
         }
 
       } catch (Exception exception) {
@@ -147,6 +154,12 @@ public class ActivityAnticipationCheckScheduler {
       }
     }
 
+    // The votation needs time to collect votes and must close before its earliest alternative,
+    // so alternatives that start too soon are not offered.
+    LocalDateTime creationDate = activity.now();
+    LocalDateTime earliestAllowed = creationDate.plus(MIN_VOTING_TIME).plus(CLOSING_MARGIN);
+    candidateTimes.removeIf(candidate -> !candidate.isAfter(earliestAllowed));
+
     List<WeatherForecast> forecasts =
         weatherAdapter.getForecastRange(activity.getLocation(), candidateTimes);
     if (forecasts.size() != candidateTimes.size()) {
@@ -164,7 +177,6 @@ public class ActivityAnticipationCheckScheduler {
       }
     }
 
-    activity.markWeatherChecked();
     if (options.isEmpty()) {
       transitionService.transition(
           activity, ActivityStatus.CANCELLED, ActivityTransitionReason.NO_WEATHER_ALTERNATIVES);
@@ -177,9 +189,8 @@ public class ActivityAnticipationCheckScheduler {
     Votation votation = new Votation();
     votation.setActivity(activity);
     votation.setStatus(VotationStatus.ACTIVE);
-    LocalDateTime creationDate = LocalDateTime.now();
     votation.setCreationDate(creationDate);
-    votation.setClosingDate(creationDate.plus(votationDuration));
+    votation.setClosingDate(closingDate(creationDate, options.getFirst().getDateTime()));
     votation.setMinQuorum(minQuorum);
     votation.setOptions(options);
     votationRepository.save(votation);
@@ -190,5 +201,20 @@ public class ActivityAnticipationCheckScheduler {
         activity.getId(),
         options.size(),
         votation.getClosingDate());
+  }
+
+  /**
+   * Chooses when the votation closes: after the configured duration, but never later than {@link
+   * #CLOSING_MARGIN} before the earliest alternative. Otherwise a short anticipation window could
+   * leave the votation open past its own options and reschedule the activity to a past date.
+   *
+   * @param creationDate when the votation opens, in the activity's zone
+   * @param earliestOption earliest alternative offered
+   * @return the closing date, always after {@code creationDate}
+   */
+  private LocalDateTime closingDate(LocalDateTime creationDate, LocalDateTime earliestOption) {
+    LocalDateTime byDuration = creationDate.plus(votationDuration);
+    LocalDateTime beforeEarliestOption = earliestOption.minus(CLOSING_MARGIN);
+    return byDuration.isBefore(beforeEarliestOption) ? byDuration : beforeEarliestOption;
   }
 }

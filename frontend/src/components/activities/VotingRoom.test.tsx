@@ -45,6 +45,23 @@ function fakeVoting(overrides: Partial<UseVoting> = {}): UseVoting {
   };
 }
 
+/** The naive local date-time ("2026-09-20T18:00:00") an instant reads as in a
+ * given IANA zone - the shape the backend stores. */
+function wallClockIn(timeZone: string, at: Date): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).formatToParts(at);
+  const part = (type: string) => parts.find((p) => p.type === type)?.value;
+  return `${part("year")}-${part("month")}-${part("day")}T${part("hour")}:${part("minute")}:${part("second")}`;
+}
+
 describe("VotingRoom", () => {
   it("hides the administration entry from participants", () => {
     render(<VotingRoom voting={fakeVoting()} />);
@@ -60,12 +77,31 @@ describe("VotingRoom", () => {
 });
 
 describe("VotationAdminDialog", () => {
-  async function openDialog(voting: UseVoting) {
+  async function openDialog(voting: UseVoting, timeZone?: string | null) {
     const user = userEvent.setup();
-    render(<VotingRoom voting={voting} organizer />);
+    render(<VotingRoom voting={voting} organizer timeZone={timeZone} />);
     await user.click(screen.getByRole("button", { name: /Administrar votación/ }));
     return user;
   }
+
+  it("measures the remaining duration in the activity's own zone", async () => {
+    // Whichever zone the reader is in, a closing date 48 hours away *on the
+    // activity's clock* has to seed 48: reading that same wall clock in the
+    // reader's zone would shift it by their UTC offset, and that error is what
+    // the backend would then persist as the votation's closing date.
+    const hostZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const activityZone = hostZone === "Asia/Tokyo" ? "America/Argentina/Buenos_Aires" : "Asia/Tokyo";
+    const in48h = new Date(Date.now() + 48 * 3_600_000);
+
+    await openDialog(
+      fakeVoting({
+        votation: { ...VOTATION, closingDate: wallClockIn(activityZone, in48h) },
+      }),
+      activityZone,
+    );
+
+    expect(within(screen.getByRole("dialog")).getByLabelText(/Duración/)).toHaveValue(48);
+  });
 
   it("seeds the form with the votation's current settings and options", async () => {
     await openDialog(fakeVoting());

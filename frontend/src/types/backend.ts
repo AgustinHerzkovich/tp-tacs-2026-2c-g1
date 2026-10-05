@@ -56,6 +56,10 @@ export interface ActivityResponse {
   location: LocationDTO;
   /** LocalDateTime, e.g. "2026-09-06T09:00:00" */
   dateTime: string;
+  /** IANA zone the activity's dates are written in (e.g.
+   * "America/Argentina/Buenos_Aires"), `null` when the backend never recorded
+   * one. Needed to tell whether a date already passed is really past. */
+  timeZone: string | null;
   availability: boolean | null;
   minParticipants: number;
   maxParticipants: number;

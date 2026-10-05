@@ -16,6 +16,7 @@ import {
   compareLocalDateTimes,
   formatActivityWhen,
   fromDateTimeLocalValue,
+  hoursUntilLocalDateTime,
   parseLocalDateTime,
   toDateTimeLocalValue,
 } from "@/lib/formatDate";
@@ -23,6 +24,9 @@ import type { UseVoting } from "@/hooks/useVoting";
 
 interface VotationAdminDialogProps {
   voting: UseVoting;
+  /** IANA zone of the activity's dates, used to seed the remaining duration
+   * (see `remainingHours`). */
+  timeZone?: string | null;
   onOpenChange: (open: boolean) => void;
 }
 
@@ -60,7 +64,7 @@ interface DraftOption {
  * `allowVoteLoss` from there. The warning replaces no overlay: the organizer
  * keeps reading the list while deciding, and the list itself stays frozen so the
  * count in the warning can never go stale. */
-export function VotationAdminDialog({ voting, onOpenChange }: VotationAdminDialogProps) {
+export function VotationAdminDialog({ voting, timeZone, onOpenChange }: VotationAdminDialogProps) {
   const votation = voting.votation;
   const [options, setOptions] = useState<DraftOption[]>(() =>
     (votation?.options ?? [])
@@ -73,7 +77,7 @@ export function VotationAdminDialog({ voting, onOpenChange }: VotationAdminDialo
   );
   const [quorum, setQuorum] = useState(() => String(Math.round((votation?.minQuorum ?? 0.5) * 100)));
   const [durationHours, setDurationHours] = useState(() =>
-    String(remainingHours(votation?.closingDate ?? null)),
+    String(remainingHours(votation?.closingDate ?? null, timeZone)),
   );
   const [saving, setSaving] = useState<"settings" | "options" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -370,9 +374,11 @@ disabled={closed || confirmVoteLoss}
 }
 
 /** Whole hours left until the votation closes, at least 1 so the input never
- * starts empty or below the minimum the backend accepts. */
-function remainingHours(closingDate: string | null): number {
+ * starts empty or below the minimum the backend accepts. Resolved in the
+ * activity's own zone: the closing date is a wall-clock reading over there, so
+ * measuring it against the organizer's clock without the zone would write a
+ * duration off by their UTC offset. */
+function remainingHours(closingDate: string | null, timeZone?: string | null): number {
   if (!closingDate) return 24;
-  const ms = parseLocalDateTime(closingDate).getTime() - new Date().getTime();
-  return Math.max(1, Math.ceil(ms / 3_600_000));
+  return Math.max(1, Math.ceil(hoursUntilLocalDateTime(closingDate, timeZone)));
 }

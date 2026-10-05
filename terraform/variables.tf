@@ -119,3 +119,9 @@ variable "atlas_access_cidrs" {
   type        = set(string)
   default     = ["0.0.0.0/0"]
 }
+
+variable "activity_legacy_time_zone" {
+  description = "IANA time zone assigned on startup to activities created before the zone was stored. Empty skips the step."
+  type        = string
+  default     = "America/Argentina/Buenos_Aires"
+}

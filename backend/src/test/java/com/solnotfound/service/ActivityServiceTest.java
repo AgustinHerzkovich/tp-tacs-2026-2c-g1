@@ -20,8 +20,11 @@ import com.solnotfound.dto.ParticipantDTO;
 import com.solnotfound.dto.ReprogramationRangeDTO;
 import com.solnotfound.dto.WeatherConditionsDTO;
 import com.solnotfound.dto.WeatherForecastDTO;
+import com.solnotfound.entity.activity.Activity;
 import com.solnotfound.entity.activity.ActivityType;
+import com.solnotfound.entity.activity.City;
 import com.solnotfound.entity.activity.Location;
+import com.solnotfound.entity.activity.ReprogramationRange;
 import com.solnotfound.entity.user.User;
 import com.solnotfound.entity.weather.WeatherForecast;
 import com.solnotfound.exception.ActivityAccessDeniedException;
@@ -290,6 +293,20 @@ class ActivityServiceTest {
   }
 
   @Test
+  void storesTheOrganizerTimeZoneSoDeadlinesAreEvaluatedInIt() {
+    CreateActivityRequest request = requestAt(LocalDateTime.now().plusDays(2));
+
+    ActivityResponse created =
+        activityService.create(request, "creator-1", List.of(), "America/Argentina/Buenos_Aires");
+
+    assertThat(activityRepository.findById(created.id()).getTimeZone())
+        .isEqualTo("America/Argentina/Buenos_Aires");
+    // And it travels back to the client: without it the UI cannot tell whether an
+    // already-past date is really past, since its own clock is a different zone.
+    assertThat(created.timeZone()).isEqualTo("America/Argentina/Buenos_Aires");
+  }
+
+  @Test
   void rejectsUnknownTimeZoneId() {
     CreateActivityRequest request = requestAt(LocalDateTime.now().plusDays(1));
 
@@ -483,6 +500,88 @@ class ActivityServiceTest {
     ActivityResponse result = activityService.join(activity.id(), "user-1");
 
     assertThat(result.participants()).extracting(ParticipantDTO::userId).containsExactly("user-1");
+  }
+
+  @Test
+  void reportsTheActivityAsFullWhenAnotherUserTakesTheLastSpotConcurrently() {
+    // Both requests read the activity while it still had a spot; the other one wins the atomic
+    // update, so this one must reload, see it full and fail instead of overbooking.
+    IActivityRepository repository = mock(IActivityRepository.class);
+    Activity withOneSpot = activityWithCapacity(1);
+    Activity full = activityWithCapacity(1);
+    full.addParticipant("rival");
+    when(repository.findById("activity-1")).thenReturn(withOneSpot, full);
+    when(repository.addParticipant("activity-1", "user-1")).thenReturn(false);
+    ActivityService service =
+        new ActivityService(repository, weatherAdapter, userRepository, statisticsRecorder);
+
+    assertThatThrownBy(() -> service.join("activity-1", "user-1"))
+        .isInstanceOf(IllegalStateActivityException.class)
+        .extracting("code")
+        .isEqualTo(com.solnotfound.exception.ErrorCode.ACTIVITY_FULL);
+    verify(repository, never()).save(any());
+  }
+
+  @Test
+  void joinsWithAnAtomicUpdateInsteadOfSavingTheWholeActivity() {
+    IActivityRepository repository = mock(IActivityRepository.class);
+    when(repository.findById("activity-1")).thenReturn(activityWithCapacity(5));
+    when(repository.addParticipant("activity-1", "user-1")).thenReturn(true);
+    ActivityService service =
+        new ActivityService(repository, weatherAdapter, userRepository, statisticsRecorder);
+
+    ActivityResponse joined = service.join("activity-1", "user-1");
+
+    assertThat(joined.participants()).extracting(ParticipantDTO::userId).containsExactly("user-1");
+    verify(repository).addParticipant("activity-1", "user-1");
+    verify(repository, never()).save(any());
+  }
+
+  @Test
+  void joiningAgainDoesNotTouchTheStoredParticipants() {
+    IActivityRepository repository = mock(IActivityRepository.class);
+    Activity activity = activityWithCapacity(5);
+    activity.addParticipant("user-1");
+    when(repository.findById("activity-1")).thenReturn(activity);
+    ActivityService service =
+        new ActivityService(repository, weatherAdapter, userRepository, statisticsRecorder);
+
+    service.join("activity-1", "user-1");
+
+    verify(repository, never()).addParticipant(any(), any());
+    verify(repository, never()).save(any());
+  }
+
+  @Test
+  void leavesWithAnAtomicUpdateInsteadOfSavingTheWholeActivity() {
+    IActivityRepository repository = mock(IActivityRepository.class);
+    Activity activity = activityWithCapacity(5);
+    activity.addParticipant("user-1");
+    when(repository.findById("activity-1")).thenReturn(activity);
+    ActivityService service =
+        new ActivityService(repository, weatherAdapter, userRepository, statisticsRecorder);
+
+    ActivityResponse left = service.leave("activity-1", "user-1");
+
+    assertThat(left.participants()).isEmpty();
+    verify(repository).removeParticipant("activity-1", "user-1");
+    verify(repository, never()).save(any());
+  }
+
+  private Activity activityWithCapacity(int maxParticipants) {
+    Activity activity = new Activity();
+    activity.setId("activity-1");
+    activity.setTitle("Football match");
+    activity.setType(ActivityType.OUTDOOR);
+    activity.setLocation(new Location(new City(null, "Buenos Aires"), null, null));
+    activity.setDateTime(LocalDateTime.now().plusDays(1));
+    activity.setMinParticipants(1);
+    activity.setMaxParticipants(maxParticipants);
+    activity.setOrganizer(User.withId("organizer"));
+    activity.setAnticipationWindow(24);
+    activity.setReprogramationRange(
+        new ReprogramationRange(3, java.time.LocalTime.of(9, 0), java.time.LocalTime.of(21, 0)));
+    return activity;
   }
 
   @Test

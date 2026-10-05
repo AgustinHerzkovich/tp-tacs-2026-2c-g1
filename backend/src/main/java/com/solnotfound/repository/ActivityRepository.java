@@ -13,6 +13,7 @@ import org.springframework.data.mongodb.MongoExpression;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -141,6 +142,38 @@ public class ActivityRepository implements IActivityRepository {
     Query query = Query.query(Criteria.where("participants").is(participantId));
     addDateRangeCriteria(query, dateFrom, dateTo);
     return page(query, pageable);
+  }
+
+  @Override
+  public boolean addParticipant(String activityId, String userId) {
+    // Participants are stored as a list of user identifiers (document references).
+    Query canJoin =
+        Query.query(
+            new Criteria()
+                .andOperator(
+                    Criteria.where("_id").is(activityId),
+                    Criteria.where("participants").ne(userId),
+                    availabilityCriteria(true)));
+    return mongoTemplate
+            .updateFirst(canJoin, new Update().push("participants", userId), Activity.class)
+            .getModifiedCount()
+        == 1;
+  }
+
+  @Override
+  public void removeParticipant(String activityId, String userId) {
+    mongoTemplate.updateFirst(
+        Query.query(Criteria.where("_id").is(activityId)),
+        new Update().pull("participants", userId),
+        Activity.class);
+  }
+
+  @Override
+  public long assignTimeZoneWhereMissing(String timeZone) {
+    Query withoutZone = Query.query(Criteria.where("timeZone").is(null));
+    return mongoTemplate
+        .updateMulti(withoutZone, Update.update("timeZone", timeZone), Activity.class)
+        .getModifiedCount();
   }
 
   private Page<Activity> page(Query query, Pageable pageable) {

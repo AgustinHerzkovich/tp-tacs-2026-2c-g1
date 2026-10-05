@@ -27,11 +27,70 @@ export function formatActivityWhen(isoLocalDateTime: string): string {
 }
 
 /** True when the backend's naive local date-time is already behind the clock —
- * the activity happened (or is happening right now). A weather provider only
- * forecasts the future, so this is what tells the UI to stop talking about a
- * pending forecast. */
-export function isPastLocalDateTime(isoLocalDateTime: string): boolean {
-  return parseLocalDateTime(isoLocalDateTime).getTime() < new Date().getTime();
+ *  the activity happened (or is happening right now). A weather provider only
+ *  forecasts the future, so this is what tells the UI to stop talking about a
+ *  pending forecast.
+ *
+ *  `timeZone` is the activity's own zone (the backend stores the one the creator
+ *  was in). Without it the browser's zone is assumed, which is right only while
+ *  every activity belongs to the same place as the reader. */
+export function isPastLocalDateTime(isoLocalDateTime: string, timeZone?: string | null): boolean {
+  return instantOfLocalDateTime(isoLocalDateTime, timeZone).getTime() < Date.now();
+}
+
+/** Whole hours from now until a naive local date-time — negative once it passed.
+ * Same zone rules as {@link isPastLocalDateTime}. */
+export function hoursUntilLocalDateTime(
+  isoLocalDateTime: string,
+  timeZone?: string | null,
+): number {
+  return (instantOfLocalDateTime(isoLocalDateTime, timeZone).getTime() - Date.now()) / 3_600_000;
+}
+
+/** The instant a wall-clock reading stands for.
+ *
+ * The backend sends naive local date-times: "2026-09-15T14:00:00" means 14:00
+ * *in the activity's zone*, with no offset attached. Turning that into an instant
+ * therefore needs that zone — without one the browser's own zone is the best guess,
+ * which is what the data meant before zones were recorded. */
+export function instantOfLocalDateTime(iso: string, timeZone?: string | null): Date {
+  if (!timeZone) return parseLocalDateTime(iso);
+
+  const [datePart, timePart = "00:00:00"] = iso.split("T");
+  const [year, month, day] = (datePart ?? "").split("-").map(Number);
+  const [hour = 0, minute = 0, second = 0] = timePart.split(":").map(Number);
+  const wallClockAsUtc = Date.UTC(year ?? 1970, (month ?? 1) - 1, day ?? 1, hour, minute, second);
+
+  // The zone's offset depends on the instant, so it is read once at the guessed
+  // instant and applied once more: the second pass settles daylight-saving dates,
+  // where the first pass is off by an hour.
+  const guess = new Date(wallClockAsUtc);
+  return new Date(wallClockAsUtc - zoneOffsetMs(guess, timeZone));
+}
+
+/** Milliseconds that `timeZone` is ahead of UTC at the given instant (east of
+ * Greenwich is positive). `Intl` is the only portable source of that offset. */
+function zoneOffsetMs(at: Date, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).formatToParts(at);
+  const part = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+  const asUtc = Date.UTC(
+    part("year"),
+    part("month") - 1,
+    part("day"),
+    part("hour"),
+    part("minute"),
+    part("second"),
+  );
+  return asUtc - at.getTime();
 }
 
 /** The backend's naive local date-time as the `YYYY-MM-DDTHH:mm` value an

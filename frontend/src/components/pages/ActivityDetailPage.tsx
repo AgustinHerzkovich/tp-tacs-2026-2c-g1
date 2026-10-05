@@ -40,8 +40,9 @@ export function ActivityDetailPage({ id }: { id: string }) {
 
   // The backend never returns a forecast for an activity whose date-time is
   // already past, so without this the weather widget would blame the forecast
-  // for something that already happened.
-  const expired = activity != null && isPastLocalDateTime(activity.dateTime);
+  // for something that already happened. Resolved in the activity's own zone:
+  // its date-time is a wall-clock reading there, not in the reader's.
+  const expired = activity != null && isPastLocalDateTime(activity.dateTime, activity.timeZone);
 
   const handleRefreshImages = () => {
     refresh();
@@ -164,6 +165,7 @@ export function ActivityDetailPage({ id }: { id: string }) {
               }
               organizer={isOrganizer}
               maxHeightPx={votingMaxHeight}
+              timeZone={activity.timeZone}
             />
           )}
         </div>

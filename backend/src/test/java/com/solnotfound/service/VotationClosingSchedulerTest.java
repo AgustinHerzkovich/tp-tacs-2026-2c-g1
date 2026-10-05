@@ -29,6 +29,9 @@ import org.springframework.context.ApplicationEventPublisher;
 
 class VotationClosingSchedulerTest {
 
+  private static final LocalDateTime FUTURE_OPTION =
+      LocalDateTime.now().plusDays(2).withHour(10).withMinute(0).withSecond(0).withNano(0);
+
   private IVotationRepository votationRepository;
   private IActivityRepository activityRepository;
   private ApplicationEventPublisher eventPublisher;
@@ -48,7 +51,7 @@ class VotationClosingSchedulerTest {
   @Test
   void reschedulesActivityToMostVotedOptionWhenParticipationReachesQuorum() {
     Activity activity = activity(3);
-    LocalDateTime winner = LocalDateTime.of(2026, 9, 3, 10, 0);
+    LocalDateTime winner = FUTURE_OPTION;
     Votation votation =
         votation(
             option(winner, activity.getParticipants().get(0), activity.getParticipants().get(1)),
@@ -70,9 +73,7 @@ class VotationClosingSchedulerTest {
   @Test
   void cancelsActivityWhenTotalParticipationDoesNotReachQuorum() {
     Activity activity = activity(3);
-    Votation votation =
-        votation(
-            option(LocalDateTime.of(2026, 9, 3, 10, 0), activity.getParticipants().getFirst()));
+    Votation votation = votation(option(FUTURE_OPTION, activity.getParticipants().getFirst()));
     when(votationRepository.findActiveDueToClose(any())).thenReturn(List.of(votation));
     when(activityRepository.findById("activity-1")).thenReturn(activity);
     votation.setActivity(activity);
@@ -87,9 +88,7 @@ class VotationClosingSchedulerTest {
   @Test
   void persistsResolutionBeforeNotificationFailure() {
     Activity activity = activity(1);
-    Votation votation =
-        votation(
-            option(LocalDateTime.of(2026, 9, 3, 10, 0), activity.getParticipants().getFirst()));
+    Votation votation = votation(option(FUTURE_OPTION, activity.getParticipants().getFirst()));
     when(votationRepository.findActiveDueToClose(any())).thenReturn(List.of(votation));
     when(activityRepository.findById("activity-1")).thenReturn(activity);
     votation.setActivity(activity);
@@ -102,6 +101,59 @@ class VotationClosingSchedulerTest {
 
     verify(votationRepository).save(votation);
     verify(activityRepository).save(activity);
+  }
+
+  @Test
+  void cancelsInsteadOfReschedulingToAnOptionThatAlreadyPassed() {
+    Activity activity = activity(1);
+    Votation votation =
+        votation(option(LocalDateTime.now().minusHours(1), activity.getParticipants().getFirst()));
+    when(votationRepository.findActiveDueToClose(any())).thenReturn(List.of(votation));
+    votation.setActivity(activity);
+    LocalDateTime originalDate = activity.getDateTime();
+
+    scheduler.closeDueVotations();
+
+    assertThat(votation.getStatus()).isEqualTo(VotationStatus.CLOSED);
+    assertThat(activity.getStatus()).isEqualTo(ActivityStatus.CANCELLED);
+    assertThat(activity.getDateTime()).isEqualTo(originalDate);
+  }
+
+  @Test
+  void prefersTheMostVotedOptionThatIsStillInTheFuture() {
+    Activity activity = activity(3);
+    Votation votation =
+        votation(
+            option(
+                LocalDateTime.now().minusHours(1),
+                activity.getParticipants().get(0),
+                activity.getParticipants().get(1)),
+            option(FUTURE_OPTION, activity.getParticipants().get(2)));
+    when(votationRepository.findActiveDueToClose(any())).thenReturn(List.of(votation));
+    votation.setActivity(activity);
+
+    scheduler.closeDueVotations();
+
+    assertThat(activity.getStatus()).isEqualTo(ActivityStatus.RESCHEDULED);
+    assertThat(activity.getDateTime()).isEqualTo(FUTURE_OPTION);
+  }
+
+  @Test
+  void waitsUntilTheClosingDateArrivesInTheActivityZone() {
+    // The query pre-selects with the latest "now" on Earth; a votation whose closing date has not
+    // arrived yet in its own activity's zone must stay open.
+    Activity activity = activity(1);
+    activity.setTimeZone("Pacific/Pago_Pago");
+    Votation votation = votation(option(FUTURE_OPTION, activity.getParticipants().getFirst()));
+    votation.setClosingDate(activity.now().plusMinutes(30));
+    when(votationRepository.findActiveDueToClose(any())).thenReturn(List.of(votation));
+    votation.setActivity(activity);
+
+    scheduler.closeDueVotations();
+
+    assertThat(votation.getStatus()).isEqualTo(VotationStatus.ACTIVE);
+    assertThat(activity.getStatus()).isEqualTo(ActivityStatus.PROPOSED);
+    verify(votationRepository, never()).save(any());
   }
 
   @Test
@@ -141,6 +193,7 @@ class VotationClosingSchedulerTest {
     votation.setId("votation-1");
     votation.setStatus(VotationStatus.ACTIVE);
     votation.setMinQuorum(0.5);
+    votation.setClosingDate(LocalDateTime.now().minusMinutes(1));
     votation.setOptions(List.of(options));
     return votation;
   }

@@ -18,6 +18,7 @@ function makeActivity(overrides: Partial<ActivityResponse> = {}): ActivityRespon
     type: "OUTDOOR",
     location: { city: "CABA", latitude: -34.6, longitude: -58.4 },
     dateTime: "2026-09-20T14:00:00",
+    timeZone: "America/Argentina/Buenos_Aires",
     availability: true,
     minParticipants: 4,
     maxParticipants: 12,

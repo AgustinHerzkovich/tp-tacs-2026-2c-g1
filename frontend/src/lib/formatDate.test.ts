@@ -4,6 +4,8 @@ import {
   formatActivityWhen,
   formatRelativeTime,
   fromDateTimeLocalValue,
+  hoursUntilLocalDateTime,
+  instantOfLocalDateTime,
   isPastLocalDateTime,
   toDateTimeLocalValue,
 } from "@/lib/formatDate";
@@ -42,6 +44,94 @@ describe("isPastLocalDateTime", () => {
 
   it("treats the exact current minute as not past yet", () => {
     expect(isPastLocalDateTime("2026-09-13T12:00:00")).toBe(false);
+  });
+});
+
+describe("instantOfLocalDateTime", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    // 2026-09-13T12:00Z: a fixed UTC instant, so the expectations below do not
+    // depend on the machine's own zone.
+    vi.setSystemTime(new Date("2026-09-13T12:00:00Z"));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("reads the wall clock in the given zone, not in the browser's", () => {
+    // Buenos Aires is UTC-3 year round: 18:00 there is 21:00Z.
+    expect(instantOfLocalDateTime("2026-09-13T18:00:00", "America/Argentina/Buenos_Aires").toISOString()).toBe(
+      "2026-09-13T21:00:00.000Z",
+    );
+    // Tokyo is UTC+9: the same wall clock is 09:00Z.
+    expect(instantOfLocalDateTime("2026-09-13T18:00:00", "Asia/Tokyo").toISOString()).toBe(
+      "2026-09-13T09:00:00.000Z",
+    );
+  });
+
+  it("applies the daylight-saving offset of the date, not of today", () => {
+    // New York is UTC-4 in September and UTC-5 in January.
+    expect(instantOfLocalDateTime("2026-09-13T18:00:00", "America/New_York").toISOString()).toBe(
+      "2026-09-13T22:00:00.000Z",
+    );
+    expect(instantOfLocalDateTime("2026-01-13T18:00:00", "America/New_York").toISOString()).toBe(
+      "2026-01-13T23:00:00.000Z",
+    );
+  });
+
+  it("falls back to the browser's zone when the activity has none", () => {
+    expect(instantOfLocalDateTime("2026-09-13T18:00:00", null).getTime()).toBe(
+      instantOfLocalDateTime("2026-09-13T18:00:00").getTime(),
+    );
+  });
+});
+
+describe("isPastLocalDateTime with an activity time zone", () => {
+  const BA = "America/Argentina/Buenos_Aires";
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-13T12:00:00Z"));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("judges the wall clock in the activity's zone, not in the reader's", () => {
+    // 09:00 in Buenos Aires is 12:00Z: the activity is starting right now, so it
+    // is not past. The very same wall clock read in Tokyo is 00:00Z, twelve hours
+    // ago — which is exactly the mistake the zone argument removes.
+    expect(isPastLocalDateTime("2026-09-13T09:00:00", BA)).toBe(false);
+    expect(isPastLocalDateTime("2026-09-13T09:00:00", "Asia/Tokyo")).toBe(true);
+  });
+
+  it("calls it past once that zone's clock moved on", () => {
+    // 05:00 in Buenos Aires is 08:00Z, four hours behind the frozen clock, while
+    // 20:00 there is still ahead of it.
+    expect(isPastLocalDateTime("2026-09-13T05:00:00", BA)).toBe(true);
+    expect(isPastLocalDateTime("2026-09-13T20:00:00", BA)).toBe(false);
+  });
+});
+
+describe("hoursUntilLocalDateTime", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-13T12:00:00Z"));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("measures the remaining time in the activity's zone", () => {
+    expect(hoursUntilLocalDateTime("2026-09-13T09:00:00", "America/Argentina/Buenos_Aires")).toBe(0);
+    expect(hoursUntilLocalDateTime("2026-09-13T09:00:00", "Asia/Tokyo")).toBe(-12);
+    expect(hoursUntilLocalDateTime("2026-09-14T00:00:00", "Asia/Tokyo")).toBe(3);
+  });
+
+  it("is negative for a date already gone", () => {
+    expect(
+      hoursUntilLocalDateTime("2026-09-13T05:00:00", "America/Argentina/Buenos_Aires"),
+    ).toBeLessThan(0);
   });
 });
 

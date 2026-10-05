@@ -68,6 +68,7 @@ class ActivityAnticipationCheckSchedulerTest {
     lenient().when(activityToCheck.isTimeToCheckWeatherConditions()).thenReturn(true);
     lenient().when(activityToCheck.getLocation()).thenReturn(location);
     lenient().when(activityToCheck.getDateTime()).thenReturn(dateTime);
+    lenient().when(activityToCheck.now()).thenReturn(dateTime.minusHours(2));
     lenient().when(activityToCheck.getId()).thenReturn("activity-1");
 
     range = mock(ReprogramationRange.class);
@@ -148,6 +149,71 @@ class ActivityAnticipationCheckSchedulerTest {
   }
 
   @Test
+  void keepsWatchingAnActivityWithGoodWeatherOnEveryRun() throws Exception {
+    when(activityRepository.findActive()).thenReturn(List.of(activityToCheck));
+    when(weatherAdapter.getFutureClimate(location, dateTime)).thenReturn(weather);
+    when(badWeatherChecker.isBadWeatherForActivity(weather, activityToCheck))
+        .thenReturn(false, true, false);
+    when(range.isWithinRange(any(LocalDateTime.class), any(LocalDateTime.class)))
+        .thenReturn(true, false);
+
+    // First run: the forecast is fine, nothing is recorded that would stop later checks.
+    scheduler.checkActivitiesClimate();
+    verify(activityRepository, never()).save(any());
+    verify(eventPublisher, never()).publishEvent(any());
+
+    // Next run: the forecast got worse inside the anticipation window and is detected.
+    scheduler.checkActivitiesClimate();
+    verify(weatherAdapter, times(2)).getFutureClimate(location, dateTime);
+    verify(votationRepository).save(any(Votation.class));
+    verify(activityToCheck).setStatus(ActivityStatus.PROPOSED);
+  }
+
+  @Test
+  void closesTheVotationBeforeItsEarliestOptionWhenTheDurationIsLonger() throws Exception {
+    // The activity is tonight and its first alternative is tomorrow at 10:00, 12 hours from "now":
+    // a 24-hour votation would outlive that alternative.
+    LocalDateTime now = LocalDateTime.of(2026, 10, 5, 22, 0);
+    LocalDateTime tonight = now.plusHours(1);
+    when(activityToCheck.now()).thenReturn(now);
+    when(activityToCheck.getDateTime()).thenReturn(tonight);
+    when(activityRepository.findActive()).thenReturn(List.of(activityToCheck));
+    when(weatherAdapter.getFutureClimate(location, tonight)).thenReturn(weather);
+    when(badWeatherChecker.isBadWeatherForActivity(any(), eq(activityToCheck)))
+        .thenReturn(true, false);
+    when(range.isWithinRange(any(LocalDateTime.class), any(LocalDateTime.class)))
+        .thenReturn(true, false);
+
+    scheduler.checkActivitiesClimate();
+
+    ArgumentCaptor<Votation> votationCaptor = ArgumentCaptor.forClass(Votation.class);
+    verify(votationRepository).save(votationCaptor.capture());
+    LocalDateTime earliestOption = LocalDateTime.of(2026, 10, 6, 10, 0);
+    assertThat(votationCaptor.getValue().getCreationDate()).isEqualTo(now);
+    assertThat(votationCaptor.getValue().getClosingDate()).isEqualTo(earliestOption.minusHours(1));
+  }
+
+  @Test
+  void doesNotOfferAlternativesTooCloseToLeaveTimeToVote() throws Exception {
+    // "Now" is 08:30 on the day of the only candidate (10:00): less than the minimum voting time
+    // plus the closing margin, so it is discarded and the activity is cancelled.
+    LocalDateTime now = LocalDateTime.of(2026, 10, 6, 8, 30);
+    LocalDateTime yesterdayNight = LocalDateTime.of(2026, 10, 5, 23, 0);
+    when(activityToCheck.now()).thenReturn(now);
+    when(activityToCheck.getDateTime()).thenReturn(yesterdayNight);
+    when(activityRepository.findActive()).thenReturn(List.of(activityToCheck));
+    when(weatherAdapter.getFutureClimate(location, yesterdayNight)).thenReturn(weather);
+    when(badWeatherChecker.isBadWeatherForActivity(any(), eq(activityToCheck))).thenReturn(true);
+    when(range.isWithinRange(any(LocalDateTime.class), any(LocalDateTime.class)))
+        .thenReturn(true, false);
+
+    scheduler.checkActivitiesClimate();
+
+    verify(votationRepository, never()).save(any());
+    verify(activityToCheck).setStatus(ActivityStatus.CANCELLED);
+  }
+
+  @Test
   void skipsActivitiesThatAreNotDueForCheck() {
     when(activityRepository.findActive()).thenReturn(List.of(activityNotToCheck));
 
@@ -167,6 +233,7 @@ class ActivityAnticipationCheckSchedulerTest {
     when(anotherActivity.isTimeToCheckWeatherConditions()).thenReturn(true);
     when(anotherActivity.getLocation()).thenReturn(anotherLocation);
     when(anotherActivity.getDateTime()).thenReturn(anotherDateTime);
+    when(anotherActivity.now()).thenReturn(anotherDateTime.minusHours(3));
     when(anotherActivity.getReprogramationRange()).thenReturn(range);
     when(weatherAdapter.getForecastRange(eq(anotherLocation), anyList()))
         .thenAnswer(
@@ -256,7 +323,6 @@ class ActivityAnticipationCheckSchedulerTest {
 
     scheduler.checkActivitiesClimate();
 
-    verify(activityToCheck).markWeatherChecked();
     verify(activityRepository).save(activityToCheck);
     verify(votationRepository).save(any(Votation.class));
     verify(activityToCheck).setStatus(ActivityStatus.PROPOSED);
@@ -293,7 +359,12 @@ class ActivityAnticipationCheckSchedulerTest {
 
     assertThat(saved.getStatus()).isEqualTo(VotationStatus.ACTIVE);
     assertThat(saved.getActivity()).isSameAs(activityToCheck);
-    assertThat(saved.getClosingDate()).isEqualTo(saved.getCreationDate().plusHours(24));
+    LocalDateTime earliestOption = dateTime.plusDays(1).withHour(10).withMinute(0).withSecond(0);
+    LocalDateTime byDuration = saved.getCreationDate().plusHours(24);
+    LocalDateTime beforeEarliestOption = earliestOption.minusHours(1);
+    assertThat(saved.getClosingDate())
+        .isEqualTo(byDuration.isBefore(beforeEarliestOption) ? byDuration : beforeEarliestOption)
+        .isBefore(earliestOption);
     assertThat(saved.getMinQuorum()).isEqualTo(0.5);
     assertThat(saved.getOptions()).allSatisfy(option -> assertThat(option.getUsers()).isEmpty());
     assertThat(saved.getOptions())
@@ -392,7 +463,6 @@ class ActivityAnticipationCheckSchedulerTest {
 
     verify(votationRepository, never()).save(any());
     verify(activityToCheck).setStatus(ActivityStatus.CANCELLED);
-    verify(activityToCheck).markWeatherChecked();
     verify(activityRepository).save(activityToCheck);
     ArgumentCaptor<ActivityNotificationEvent> eventCaptor =
         ArgumentCaptor.forClass(ActivityNotificationEvent.class);

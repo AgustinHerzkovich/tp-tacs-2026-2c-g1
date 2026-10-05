@@ -17,9 +17,12 @@ interface VotingRoomProps {
    * (where the columns stack instead of sitting side by side) a fixed
    * viewport-relative cap applies instead, see the `max-h-[75vh]` fallback. */
   maxHeightPx?: number;
+  /** IANA zone of the activity's dates, forwarded to the admin panel so the
+   * remaining duration is measured in the activity's clock, not the reader's. */
+  timeZone?: string | null;
 }
 
-export function VotingRoom({ voting, warningText, organizer = false, maxHeightPx }: VotingRoomProps) {
+export function VotingRoom({ voting, warningText, organizer = false, maxHeightPx, timeZone }: VotingRoomProps) {
   const { options, total, selectedId, votedId, select, requestVote, pending } = voting;
   const [adminOpen, setAdminOpen] = useState(false);
 
@@ -99,7 +102,9 @@ export function VotingRoom({ voting, warningText, organizer = false, maxHeightPx
           >
             <Settings2 className="size-4" /> Administrar votación
           </Button>
-          {adminOpen && <VotationAdminDialog voting={voting} onOpenChange={setAdminOpen} />}
+          {adminOpen && (
+        <VotationAdminDialog voting={voting} timeZone={timeZone} onOpenChange={setAdminOpen} />
+      )}
         </div>
       )}
     </Card>
