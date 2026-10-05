@@ -18,13 +18,15 @@ nuevas corridas ver [Registro](#registro).
 - Se prueba el backend directo (`http://localhost:8080`). Para medir también el proxy de Next.js se
   puede apuntar `BASE_URL` a `http://localhost:3000/api`, pero así se mezclan dos servicios en la
   misma medición.
-- El escenario `mixed` escribe en MongoDB (crea actividades y suma participantes). Hay que usar un
-  ambiente descartable.
+- El escenario `mixed` escribe en MongoDB (crea actividades y suma participantes), y `read` crea
+  una actividad por usuario antes de empezar. Hay que usar un ambiente descartable.
 
 ## Requisitos
 
 - Docker con Docker Compose.
-- `vegeta` (probado con 12.13), `jq`, `curl` y `bash` (en Windows: Git Bash o WSL).
+- `vegeta` (probado con 12.13), `jq`, `curl`, `base64` y `bash` 4 o superior (en Windows: Git Bash
+  o WSL). El `bash` 3.2 que trae macOS no sirve: hay que instalar uno más nuevo, por ejemplo con
+  Homebrew.
 
 ## Preparación
 
@@ -55,7 +57,10 @@ LOADTEST_USERS=20 ./loadtest/run.sh read
 
 Por defecto cada escenario corre tres etapas (`10/s`, `50/s`, `100/s`) de 60 segundos. El script se
 detiene en la primera etapa que no cumple los umbrales y en ese caso sale con código distinto de 0.
-Cada etapa pide tokens nuevos porque el access token dura 5 minutos.
+Cada etapa pide tokens nuevos porque el access token dura 5 minutos. Los tokens se piden una sola
+vez al empezar la etapa, así que `DURATION` no puede pasar de 5 minutos: el backend tolera el token
+vencido unos 60 segundos más y después responde `401`, con lo que la etapa falla por el umbral de
+éxito.
 
 Variables de entorno:
 
@@ -242,8 +247,12 @@ capacidad de la aplicación.
 3. **Lanzar la carga desde una VM en la misma región que Cloud Run** (por ejemplo `e2-standard-2`),
    no desde una conexión hogareña: el ancho de banda y la latencia de internet contaminan la
    medición.
-4. **Verificar sin generar carga:** que `/healthcheck` responda y que el endpoint de token devuelva
-   un `access_token` con `sub` y `aud` correctos.
+4. **Usar las URLs de los outputs de Terraform** (`backend_url` y `keycloak_url`). Keycloak arma el
+   issuer del token con la URL por la que se lo llama y el backend solo acepta el de `keycloak_url`:
+   con cualquier otra URL del mismo servicio, todas las requests responden `401`.
+5. **Verificar sin generar carga:** que `/healthcheck` responda y que el endpoint de token devuelva
+   un `access_token` con `sub` y `aud` correctos, y con `iss` igual a
+   `<keycloak_url>/realms/<realm>`.
 
 ### Durante
 
@@ -255,20 +264,31 @@ LOADTEST_PASSWORD='<contraseña temporal>' \
 ./loadtest/run.sh read
 ```
 
-- **Calentar:** antes de medir, correr unos minutos de `smoke` o `read 2/s` para que Cloud Run tenga
-  instancias activas. Si no, se mide el *cold start*.
+- **Calentar:** antes de medir, correr unos minutos de `read` a tasa baja, con las mismas variables
+  del comando de arriba: `DURATION=180s ./loadtest/run.sh read 2/s`. Cada etapa dura 60 segundos
+  por defecto, así que hay que pasar `DURATION`. `smoke` no alcanza: solo llama a `/healthcheck`,
+  que levanta la instancia pero no ejercita los endpoints autenticados ni la conexión a Atlas. Sin
+  calentar se mide el *cold start*.
 - **Empezar con `read`:** las etapas por defecto son `5/s 10/s 20/s 50/s`. `/weather` queda
   excluido para no cargar Open-Meteo.
-- **Usar `mixed` solo en una corrida corta y con tasa baja:** sus actividades aparecen en Explorar
-  para los usuarios reales e inflan las estadísticas del panel de administración.
-- **Distinguir los `429` de los `5xx`:** un `429` significa que Cloud Run llegó al máximo de
-  instancias; un `5xx`, que falló la app.
+- **`read` también escribe.** Antes de `read` y de `mixed` el script crea una actividad por usuario
+  de prueba, en cada corrida, incluido el calentamiento. Esas actividades (`Load test warm-up ...`)
+  aparecen en Explorar para los usuarios reales y cuentan en las estadísticas del panel de
+  administración hasta que se corre la limpieza. Con 10 usuarios son 10 actividades por corrida.
+- **Usar `mixed` solo en una corrida corta y con tasa baja:** además de las anteriores, crea
+  actividades durante toda la etapa (alrededor de una de cada diez requests).
+- **Interpretar los errores:** un `429` significa que Cloud Run llegó al máximo de instancias. Un
+  `5xx` no siempre es de la app: Cloud Run también responde `500` o `503` cuando no tiene una
+  instancia disponible o la instancia se cae (por ejemplo, por memoria), y `504` cuando la request
+  supera su timeout. Para saber de dónde vino, buscar la request en Cloud Logging: los errores de la
+  app dejan una excepción en el log del backend.
 - **Observar:** en Cloud Run, instancias, latencia, CPU, 429 y 5xx; en Cloud Logging, excepciones; en
   Atlas, operaciones, conexiones y avisos de *throttling*.
 
 ### Después
 
 1. Ejecutar `loadtest/cleanup.js` contra Atlas: primero en modo de prueba, después con `APPLY=1`.
+   Hace falta también si solo se corrió `read`, por las actividades del paso previo.
 2. Borrar del realm el cliente y los usuarios temporales.
 3. Comprobar `/healthcheck` y el login desde el frontend.
 4. Borrar la VM de carga y revertir cualquier cambio temporal de infraestructura (por ejemplo,
