@@ -176,11 +176,17 @@ if ! "$KCADM" get "clients/$loadtest_client_id/protocol-mappers/models" -r "$REA
     -s 'config."id.token.claim"=false'
 fi
 
-i=1
-while [ "$i" -le "$LOADTEST_USERS" ]; do
-  username=$(printf 'loadtest%02d' "$i")
-  ensure_user "$username" "$username" "$username@planazo.local"
-  "$KCADM" update "users/$("$KCADM" get users -r "$REALM" -q "username=$username" -q exact=true --fields id --format csv --noquotes)" \
-    -r "$REALM" -s firstName=Load -s "lastName=Test $i" -s 'requiredActions=[]'
-  i=$((i + 1))
-done
+# All users go in a single partial import: one kcadm.sh call instead of several per user, since
+# each call starts a JVM. Existing users are skipped, so their ids (the JWT sub) stay stable.
+# A partial import does not assign the realm default roles, so they are listed explicitly.
+if [ "$LOADTEST_USERS" -gt 0 ]; then
+  users_json=""
+  i=1
+  while [ "$i" -le "$LOADTEST_USERS" ]; do
+    username=$(printf 'loadtest%02d' "$i")
+    users_json="$users_json${users_json:+,}{\"username\":\"$username\",\"enabled\":true,\"email\":\"$username@planazo.local\",\"emailVerified\":true,\"firstName\":\"Load\",\"lastName\":\"Test $i\",\"requiredActions\":[],\"realmRoles\":[\"default-roles-$REALM\"],\"credentials\":[{\"type\":\"password\",\"value\":\"$username\",\"temporary\":false}]}"
+    i=$((i + 1))
+  done
+  printf '{"ifResourceExists":"SKIP","users":[%s]}' "$users_json" |
+    "$KCADM" create partialImport -r "$REALM" -f -
+fi
