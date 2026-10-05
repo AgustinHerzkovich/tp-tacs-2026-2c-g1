@@ -236,6 +236,13 @@ services:
       TELEGRAM_BOT_CLIENT_SECRET: ${KEYCLOAK_TELEGRAM_BOT_CLIENT_SECRET:-solnotfound-telegram-bot-client-secret}
       # Cantidad de usuarios loadtestNN que crea configure-local.sh (ver docs/LOAD_TEST.md).
       LOADTEST_USERS: ${LOADTEST_USERS:-10}
+      # configure-local.sh llama a kcadm.sh decenas de veces y cada llamada levanta una JVM que
+      # vive un par de segundos: se prioriza el arranque (JIT C1, GC serial y un archivo de clases
+      # compartido que la primera llamada crea y las siguientes reutilizan). Al crear ese archivo
+      # la JVM imprime cientos de avisos inofensivos, por eso se silencia su log.
+      KC_OPTS: >-
+        -XX:TieredStopAtLevel=1 -XX:+UseSerialGC
+        -XX:+AutoCreateSharedArchive -XX:SharedArchiveFile=/tmp/kcadm.jsa -Xlog:cds*=off
     depends_on:
       keycloak:
         condition: service_healthy
