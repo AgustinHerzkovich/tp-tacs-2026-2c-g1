@@ -23,7 +23,9 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -55,6 +57,8 @@ public class ActivityAnticipationCheckScheduler {
   private final ActivityStatusTransitionService transitionService;
   private final Duration votationDuration;
   private final double minQuorum;
+  private final boolean weatherCheckOnStartup;
+  private final String appMode;
 
   public ActivityAnticipationCheckScheduler(
       IActivityRepository activityRepository,
@@ -64,7 +68,9 @@ public class ActivityAnticipationCheckScheduler {
       ApplicationEventPublisher eventPublisher,
       ActivityStatusTransitionService transitionService,
       @Value("${votation.duration:24h}") Duration votationDuration,
-      @Value("${votation.min-quorum:0.5}") double minQuorum) {
+      @Value("${votation.min-quorum:0.5}") double minQuorum,
+      @Value("${activity.weather-check-on-startup:true}") boolean weatherCheckOnStartup,
+      @Value("${app.mode:}") String appMode) {
     this.activityRepository = activityRepository;
     this.votationRepository = votationRepository;
     this.weatherAdapter = weatherAdapter;
@@ -73,12 +79,15 @@ public class ActivityAnticipationCheckScheduler {
     this.transitionService = transitionService;
     this.votationDuration = votationDuration;
     this.minQuorum = minQuorum;
+    this.weatherCheckOnStartup = weatherCheckOnStartup;
+    this.appMode = appMode;
   }
 
   /**
-   * Checks due active activities once per hour. For bad weather, alternatives and the resulting
-   * activity state are persisted before notification delivery. Weather-provider failures leave the
-   * activity unchecked so a later execution can retry it.
+   * Checks due active activities once per hour, and once more when the application starts. For bad
+   * weather, alternatives and the resulting activity state are persisted before notification
+   * delivery. Weather-provider failures leave the activity unchecked so a later execution can retry
+   * it.
    *
    * <p>Every votation it opens starts with the configured participation quorum ({@code
    * votation.min-quorum}), which the organizer can then adjust from the app.
@@ -124,6 +133,36 @@ public class ActivityAnticipationCheckScheduler {
         goodWeather,
         badWeatherActivities,
         failures);
+  }
+
+  /**
+   * Runs one weather-check pass as soon as the application is ready, so due activities do not have
+   * to wait for the first cron execution. It reuses the same rules as the scheduled pass: only the
+   * activities for which {@link Activity#isTimeToCheckWeatherConditions()} holds are queried, and
+   * the whole pass runs synchronously before the application reports itself as started.
+   *
+   * <p>The pass is skipped when {@code activity.weather-check-on-startup=false}, and also when
+   * {@code app.mode=scheduled-jobs}: in that mode {@link ScheduledJobRunner} runs this very pass
+   * from a {@code CommandLineRunner} and closes the context afterwards, so running it again here
+   * would duplicate the work against an already closed context.
+   *
+   * <p>A failure of the pass is logged and swallowed: a provider, database or scheduling problem
+   * must never prevent the application from starting, and the cron execution retries later.
+   */
+  @EventListener(ApplicationReadyEvent.class)
+  public void checkActivitiesOnStartup() {
+    if (!weatherCheckOnStartup || "scheduled-jobs".equals(appMode)) {
+      log.info(
+          "Startup weather check skipped: weatherCheckOnStartup={} appMode={}",
+          weatherCheckOnStartup,
+          appMode.isEmpty() ? "<unset>" : appMode);
+      return;
+    }
+    try {
+      checkActivitiesClimate();
+    } catch (RuntimeException exception) {
+      log.error("Startup weather check failed", exception);
+    }
   }
 
   private void openActivityVotation(Activity activity) {

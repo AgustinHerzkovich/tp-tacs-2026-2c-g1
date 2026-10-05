@@ -41,6 +41,7 @@ function fakeVoting(overrides: Partial<UseVoting> = {}): UseVoting {
     confirmVote: vi.fn(),
     updateOptions: vi.fn().mockResolvedValue(undefined),
     updateSettings: vi.fn().mockResolvedValue(undefined),
+    refresh: vi.fn(),
     ...overrides,
   };
 }

@@ -66,6 +66,23 @@ describe("useVoting", () => {
     expect(result.current.votedId).toBeNull();
   });
 
+  it("picks up the votation on refresh, which is what joining does", async () => {
+    // The backend lists only votations of activities the user organizes or
+    // joined, so before joining the empty page is the correct answer and only a
+    // refresh (the page's join handler) surfaces the votation.
+    mine.mockResolvedValueOnce(pageOf()).mockResolvedValueOnce(pageOf(VOTATION));
+    const { result } = renderHook(() => useVoting("a1"));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.votation).toBeNull();
+
+    act(() => result.current.refresh());
+
+    await waitFor(() => expect(result.current.votation).toMatchObject({ id: "v1" }));
+    expect(result.current.total).toBe(4);
+    expect(result.current.loading).toBe(false);
+    expect(mine).toHaveBeenCalledTimes(2);
+  });
+
   it("lists the options from the earliest date to the latest", async () => {
     mine.mockResolvedValueOnce(
       pageOf({

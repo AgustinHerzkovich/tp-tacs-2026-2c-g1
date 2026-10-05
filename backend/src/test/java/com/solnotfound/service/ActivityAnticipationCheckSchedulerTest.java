@@ -1,6 +1,7 @@
 package com.solnotfound.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -89,6 +90,11 @@ class ActivityAnticipationCheckSchedulerTest {
   }
 
   private ActivityAnticipationCheckScheduler schedulerFor(double minQuorum) {
+    return schedulerFor(minQuorum, true, "");
+  }
+
+  private ActivityAnticipationCheckScheduler schedulerFor(
+      double minQuorum, boolean weatherCheckOnStartup, String appMode) {
     return new ActivityAnticipationCheckScheduler(
         activityRepository,
         votationRepository,
@@ -98,7 +104,9 @@ class ActivityAnticipationCheckSchedulerTest {
         new ActivityStatusTransitionService(
             activityRepository, eventPublisher, mock(StatisticsEventRecorder.class)),
         Duration.ofHours(24),
-        minQuorum);
+        minQuorum,
+        weatherCheckOnStartup,
+        appMode);
   }
 
   @Test
@@ -470,5 +478,44 @@ class ActivityAnticipationCheckSchedulerTest {
     assertThat(eventCaptor.getAllValues())
         .extracting(ActivityNotificationEvent::type)
         .anyMatch(CancelledNotificationType.class::isInstance);
+  }
+
+  @Test
+  void runsWeatherCheckAsSoonAsTheApplicationIsReady() throws Exception {
+    when(activityRepository.findActive()).thenReturn(List.of(activityToCheck));
+    when(weatherAdapter.getFutureClimate(location, dateTime)).thenReturn(weather);
+    when(badWeatherChecker.isBadWeatherForActivity(weather, activityToCheck)).thenReturn(false);
+
+    scheduler.checkActivitiesOnStartup();
+
+    verify(weatherAdapter, times(1)).getFutureClimate(location, dateTime);
+    verifyNoInteractions(eventPublisher);
+  }
+
+  @Test
+  void skipsStartupWeatherCheckWhenRunningAsScheduledJob() {
+    scheduler = schedulerFor(0.5, true, "scheduled-jobs");
+
+    scheduler.checkActivitiesOnStartup();
+
+    verifyNoInteractions(activityRepository, weatherAdapter, eventPublisher);
+  }
+
+  @Test
+  void skipsStartupWeatherCheckWhenDisabledByConfiguration() {
+    scheduler = schedulerFor(0.5, false, "");
+
+    scheduler.checkActivitiesOnStartup();
+
+    verifyNoInteractions(activityRepository, weatherAdapter, eventPublisher);
+  }
+
+  @Test
+  void keepsTheApplicationRunningWhenTheStartupWeatherCheckFails() {
+    when(activityRepository.findActive()).thenThrow(new IllegalStateException("unavailable"));
+
+    assertThatCode(() -> scheduler.checkActivitiesOnStartup()).doesNotThrowAnyException();
+
+    verify(weatherAdapter, never()).getFutureClimate(any(), any());
   }
 }

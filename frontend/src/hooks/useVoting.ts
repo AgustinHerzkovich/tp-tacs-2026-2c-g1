@@ -30,6 +30,10 @@ export interface UseVoting {
   confirmVote: () => Promise<void>;
   updateOptions: (dates: string[], allowVoteLoss?: boolean) => Promise<void>;
   updateSettings: (minQuorum: number, durationHours: number) => Promise<void>;
+  /** Re-requests the votation. Needed after joining or leaving, because the
+   * backend only lists votations of activities the user takes part in: without
+   * this the card stays empty (or stale) until the page is opened again. */
+  refresh: () => void;
 }
 
 /** Finds and drives the reprogramming vote for one activity: the most recent
@@ -135,5 +139,6 @@ export function useVoting(activityId: string): UseVoting {
     confirmVote,
     updateOptions,
     updateSettings,
+    refresh: load,
   };
 }
