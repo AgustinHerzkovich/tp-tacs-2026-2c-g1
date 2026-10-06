@@ -22,11 +22,16 @@ interface WeatherWidgetProps {
    * trustworthy than re-deriving it from this component's own (separate)
    * weather fetch. */
   forcedExceeded?: boolean;
+  /** True when the activity's date-time is already in the past. The backend
+   * rejects forecasts for past activities (Open-Meteo has no history here), so
+   * this state always arrives as `unavailable` — the badge then says the
+   * activity already happened instead of blaming the forecast. */
+  expired?: boolean;
 }
 
 const SHELL = "relative rounded-[26px] border-[3px] border-white p-4 mb-6 shadow-[0_10px_22px_-10px_rgba(58,51,82,.32)] -rotate-1";
 
-export function WeatherWidget({ loading, unavailable, forecast, current, conditions, forcedExceeded }: WeatherWidgetProps) {
+export function WeatherWidget({ loading, unavailable, forecast, current, conditions, forcedExceeded, expired }: WeatherWidgetProps) {
   if (loading) {
     return (
       <div className={`${SHELL} bg-muted`} aria-busy="true">
@@ -53,7 +58,9 @@ export function WeatherWidget({ loading, unavailable, forecast, current, conditi
           className="absolute left-1/2 top-1/2 max-w-[88%] -translate-x-1/2 -translate-y-1/2 rotate-[-7deg] rounded-2xl border-[3px] border-white px-4 py-2.5 text-center shadow-[0_6px_14px_-4px_rgba(58,51,82,.25)]"
           style={{ background: "var(--sun)", color: "var(--sun-ink)" }}
         >
-          <span className="text-[11.5px] font-black leading-tight">⏳ Todavía es pronto para el pronóstico</span>
+          <span className="text-[11.5px] font-black leading-tight">
+            {expired ? "🕐 Esta actividad ya pasó" : "⏳ Todavía es pronto para el pronóstico"}
+          </span>
         </div>
       </div>
     );

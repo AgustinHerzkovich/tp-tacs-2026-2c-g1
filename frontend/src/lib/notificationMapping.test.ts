@@ -6,6 +6,7 @@ describe("mapNotificationKind", () => {
     ["BAD_WEATHER_ALERT", "warn"],
     ["CANCELLED", "cancel"],
     ["REPROGRAMMED", "reprog"],
+    ["VOTATION_OPTIONS_CHANGED", "info"],
     ["STARTED", "info"],
     ["STARTING_SOON", "info"],
   ])("maps backend %s -> %s", (type, expected) => {

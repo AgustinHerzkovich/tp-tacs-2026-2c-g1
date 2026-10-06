@@ -18,6 +18,7 @@ import { useVoting } from "@/hooks/useVoting";
 import { useJoinActivity } from "@/hooks/useJoinActivity";
 import { useAuth } from "@/hooks/useAuth";
 import { mapActivityStatus, mapActivityType, pickPattern, pickScene } from "@/lib/activityMapping";
+import { isPastLocalDateTime } from "@/lib/formatDate";
 import { participantDisplayName } from "@/lib/initials";
 import { ErrorState } from "@/components/common/AsyncState";
 import { ActivityDetailSkeleton } from "@/components/common/Skeletons";
@@ -35,7 +36,24 @@ export function ActivityDetailPage({ id }: { id: string }) {
   const [votingMaxHeight, setVotingMaxHeight] = useState<number>();
 
   const initialJoined = activity?.participants.some((p) => p.userId === user?.id) ?? false;
-  const join = useJoinActivity(id, initialJoined, refresh);
+
+  // Joining or leaving changes what the backend is willing to tell us: the
+  // forecast endpoint requires a participant (403 otherwise) and the votations
+  // list only covers activities the user takes part in. So all three reads have
+  // to be redone, otherwise the page keeps showing the "not allowed yet" state
+  // until it is opened again.
+  const refreshEverything = () => {
+    refresh();
+    weather.refresh();
+    voting.refresh();
+  };
+  const join = useJoinActivity(id, initialJoined, refreshEverything);
+
+  // The backend never returns a forecast for an activity whose date-time is
+  // already past, so without this the weather widget would blame the forecast
+  // for something that already happened. Resolved in the activity's own zone:
+  // its date-time is a wall-clock reading there, not in the reader's.
+  const expired = activity != null && isPastLocalDateTime(activity.dateTime, activity.timeZone);
 
   const handleRefreshImages = () => {
     refresh();
@@ -140,6 +158,7 @@ export function ActivityDetailPage({ id }: { id: string }) {
               current={weather.weather?.currentWeather ?? null}
               conditions={activity.weatherConditions}
               forcedExceeded={hasVoting}
+              expired={expired}
             />
             <ActivityRequirementsCard
               minParticipants={activity.minParticipants}
@@ -155,7 +174,9 @@ export function ActivityDetailPage({ id }: { id: string }) {
                   ? `Se superó el máximo de lluvia permitido (${maxRain}%). Elegí una fecha alternativa para reprogramar.`
                   : undefined
               }
+              organizer={isOrganizer}
               maxHeightPx={votingMaxHeight}
+              timeZone={activity.timeZone}
             />
           )}
         </div>

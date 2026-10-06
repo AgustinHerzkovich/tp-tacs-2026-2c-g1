@@ -7,6 +7,8 @@ import java.util.List;
 /**
  * A votation as seen by one user.
  *
+ * @param minQuorum minimum participation (0..1) required to resolve the votation
+ * @param closingDate instant at which the votation stops accepting votes
  * @param votedOption date and time of the option the requesting user voted for, or {@code null}
  *     when that user has not voted yet
  */
@@ -16,6 +18,8 @@ public record VotationDTO(
     LocalDateTime creationDate,
     VotationStatus status,
     List<VotationOptionDTO> options,
+    LocalDateTime closingDate,
+    Double minQuorum,
     LocalDateTime votedOption) {
 
   public VotationDTO {

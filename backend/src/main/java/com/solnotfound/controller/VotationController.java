@@ -28,6 +28,9 @@ public class VotationController {
 
   private final VotationService votationService;
 
+  @edu.umd.cs.findbugs.annotations.SuppressFBWarnings(
+      value = "EI_EXPOSE_REP2",
+      justification = "Spring injects shared application collaborators")
   public VotationController(VotationService votationService) {
     this.votationService = votationService;
   }

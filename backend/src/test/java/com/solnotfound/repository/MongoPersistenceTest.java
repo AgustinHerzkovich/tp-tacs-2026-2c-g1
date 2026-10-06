@@ -1,6 +1,7 @@
 package com.solnotfound.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.solnotfound.dto.ActivityFilterDTO;
 import com.solnotfound.dto.VotationFilterDTO;
@@ -35,8 +36,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.mongodb.test.autoconfigure.DataMongoTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.mongodb.MongoDBContainer;
@@ -354,6 +359,88 @@ class MongoPersistenceTest {
     activity.setReprogramationRange(
         new ReprogramationRange(3, LocalTime.of(9, 0), LocalTime.of(21, 0)));
     return activity;
+  }
+
+  @Test
+  void rejectsSavingAVotationOverAStateThatSomeoneElseAlreadyReplaced() {
+    User organizer = userRepository.findOrCreate("organizer");
+    User participant = userRepository.findOrCreate("participant");
+    Activity activity = activity(organizer, participant);
+    activityRepository.save(activity);
+    Votation created =
+        votationRepository.save(
+            votation(activity, participant, LocalDateTime.of(2026, 9, 5, 12, 0)));
+    Votation first = votationRepository.findById(created.getId());
+    Votation second = votationRepository.findById(created.getId());
+
+    first.setMinQuorum(0.8);
+    votationRepository.save(first);
+    second.setStatus(VotationStatus.CLOSED);
+
+    assertThatThrownBy(() -> votationRepository.save(second))
+        .isInstanceOf(OptimisticLockingFailureException.class);
+    Votation stored = votationRepository.findById(created.getId());
+    assertThat(stored.getStatus()).isEqualTo(VotationStatus.ACTIVE);
+    assertThat(stored.getMinQuorum()).isEqualTo(0.8);
+
+    stored.setStatus(VotationStatus.CLOSED);
+    votationRepository.save(stored);
+    assertThat(votationRepository.findById(created.getId()).getStatus())
+        .isEqualTo(VotationStatus.CLOSED);
+  }
+
+  @Test
+  void savesVotationsStoredBeforeTheVersionFieldExisted() {
+    User organizer = userRepository.findOrCreate("organizer");
+    User participant = userRepository.findOrCreate("participant");
+    Activity activity = activity(organizer, participant);
+    activityRepository.save(activity);
+    Votation created =
+        votationRepository.save(
+            votation(activity, participant, LocalDateTime.of(2026, 9, 5, 12, 0)));
+    mongoTemplate.updateFirst(
+        Query.query(Criteria.where("_id").is(created.getId())),
+        new Update().unset("version"),
+        Votation.class);
+
+    Votation legacy = votationRepository.findById(created.getId());
+    legacy.setMinQuorum(0.3);
+    votationRepository.save(legacy);
+
+    Votation stored = votationRepository.findById(created.getId());
+    assertThat(stored.getMinQuorum()).isEqualTo(0.3);
+    assertThat(stored.getVersion()).isEqualTo(1);
+  }
+
+  @Test
+  void removesTheVotesOfAUserOnlyFromActiveVotationsOfTheActivity() {
+    User organizer = userRepository.findOrCreate("organizer");
+    User participant = userRepository.findOrCreate("participant");
+    User other = userRepository.findOrCreate("other");
+    Activity activity = activity(organizer, participant);
+    activityRepository.save(activity);
+    LocalDateTime closingDate = LocalDateTime.of(2026, 9, 5, 12, 0);
+    Votation active = votation(activity, participant, closingDate);
+    VotationOption second = new VotationOption();
+    second.setDateTime(activity.getDateTime().plusDays(2));
+    second.setUsers(List.of(other));
+    active.setOptions(List.of(active.getOptions().getFirst(), second));
+    active = votationRepository.save(active);
+    Votation closed = votation(activity, participant, closingDate);
+    closed.setStatus(VotationStatus.CLOSED);
+    closed = votationRepository.save(closed);
+    Votation readBeforeRemoval = votationRepository.findById(active.getId());
+
+    votationRepository.removeVotes("activity-1", "participant");
+
+    Votation stored = votationRepository.findById(active.getId());
+    assertThat(stored.getVoteByUserId("participant")).isEmpty();
+    assertThat(stored.getVoteByUserId("other")).isPresent();
+    assertThat(votationRepository.findById(closed.getId()).getVoteByUserId("participant"))
+        .isPresent();
+    // A save made over the state read before the removal must not bring the vote back.
+    assertThatThrownBy(() -> votationRepository.save(readBeforeRemoval))
+        .isInstanceOf(OptimisticLockingFailureException.class);
   }
 
   private Votation votation(Activity activity, User participant, LocalDateTime closingDate) {

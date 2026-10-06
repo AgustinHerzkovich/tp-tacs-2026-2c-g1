@@ -48,6 +48,7 @@ public class DevExtrasSeeder implements CommandLineRunner {
   private final IVotationRepository votationRepository;
   private final NotificationService notificationService;
   private final String targetUserId;
+  private final double minQuorum;
 
   @edu.umd.cs.findbugs.annotations.SuppressFBWarnings(
       value = "EI_EXPOSE_REP2",
@@ -57,12 +58,14 @@ public class DevExtrasSeeder implements CommandLineRunner {
       IUserRepository userRepository,
       IVotationRepository votationRepository,
       NotificationService notificationService,
-      @Value("${app.dev-seed.user-id:}") String targetUserId) {
+      @Value("${app.dev-seed.user-id:}") String targetUserId,
+      @Value("${votation.min-quorum:0.5}") double minQuorum) {
     this.activityRepository = activityRepository;
     this.userRepository = userRepository;
     this.votationRepository = votationRepository;
     this.notificationService = notificationService;
     this.targetUserId = targetUserId;
+    this.minQuorum = minQuorum;
   }
 
   @Override
@@ -138,7 +141,7 @@ public class DevExtrasSeeder implements CommandLineRunner {
     votation.setActivity(activity);
     votation.setCreationDate(now);
     votation.setClosingDate(now.plusDays(1));
-    votation.setMinQuorum(0.5);
+    votation.setMinQuorum(minQuorum);
     votation.setStatus(VotationStatus.ACTIVE);
 
     votation.setOptions(options);

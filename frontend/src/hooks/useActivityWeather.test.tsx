@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { useActivityWeather } from "@/hooks/useActivityWeather";
 import type { ActivityWeatherResponse } from "@/types/backend";
@@ -34,5 +34,34 @@ describe("useActivityWeather", () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.weather).toBeNull();
     expect(result.current.unavailable).toBe(true);
+  });
+
+  it("re-requests the forecast on refresh, which is what joining does", async () => {
+    // The backend answers 403 to a non-participant, so the first load lands on
+    // `unavailable` and only a refresh (the page's join handler) can turn it
+    // into a real forecast. Without it the widget stays empty until the page is
+    // reopened.
+    weather.mockRejectedValueOnce(new Error("403")).mockResolvedValueOnce(FORECAST);
+    const { result } = renderHook(() => useActivityWeather("a1"));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.unavailable).toBe(true);
+
+    act(() => result.current.refresh());
+
+    await waitFor(() => expect(result.current.weather).toEqual(FORECAST));
+    expect(result.current.unavailable).toBe(false);
+    expect(weather).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps showing the previous forecast while refreshing", async () => {
+    weather.mockResolvedValueOnce(FORECAST).mockResolvedValueOnce(FORECAST);
+    const { result } = renderHook(() => useActivityWeather("a1"));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    act(() => result.current.refresh());
+
+    await waitFor(() => expect(weather).toHaveBeenCalledTimes(2));
+    expect(result.current.loading).toBe(false);
+    expect(result.current.weather).toEqual(FORECAST);
   });
 });

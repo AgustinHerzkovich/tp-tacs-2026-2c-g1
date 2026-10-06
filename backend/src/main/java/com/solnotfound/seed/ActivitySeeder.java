@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
@@ -52,6 +53,7 @@ public class ActivitySeeder implements CommandLineRunner {
   private final IActivityRepository activityRepository;
   private final IUserRepository userRepository;
   private final IVotationRepository votationRepository;
+  private final double minQuorum;
 
   @edu.umd.cs.findbugs.annotations.SuppressFBWarnings(
       value = "EI_EXPOSE_REP2",
@@ -59,10 +61,12 @@ public class ActivitySeeder implements CommandLineRunner {
   public ActivitySeeder(
       IActivityRepository activityRepository,
       IUserRepository userRepository,
-      IVotationRepository votationRepository) {
+      IVotationRepository votationRepository,
+      @Value("${votation.min-quorum:0.5}") double minQuorum) {
     this.activityRepository = activityRepository;
     this.userRepository = userRepository;
     this.votationRepository = votationRepository;
+    this.minQuorum = minQuorum;
   }
 
   @Override
@@ -166,6 +170,7 @@ public class ActivitySeeder implements CommandLineRunner {
     votation.setActivity(activity);
     votation.setCreationDate(now);
     votation.setClosingDate(now.plusDays(2));
+    votation.setMinQuorum(minQuorum);
     votation.setStatus(VotationStatus.ACTIVE);
 
     VotationOption optionA = new VotationOption();

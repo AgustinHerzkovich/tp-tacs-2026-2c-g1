@@ -26,6 +26,9 @@ import com.solnotfound.entity.activity.City;
 import com.solnotfound.entity.activity.Location;
 import com.solnotfound.entity.activity.ReprogramationRange;
 import com.solnotfound.entity.user.User;
+import com.solnotfound.entity.votation.Votation;
+import com.solnotfound.entity.votation.VotationOption;
+import com.solnotfound.entity.votation.VotationStatus;
 import com.solnotfound.entity.weather.WeatherForecast;
 import com.solnotfound.exception.ActivityAccessDeniedException;
 import com.solnotfound.exception.ActivityNotFoundException;
@@ -36,6 +39,7 @@ import com.solnotfound.repository.IActivityRepository;
 import com.solnotfound.repository.IUserRepository;
 import com.solnotfound.repository.InMemoryActivityRepository;
 import com.solnotfound.repository.InMemoryUserRepository;
+import com.solnotfound.repository.InMemoryVotationRepository;
 import com.solnotfound.storage.ImageFile;
 import com.solnotfound.storage.ImageStorage;
 import java.io.ByteArrayInputStream;
@@ -57,6 +61,7 @@ class ActivityServiceTest {
   private IWeatherAdapter weatherAdapter;
   private IUserRepository userRepository;
   private StatisticsEventRecorder statisticsRecorder;
+  private InMemoryVotationRepository votationRepository;
 
   @BeforeEach
   void setUp() {
@@ -64,9 +69,15 @@ class ActivityServiceTest {
     weatherAdapter = org.mockito.Mockito.mock(IWeatherAdapter.class);
     userRepository = new InMemoryUserRepository();
     statisticsRecorder = org.mockito.Mockito.mock(StatisticsEventRecorder.class);
+    votationRepository = new InMemoryVotationRepository();
 
     activityService =
-        new ActivityService(activityRepository, weatherAdapter, userRepository, statisticsRecorder);
+        new ActivityService(
+            activityRepository,
+            weatherAdapter,
+            userRepository,
+            statisticsRecorder,
+            votationRepository);
   }
 
   @Test
@@ -132,7 +143,12 @@ class ActivityServiceTest {
 
   private ActivityService serviceWith(ImageStorage imageStorage) {
     return new ActivityService(
-        activityRepository, weatherAdapter, userRepository, statisticsRecorder, imageStorage);
+        activityRepository,
+        weatherAdapter,
+        userRepository,
+        statisticsRecorder,
+        votationRepository,
+        imageStorage);
   }
 
   private ImageFile image(String contentType) {
@@ -301,6 +317,9 @@ class ActivityServiceTest {
 
     assertThat(activityRepository.findById(created.id()).getTimeZone())
         .isEqualTo("America/Argentina/Buenos_Aires");
+    // And it travels back to the client: without it the UI cannot tell whether an
+    // already-past date is really past, since its own clock is a different zone.
+    assertThat(created.timeZone()).isEqualTo("America/Argentina/Buenos_Aires");
   }
 
   @Test
@@ -510,7 +529,8 @@ class ActivityServiceTest {
     when(repository.findById("activity-1")).thenReturn(withOneSpot, full);
     when(repository.addParticipant("activity-1", "user-1")).thenReturn(false);
     ActivityService service =
-        new ActivityService(repository, weatherAdapter, userRepository, statisticsRecorder);
+        new ActivityService(
+            repository, weatherAdapter, userRepository, statisticsRecorder, votationRepository);
 
     assertThatThrownBy(() -> service.join("activity-1", "user-1"))
         .isInstanceOf(IllegalStateActivityException.class)
@@ -525,7 +545,8 @@ class ActivityServiceTest {
     when(repository.findById("activity-1")).thenReturn(activityWithCapacity(5));
     when(repository.addParticipant("activity-1", "user-1")).thenReturn(true);
     ActivityService service =
-        new ActivityService(repository, weatherAdapter, userRepository, statisticsRecorder);
+        new ActivityService(
+            repository, weatherAdapter, userRepository, statisticsRecorder, votationRepository);
 
     ActivityResponse joined = service.join("activity-1", "user-1");
 
@@ -541,7 +562,8 @@ class ActivityServiceTest {
     activity.addParticipant("user-1");
     when(repository.findById("activity-1")).thenReturn(activity);
     ActivityService service =
-        new ActivityService(repository, weatherAdapter, userRepository, statisticsRecorder);
+        new ActivityService(
+            repository, weatherAdapter, userRepository, statisticsRecorder, votationRepository);
 
     service.join("activity-1", "user-1");
 
@@ -556,13 +578,66 @@ class ActivityServiceTest {
     activity.addParticipant("user-1");
     when(repository.findById("activity-1")).thenReturn(activity);
     ActivityService service =
-        new ActivityService(repository, weatherAdapter, userRepository, statisticsRecorder);
+        new ActivityService(
+            repository, weatherAdapter, userRepository, statisticsRecorder, votationRepository);
 
     ActivityResponse left = service.leave("activity-1", "user-1");
 
     assertThat(left.participants()).isEmpty();
     verify(repository).removeParticipant("activity-1", "user-1");
     verify(repository, never()).save(any());
+  }
+
+  @Test
+  void leavingRemovesTheVoteOfTheParticipantFromTheActiveVotation() {
+    Activity activity = activityWithCapacity(5);
+    activity.addParticipant("user-1");
+    activity.addParticipant("user-2");
+    activityRepository.save(activity);
+    Votation votation = votationVotedBy(activity, "user-1", "user-2");
+
+    activityService.leave("activity-1", "user-1");
+
+    assertThat(votation.getVoteByUserId("user-1")).isEmpty();
+    assertThat(votation.getVoteByUserId("user-2")).isPresent();
+  }
+
+  @Test
+  void organizerKeepsTheirVoteWhenTheyStopBeingAParticipant() {
+    Activity activity = activityWithCapacity(5);
+    activity.addParticipant("organizer");
+    activityRepository.save(activity);
+    Votation votation = votationVotedBy(activity, "organizer");
+
+    activityService.leave("activity-1", "organizer");
+
+    assertThat(votation.getVoteByUserId("organizer")).isPresent();
+  }
+
+  @Test
+  void leavingDoesNotTouchVotesOfClosedVotations() {
+    Activity activity = activityWithCapacity(5);
+    activity.addParticipant("user-1");
+    activityRepository.save(activity);
+    Votation votation = votationVotedBy(activity, "user-1");
+    votation.setStatus(VotationStatus.CLOSED);
+
+    activityService.leave("activity-1", "user-1");
+
+    assertThat(votation.getVoteByUserId("user-1")).isPresent();
+  }
+
+  private Votation votationVotedBy(Activity activity, String... voterIds) {
+    VotationOption option = new VotationOption();
+    option.setDateTime(activity.getDateTime().plusDays(1));
+    option.setUsers(java.util.Arrays.stream(voterIds).map(User::withId).toList());
+    Votation votation = new Votation();
+    votation.setId("votation-1");
+    votation.setActivity(activity);
+    votation.setStatus(VotationStatus.ACTIVE);
+    votation.setOptions(List.of(option));
+    votationRepository.save(votation);
+    return votation;
   }
 
   private Activity activityWithCapacity(int maxParticipants) {
@@ -772,7 +847,8 @@ class ActivityServiceTest {
     IActivityRepository repository = mock(IActivityRepository.class);
     when(repository.findActivitiesByOrganizerId("1")).thenReturn(null);
     ActivityService service =
-        new ActivityService(repository, weatherAdapter, userRepository, statisticsRecorder);
+        new ActivityService(
+            repository, weatherAdapter, userRepository, statisticsRecorder, votationRepository);
 
     assertThatThrownBy(() -> service.getByOrganizerId("1"))
         .isInstanceOf(NullPointerException.class);
@@ -830,7 +906,8 @@ class ActivityServiceTest {
     IActivityRepository repository = mock(IActivityRepository.class);
     when(repository.findActivitiesByParticipantId("1")).thenReturn(null);
     ActivityService service =
-        new ActivityService(repository, weatherAdapter, userRepository, statisticsRecorder);
+        new ActivityService(
+            repository, weatherAdapter, userRepository, statisticsRecorder, votationRepository);
 
     assertThatThrownBy(() -> service.getByParticipantId("1"))
         .isInstanceOf(NullPointerException.class);

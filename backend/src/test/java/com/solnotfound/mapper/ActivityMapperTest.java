@@ -45,6 +45,7 @@ class ActivityMapperTest {
         .isEqualTo(new ReprogramationRangeDTO(3, LocalTime.of(10, 0), LocalTime.of(20, 0)));
     assertThat(dto.organizer()).isEqualTo(new UserDTO("1", "Organizer"));
     assertThat(dto.participants()).containsExactly(new UserDTO("2", "Participant"));
+    assertThat(dto.timeZone()).isEqualTo("America/Argentina/Buenos_Aires");
   }
 
   @Test
@@ -65,7 +66,8 @@ class ActivityMapperTest {
             15,
             new ReprogramationRangeDTO(3, LocalTime.of(10, 0), LocalTime.of(20, 0)),
             new UserDTO("1", "Organizer"),
-            List.of(new UserDTO("2", "Participant")));
+            List.of(new UserDTO("2", "Participant")),
+            "America/Argentina/Buenos_Aires");
 
     Activity activity = ActivityMapper.toEntity(dto);
 
@@ -87,6 +89,7 @@ class ActivityMapperTest {
     assertThat(activity.getAnticipationWindow()).isEqualTo(15);
     assertThat(activity.getReprogramationRange().getMaxDays()).isEqualTo(3);
     assertThat(activity.getOrganizer().getId()).isEqualTo("1");
+    assertThat(activity.getTimeZone()).isEqualTo("America/Argentina/Buenos_Aires");
     assertThat(activity.getParticipants()).extracting(User::getId).containsExactly("2");
   }
 
@@ -104,6 +107,7 @@ class ActivityMapperTest {
     activity.setType(ActivityType.OUTDOOR);
     activity.setLocation(new Location(new City(null, "Buenos Aires"), -34.6, -58.4));
     activity.setDateTime(dateTime);
+    activity.setTimeZone("America/Argentina/Buenos_Aires");
     activity.setMinParticipants(10);
     activity.setMaxParticipants(20);
     activity.setWeatherConditions(

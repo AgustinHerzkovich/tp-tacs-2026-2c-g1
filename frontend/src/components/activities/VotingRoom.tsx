@@ -3,8 +3,8 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { useState, type CSSProperties } from "react";
-import { Plus, Settings2, X } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { Settings2 } from "lucide-react";
+import { VotationAdminDialog } from "@/components/activities/VotationAdminDialog";
 import type { UseVoting } from "@/hooks/useVoting";
 
 interface VotingRoomProps {
@@ -17,15 +17,14 @@ interface VotingRoomProps {
    * (where the columns stack instead of sitting side by side) a fixed
    * viewport-relative cap applies instead, see the `max-h-[75vh]` fallback. */
   maxHeightPx?: number;
+  /** IANA zone of the activity's dates, forwarded to the admin panel so the
+   * remaining duration is measured in the activity's clock, not the reader's. */
+  timeZone?: string | null;
 }
 
-export function VotingRoom({ voting, warningText, organizer = false, maxHeightPx }: VotingRoomProps) {
+export function VotingRoom({ voting, warningText, organizer = false, maxHeightPx, timeZone }: VotingRoomProps) {
   const { options, total, selectedId, votedId, select, requestVote, pending } = voting;
-  const [editing, setEditing] = useState(false);
-  const [dates, setDates] = useState<string[]>([]);
-  const [quorum, setQuorum] = useState("50");
-  const [duration, setDuration] = useState("24");
-  const [adminError, setAdminError] = useState<string | null>(null);
+  const [adminOpen, setAdminOpen] = useState(false);
 
   return (
     <Card
@@ -90,23 +89,22 @@ export function VotingRoom({ voting, warningText, organizer = false, maxHeightPx
 
       {organizer && (
         <div className="mx-4 mt-4 pt-4 border-t-2 shrink-0" style={{ borderColor: "var(--border)" }}>
-          <Button type="button" variant="outline" className="w-full rounded-xl" onClick={() => setEditing((value) => !value)}><Settings2 className="size-4" /> Administrar votación</Button>
-          {editing && (
-            <div className="mt-4 space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <label className="text-xs font-extrabold">Quórum (%)<Input type="number" min="0" max="100" value={quorum} onChange={(event) => setQuorum(event.target.value)} className="mt-1" /></label>
-                <label className="text-xs font-extrabold">Duración (horas)<Input type="number" min="1" value={duration} onChange={(event) => setDuration(event.target.value)} className="mt-1" /></label>
-              </div>
-              <Button type="button" className="w-full rounded-xl" onClick={() => void voting.updateSettings(Number(quorum) / 100, Number(duration)).catch((error: unknown) => setAdminError(error instanceof Error ? error.message : "No se pudo actualizar."))}>Guardar configuración</Button>
-              <div>
-                <p className="text-xs font-extrabold mb-2">Nuevas alternativas</p>
-                {dates.map((date, index) => <div key={index} className="flex gap-2 mb-2"><Input type="datetime-local" value={date} onChange={(event) => setDates((all) => all.map((item, itemIndex) => itemIndex === index ? event.target.value : item))} /><Button type="button" variant="outline" size="icon" onClick={() => setDates((all) => all.filter((_, itemIndex) => itemIndex !== index))}><X className="size-4" /></Button></div>)}
-                <Button type="button" variant="outline" className="w-full rounded-xl" onClick={() => setDates((all) => [...all, ""])}><Plus className="size-4" /> Agregar alternativa</Button>
-              </div>
-              <Button type="button" className="w-full rounded-xl" disabled={dates.length === 0 || dates.some((date) => !date)} onClick={() => void voting.updateOptions(dates.map((date) => `${date}:00`)).then(() => setDates([])).catch((error: unknown) => setAdminError(error instanceof Error ? error.message : "No se pudieron actualizar las opciones."))}>Reemplazar alternativas</Button>
-              {adminError && <p className="text-xs font-extrabold" style={{ color: "var(--destructive)" }}>{adminError}</p>}
-            </div>
-          )}
+          <Button
+            type="button"
+            size="xl"
+            className="w-full rounded-xl border-2 border-white hover:brightness-[0.97]"
+            style={{
+              background: "var(--violet)",
+              color: "var(--violet-ink)",
+              boxShadow: "0 4px 0 var(--violet-ink)",
+            }}
+            onClick={() => setAdminOpen(true)}
+          >
+            <Settings2 className="size-4" /> Administrar votación
+          </Button>
+          {adminOpen && (
+        <VotationAdminDialog voting={voting} timeZone={timeZone} onOpenChange={setAdminOpen} />
+      )}
         </div>
       )}
     </Card>

@@ -26,7 +26,12 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="es" className={`${beautySmile.variable} ${nunito.variable} h-full antialiased`}>
+    // `es-AR` (and not the generic `es`) because Chromium picks the format of the
+    // native date/time pickers — the votation alternatives, the reprogramming
+    // window and the statistics range — from the document language: es-AR gives
+    // 24h times and dd/mm/yyyy, while a plain `es` follows the browser's region
+    // and can end up on 12h with AM/PM.
+    <html lang="es-AR" className={`${beautySmile.variable} ${nunito.variable} h-full antialiased`}>
       <body className="min-h-screen">
         <StoreProvider>
           <ToastProvider>

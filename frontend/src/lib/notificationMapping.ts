@@ -12,6 +12,10 @@ export function mapNotificationKind(type: string): NotificationKind {
       return "cancel";
     case "REPROGRAMMED":
       return "reprog";
+    case "VOTATION_OPTIONS_CHANGED":
+      // Time-sensitive like the other "info" ones: the votation the recipient is
+      // reading changed, so it is worth acting on now.
+      return "info";
     case "STARTED":
     case "STARTING_SOON":
       return "info";

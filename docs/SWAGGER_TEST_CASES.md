@@ -114,7 +114,26 @@ Con un `{votationId}` activo y autenticado como organizador, ejecutar
 ```
 
 **Esperado:** `200` si ambas fechas estan dentro del rango y tienen buen clima; `400` con
-`invalidOptionDates` en caso contrario.
+`invalidOptionDates` en caso contrario. Ninguna alternativa puede ser igual o anterior al
+`closingDate`: en ese caso responde `400` con el codigo `INVALID_VOTATION_SETTINGS`.
+
+Las alternativas se reemplazan por completo: los votos de las fechas que se conservan se mantienen
+y los de las que se quitan se pierden. Si alguna de las quitadas ya tiene votos, el backend
+responde `409` con el codigo `VOTATION_VOTES_AT_RISK`, `optionDates` con las fechas afectadas y
+`votesAtRisk` con la cantidad de votos, sin aplicar ningun cambio. Para confirmar la perdida hay
+que reintentar con:
+
+```json
+{
+  "dates": ["2026-09-11T18:00:00", "2026-09-12T18:00:00"],
+  "allowVoteLoss": true
+}
+```
+
+**Esperado:** `200` con las alternativas ya aceptadas. Solo se consulta el pronóstico para las fechas
+nuevas: las que la votación ya publicaba conservan el clima con el que se aceptaron. Si el conjunto
+de fechas cambia, el organizador y cada participante reciben una notificación
+`VOTATION_OPTIONS_CHANGED`; guardar el mismo conjunto de fechas otra vez no notifica a nadie.
 
 ## US10 - Votar y ver resultado parcial
 

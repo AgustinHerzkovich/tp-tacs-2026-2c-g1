@@ -1,11 +1,13 @@
 package com.solnotfound.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.solnotfound.entity.activity.Activity;
@@ -26,6 +28,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.OptimisticLockingFailureException;
 
 class VotationClosingSchedulerTest {
 
@@ -42,10 +45,7 @@ class VotationClosingSchedulerTest {
     votationRepository = mock(IVotationRepository.class);
     activityRepository = mock(IActivityRepository.class);
     eventPublisher = mock(ApplicationEventPublisher.class);
-    ActivityStatusTransitionService transitionService =
-        new ActivityStatusTransitionService(
-            activityRepository, eventPublisher, mock(StatisticsEventRecorder.class));
-    scheduler = new VotationClosingScheduler(votationRepository, transitionService);
+    scheduler = schedulerFor(true, "");
   }
 
   @Test
@@ -68,6 +68,25 @@ class VotationClosingSchedulerTest {
     verify(votationRepository).save(votation);
     verify(activityRepository).save(activity);
     assertNotificationType(ReprogrammedNotificationType.class);
+  }
+
+  @Test
+  void resolvesTheStoredVotationWhenAVoteWasSavedAfterItWasRead() {
+    Activity activity = activity(1);
+    Votation read = votation(option(FUTURE_OPTION));
+    read.setActivity(activity);
+    Votation stored = votation(option(FUTURE_OPTION, activity.getParticipants().getFirst()));
+    stored.setActivity(activity);
+    when(votationRepository.findActiveDueToClose(any())).thenReturn(List.of(read));
+    when(votationRepository.save(read))
+        .thenThrow(new OptimisticLockingFailureException("stale votation"));
+    when(votationRepository.findById("votation-1")).thenReturn(stored);
+
+    scheduler.closeDueVotations();
+
+    assertThat(stored.getStatus()).isEqualTo(VotationStatus.CLOSED);
+    assertThat(activity.getStatus()).isEqualTo(ActivityStatus.RESCHEDULED);
+    verify(votationRepository).save(stored);
   }
 
   @Test
@@ -167,6 +186,60 @@ class VotationClosingSchedulerTest {
     assertThat(votation.getStatus()).isEqualTo(VotationStatus.ACTIVE);
     verify(votationRepository, never()).save(any());
     verify(eventPublisher, never()).publishEvent(any());
+  }
+
+  @Test
+  void closesDueVotationsAsSoonAsTheApplicationIsReady() {
+    Activity activity = activity(3);
+    Votation votation =
+        votation(
+            option(FUTURE_OPTION, activity.getParticipants().getFirst()),
+            option(FUTURE_OPTION.plusHours(1), activity.getParticipants().get(1)));
+    when(votationRepository.findActiveDueToClose(any())).thenReturn(List.of(votation));
+    when(activityRepository.findById("activity-1")).thenReturn(activity);
+    votation.setActivity(activity);
+
+    scheduler.closeDueVotationsOnStartup();
+
+    assertThat(votation.getStatus()).isEqualTo(VotationStatus.CLOSED);
+    assertThat(activity.getStatus()).isEqualTo(ActivityStatus.RESCHEDULED);
+    verify(votationRepository).save(votation);
+  }
+
+  @Test
+  void skipsStartupClosingCheckWhenRunningAsScheduledJob() {
+    scheduler = schedulerFor(true, "scheduled-jobs");
+
+    scheduler.closeDueVotationsOnStartup();
+
+    verifyNoInteractions(votationRepository, activityRepository, eventPublisher);
+  }
+
+  @Test
+  void skipsStartupClosingCheckWhenDisabledByConfiguration() {
+    scheduler = schedulerFor(false, "");
+
+    scheduler.closeDueVotationsOnStartup();
+
+    verifyNoInteractions(votationRepository, activityRepository, eventPublisher);
+  }
+
+  @Test
+  void keepsTheApplicationRunningWhenTheStartupClosingCheckFails() {
+    when(votationRepository.findActiveDueToClose(any()))
+        .thenThrow(new IllegalStateException("unavailable"));
+
+    assertThatCode(() -> scheduler.closeDueVotationsOnStartup()).doesNotThrowAnyException();
+
+    verify(activityRepository, never()).save(any());
+  }
+
+  private VotationClosingScheduler schedulerFor(boolean closingCheckOnStartup, String appMode) {
+    ActivityStatusTransitionService transitionService =
+        new ActivityStatusTransitionService(
+            activityRepository, eventPublisher, mock(StatisticsEventRecorder.class));
+    return new VotationClosingScheduler(
+        votationRepository, transitionService, closingCheckOnStartup, appMode);
   }
 
   private Activity activity(int participantCount) {

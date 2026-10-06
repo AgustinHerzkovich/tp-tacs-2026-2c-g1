@@ -250,6 +250,18 @@ Estas decisiones cubren aspectos no definidos de forma exhaustiva por el enuncia
   participantes con una actualización atómica en la base, que vuelve a comprobar el cupo y el estado
   en el mismo paso. Si dos personas piden el último lugar al mismo tiempo, entra una sola y la otra
   recibe el aviso de actividad completa; tampoco se pisan otros cambios simultáneos de la actividad.
+- **Votación bajo concurrencia:** cada votación guarda un número de versión y solo se acepta un
+  guardado hecho sobre la versión que se leyó. Si un voto, una edición del organizador y el cierre
+  coinciden, el que llega tarde vuelve a leer y reintenta sobre el estado actual (hasta tres veces);
+  así no se pierde un voto ni reaparecen fechas que se acababan de quitar, y un voto que llega
+  después del cierre se rechaza como votación cerrada.
+- **Voto de quien se baja:** al bajarse de una actividad se borra el voto de esa persona en la
+  votación abierta, porque solo votan quienes participan. El organizador conserva el suyo aunque
+  deje de figurar como participante.
+- **Chequeos al arrancar:** además de las corridas programadas, el backend revisa el clima y cierra
+  las votaciones vencidas al arrancar (`ACTIVITY_WEATHER_CHECK_ON_STARTUP` y
+  `VOTATION_CLOSING_CHECK_ON_STARTUP`, activos por defecto). En la nube quedan apagados: el
+  servicio escala a cero y lo despierta la misma tarea programada, que ya hace esa corrida.
 - **Organizador como participante:** el organizador puede sumarse y bajarse como participante. Para
   el quórum, solo se cuenta una vez aunque también figure entre los participantes.
 - **Votación sin opciones favorables:** si no se encuentran alternativas dentro del rango con clima

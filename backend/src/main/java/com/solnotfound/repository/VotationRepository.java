@@ -2,9 +2,11 @@ package com.solnotfound.repository;
 
 import com.solnotfound.dto.VotationFilterDTO;
 import com.solnotfound.entity.votation.Votation;
+import com.solnotfound.entity.votation.VotationStatus;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -13,6 +15,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -44,7 +47,43 @@ public class VotationRepository implements IVotationRepository {
     if (votation.getId() == null || votation.getId().isBlank()) {
       votation.setId(UUID.randomUUID().toString());
     }
-    return repository.save(votation);
+    long readVersion = votation.getVersion();
+    Criteria unchanged =
+        readVersion == 0
+            ? new Criteria()
+                .orOperator(
+                    Criteria.where("version").is(0L), Criteria.where("version").exists(false))
+            : Criteria.where("version").is(readVersion);
+    Query storedAsRead =
+        Query.query(
+            new Criteria().andOperator(Criteria.where("_id").is(votation.getId()), unchanged));
+    votation.setVersion(readVersion + 1);
+    if (mongoTemplate.findAndReplace(storedAsRead, votation) != null) {
+      return votation;
+    }
+    if (!repository.existsById(votation.getId())) {
+      return mongoTemplate.insert(votation);
+    }
+    votation.setVersion(readVersion);
+    throw new OptimisticLockingFailureException(
+        "Votation changed since it was read: " + votation.getId());
+  }
+
+  @Override
+  public void removeVotes(String activityId, String userId) {
+    Query votedActive =
+        Query.query(
+            Criteria.where("activity")
+                .is(activityId)
+                .and("status")
+                .is(VotationStatus.ACTIVE)
+                .and("options.users")
+                .is(userId));
+
+    mongoTemplate.updateMulti(
+        votedActive,
+        new Update().pull("options.$[].users", userId).inc("version", 1),
+        Votation.class);
   }
 
   @Override

@@ -40,7 +40,8 @@ public final class ActivityMapper {
         activity.getAnticipationWindow(),
         toReprogramationRangeDTO(activity.getReprogramationRange()),
         UserMapper.toDTO(activity.getOrganizer()),
-        toUserDTOs(activity.getParticipants()));
+        toUserDTOs(activity.getParticipants()),
+        activity.getTimeZone());
   }
 
   public static Activity toEntity(ActivityDTO activityDTO) {
@@ -62,6 +63,7 @@ public final class ActivityMapper {
     activity.setReprogramationRange(toReprogramationRange(activityDTO.reprogramationRange()));
     activity.setOrganizer(UserMapper.toEntity(activityDTO.organizer()));
     activity.setParticipants(toUsers(activityDTO.participants()));
+    activity.setTimeZone(activityDTO.timeZone());
 
     return activity;
   }
