@@ -93,7 +93,7 @@ public class ActivityAnticipationCheckScheduler {
    * votation.min-quorum}), which the organizer can then adjust from the app.
    */
   @Scheduled(cron = "${activity.weather-check-cron:0 0 * * * *}")
-  public void checkActivitiesClimate() {
+  public synchronized void checkActivitiesClimate() {
 
     List<Activity> activeActivities = activityRepository.findActive();
     int dueActivities = 0;

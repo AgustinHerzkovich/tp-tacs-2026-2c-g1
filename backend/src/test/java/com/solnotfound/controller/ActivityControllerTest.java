@@ -25,6 +25,7 @@ import com.solnotfound.entity.activity.ActivityType;
 import com.solnotfound.entity.weather.WeatherForecast;
 import com.solnotfound.repository.InMemoryActivityRepository;
 import com.solnotfound.repository.InMemoryUserRepository;
+import com.solnotfound.repository.InMemoryVotationRepository;
 import com.solnotfound.service.ActivityService;
 import com.solnotfound.service.StatisticsEventRecorder;
 import java.net.URI;
@@ -52,7 +53,8 @@ class ActivityControllerTest {
                 new InMemoryActivityRepository(),
                 weatherAdapter,
                 new InMemoryUserRepository(),
-                mock(StatisticsEventRecorder.class)));
+                mock(StatisticsEventRecorder.class),
+                new InMemoryVotationRepository()));
     LocationDTO location = new LocationDTO("Buenos Aires", null, null);
     CreateActivityRequest request =
         new CreateActivityRequest(
@@ -120,7 +122,8 @@ class ActivityControllerTest {
                 new InMemoryActivityRepository(),
                 weatherAdapter,
                 new InMemoryUserRepository(),
-                mock(StatisticsEventRecorder.class)));
+                mock(StatisticsEventRecorder.class),
+                new InMemoryVotationRepository()));
 
     CreateActivityRequest request =
         new CreateActivityRequest(
@@ -161,7 +164,8 @@ class ActivityControllerTest {
                 new InMemoryActivityRepository(),
                 weatherAdapter,
                 new InMemoryUserRepository(),
-                mock(StatisticsEventRecorder.class)));
+                mock(StatisticsEventRecorder.class),
+                new InMemoryVotationRepository()));
 
     CreateActivityRequest request =
         new CreateActivityRequest(
@@ -203,7 +207,8 @@ class ActivityControllerTest {
                 new InMemoryActivityRepository(),
                 weatherAdapter,
                 new InMemoryUserRepository(),
-                mock(StatisticsEventRecorder.class)));
+                mock(StatisticsEventRecorder.class),
+                new InMemoryVotationRepository()));
 
     CreateActivityRequest request =
         new CreateActivityRequest(

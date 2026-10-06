@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -27,6 +28,9 @@ public class VotationClosingScheduler {
   private final boolean closingCheckOnStartup;
   private final String appMode;
 
+  @edu.umd.cs.findbugs.annotations.SuppressFBWarnings(
+      value = "EI_EXPOSE_REP2",
+      justification = "Spring injects shared application collaborators")
   public VotationClosingScheduler(
       IVotationRepository votationRepository,
       ActivityStatusTransitionService transitionService,
@@ -50,7 +54,7 @@ public class VotationClosingScheduler {
   @edu.umd.cs.findbugs.annotations.SuppressFBWarnings(
       value = "THROWS_METHOD_THROWS_RUNTIMEEXCEPTION",
       justification = "Scheduler failures must propagate so Cloud Scheduler can retry the request")
-  public void closeDueVotations() {
+  public synchronized void closeDueVotations() {
     // Closing dates are wall-clock times in each activity's zone. The query uses the latest
     // "now" on Earth so no due votation is missed; resolve() then checks the activity's own time.
     LocalDateTime latestNow = LocalDateTime.now(ZoneOffset.ofHours(14));
@@ -60,7 +64,7 @@ public class VotationClosingScheduler {
     log.info("Votation closing check started: dueVotations={}", dueVotations.size());
     for (Votation votation : dueVotations) {
       try {
-        if (resolve(votation)) {
+        if (resolveOverStoredState(votation)) {
           closed++;
         }
       } catch (RuntimeException exception) {
@@ -106,6 +110,19 @@ public class VotationClosingScheduler {
       closeDueVotations();
     } catch (RuntimeException exception) {
       log.error("Startup votation closing check failed", exception);
+    }
+  }
+
+  /**
+   * Resolves a due votation and, when a vote or an organizer edit was stored after it was read,
+   * resolves the stored votation instead so that change is taken into account.
+   */
+  private boolean resolveOverStoredState(Votation votation) {
+    try {
+      return resolve(votation);
+    } catch (OptimisticLockingFailureException conflict) {
+      Votation stored = votationRepository.findById(votation.getId());
+      return stored != null && resolve(stored);
     }
   }
 

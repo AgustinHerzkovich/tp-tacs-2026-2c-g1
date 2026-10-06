@@ -29,6 +29,7 @@ import com.solnotfound.exception.IllegalStateActivityException;
 import com.solnotfound.exception.InvalidActivityException;
 import com.solnotfound.repository.IActivityRepository;
 import com.solnotfound.repository.IUserRepository;
+import com.solnotfound.repository.IVotationRepository;
 import com.solnotfound.storage.ImageFile;
 import com.solnotfound.storage.ImageStorage;
 import com.solnotfound.storage.NoOpImageStorage;
@@ -54,6 +55,7 @@ public class ActivityService {
   private final IUserRepository userRepository;
   private final StatisticsEventRecorder statisticsRecorder;
   private final ImageStorage imageStorage;
+  private final IVotationRepository votationRepository;
   private static final int MAX_IMAGES = 5;
   private static final int MAX_JOIN_ATTEMPTS = 3;
   private static final long MAX_IMAGE_SIZE = 5L * 1024 * 1024;
@@ -70,11 +72,13 @@ public class ActivityService {
       IWeatherAdapter weatherAdapter,
       IUserRepository userRepository,
       StatisticsEventRecorder statisticsRecorder,
+      IVotationRepository votationRepository,
       ImageStorage imageStorage) {
     this.activityRepository = activityRepository;
     this.weatherAdapter = weatherAdapter;
     this.userRepository = userRepository;
     this.statisticsRecorder = statisticsRecorder;
+    this.votationRepository = votationRepository;
     this.imageStorage = imageStorage;
   }
 
@@ -82,12 +86,14 @@ public class ActivityService {
       IActivityRepository activityRepository,
       IWeatherAdapter weatherAdapter,
       IUserRepository userRepository,
-      StatisticsEventRecorder statisticsRecorder) {
+      StatisticsEventRecorder statisticsRecorder,
+      IVotationRepository votationRepository) {
     this(
         activityRepository,
         weatherAdapter,
         userRepository,
         statisticsRecorder,
+        votationRepository,
         new NoOpImageStorage());
   }
 
@@ -361,6 +367,12 @@ public class ActivityService {
     activity.removeParticipant(userId);
 
     activityRepository.removeParticipant(activityId, userId);
+
+    boolean isOrganizer =
+        activity.getOrganizer() != null && userId.equals(activity.getOrganizer().getId());
+    if (!isOrganizer) {
+      votationRepository.removeVotes(activityId, userId);
+    }
 
     return toResponse(activity);
   }

@@ -73,6 +73,11 @@ public class GlobalExceptionHandler {
     return response;
   }
 
+  @ExceptionHandler(ConcurrentUpdateException.class)
+  public ResponseEntity<ProblemDetail> handleConcurrentUpdate(ConcurrentUpdateException exception) {
+    return respond(HttpStatus.CONFLICT, "Concurrent update", exception);
+  }
+
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ResponseEntity<ProblemDetail> handleValidation(MethodArgumentNotValidException exception) {
     Map<String, String> errors = new LinkedHashMap<>();

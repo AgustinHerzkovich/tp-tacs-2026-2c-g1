@@ -176,6 +176,14 @@ resource "google_cloud_run_v2_service" "backend" {
         value = "-"
       }
       env {
+        name  = "ACTIVITY_WEATHER_CHECK_ON_STARTUP"
+        value = "false"
+      }
+      env {
+        name  = "VOTATION_CLOSING_CHECK_ON_STARTUP"
+        value = "false"
+      }
+      env {
         name  = "SCHEDULER_OIDC_AUDIENCE"
         value = var.scheduler_oidc_audience
       }

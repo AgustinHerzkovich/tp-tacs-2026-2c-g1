@@ -26,6 +26,7 @@ import com.solnotfound.entity.votation.VotationStatus;
 import com.solnotfound.entity.weather.IBadWeatherChecker;
 import com.solnotfound.entity.weather.WeatherForecast;
 import com.solnotfound.exception.AccessDeniedException;
+import com.solnotfound.exception.ConcurrentUpdateException;
 import com.solnotfound.exception.InvalidVotationOptionsException;
 import com.solnotfound.exception.InvalidVotationSettingsException;
 import com.solnotfound.exception.ResourceNotFoundException;
@@ -44,6 +45,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.PageRequest;
 
 class VotationServiceTest {
@@ -514,6 +516,110 @@ class VotationServiceTest {
     assertThat(result.options().getFirst().voterNames()).containsExactly("Jane Doe");
     assertThat(votation.getOptions().getFirst().getUsers())
         .containsExactly(activity.getParticipants().getFirst());
+  }
+
+  @Test
+  void repeatsTheVoteOverTheStoredVotationWhenAnotherChangeWasSavedFirst() {
+    Activity activity = activity("a-1", "organizer", List.of("participant"));
+    activityRepository.save(activity);
+    LocalDateTime option = activity.getDateTime().plusDays(1);
+    Votation votation = votationWithOptions("v-1", "a-1", option);
+    votation.setActivity(activity);
+    ConflictingVotationRepository conflicting = new ConflictingVotationRepository(1);
+    conflicting.store(votation);
+
+    var result = serviceWith(conflicting).vote("v-1", "participant", option);
+
+    assertThat(result.votedOption()).isEqualTo(option);
+    assertThat(conflicting.saveAttempts).isEqualTo(2);
+  }
+
+  @Test
+  void aVoteThatLosesTheRaceAgainstTheClosingIsRejectedAsClosed() {
+    Activity activity = activity("a-1", "organizer", List.of("participant"));
+    activityRepository.save(activity);
+    LocalDateTime option = activity.getDateTime().plusDays(1);
+    Votation votation = votationWithOptions("v-1", "a-1", option);
+    votation.setActivity(activity);
+    ConflictingVotationRepository conflicting = new ConflictingVotationRepository(1);
+    conflicting.store(votation);
+    conflicting.onConflict = () -> votation.setStatus(VotationStatus.CLOSED);
+
+    assertThatThrownBy(() -> serviceWith(conflicting).vote("v-1", "participant", option))
+        .isInstanceOf(AccessDeniedException.class);
+  }
+
+  @Test
+  void givesUpWithAConflictWhenTheVotationKeepsChanging() {
+    Activity activity = activity("a-1", "organizer", List.of("participant"));
+    activityRepository.save(activity);
+    LocalDateTime option = activity.getDateTime().plusDays(1);
+    Votation votation = votationWithOptions("v-1", "a-1", option);
+    votation.setActivity(activity);
+    ConflictingVotationRepository conflicting =
+        new ConflictingVotationRepository(Integer.MAX_VALUE);
+    conflicting.store(votation);
+
+    assertThatThrownBy(() -> serviceWith(conflicting).vote("v-1", "participant", option))
+        .isInstanceOf(ConcurrentUpdateException.class);
+    assertThat(conflicting.saveAttempts).isEqualTo(3);
+  }
+
+  @Test
+  void doesNotNotifyAnOptionsChangeThatCouldNotBeStored() {
+    Activity activity = activity("a-1", "organizer", List.of("participant"));
+    activityRepository.save(activity);
+    LocalDateTime kept = activity.getDateTime().plusDays(1);
+    LocalDateTime added = kept.plusHours(1);
+    Votation votation = votationWithOptions("v-1", "a-1", kept);
+    votation.setActivity(activity);
+    ConflictingVotationRepository conflicting =
+        new ConflictingVotationRepository(Integer.MAX_VALUE);
+    conflicting.store(votation);
+    when(weatherAdapter.getForecastRange(any(), anyList()))
+        .thenReturn(List.of(mock(WeatherForecast.class)));
+    VotationService conflictingService = serviceWith(conflicting);
+    UpdateVotationOptionsRequest request = new UpdateVotationOptionsRequest(List.of(kept, added));
+
+    assertThatThrownBy(() -> conflictingService.updateVotationOptions("v-1", request, "organizer"))
+        .isInstanceOf(ConcurrentUpdateException.class);
+    verify(eventPublisher, never()).publishEvent(any());
+  }
+
+  private VotationService serviceWith(IVotationRepository repository) {
+    return new VotationService(
+        repository,
+        activityRepository,
+        weatherAdapter,
+        badWeatherChecker,
+        new InMemoryUserRepository(),
+        eventPublisher);
+  }
+
+  /** Rejects the first saves as if another request had stored the votation in between. */
+  private static final class ConflictingVotationRepository extends InMemoryVotationRepository {
+    private int conflictsLeft;
+    private int saveAttempts;
+    private Runnable onConflict = () -> {};
+
+    private ConflictingVotationRepository(int conflicts) {
+      this.conflictsLeft = conflicts;
+    }
+
+    private void store(Votation votation) {
+      super.save(votation);
+    }
+
+    @Override
+    public Votation save(Votation votation) {
+      saveAttempts++;
+      if (conflictsLeft > 0) {
+        conflictsLeft--;
+        onConflict.run();
+        throw new OptimisticLockingFailureException("stale votation");
+      }
+      return super.save(votation);
+    }
   }
 
   @Test

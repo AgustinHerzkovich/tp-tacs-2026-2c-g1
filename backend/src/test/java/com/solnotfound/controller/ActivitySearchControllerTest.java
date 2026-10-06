@@ -14,6 +14,7 @@ import com.solnotfound.entity.activity.ActivityStatus;
 import com.solnotfound.exception.GlobalExceptionHandler;
 import com.solnotfound.repository.InMemoryActivityRepository;
 import com.solnotfound.repository.InMemoryUserRepository;
+import com.solnotfound.repository.InMemoryVotationRepository;
 import com.solnotfound.service.ActivityService;
 import com.solnotfound.service.StatisticsEventRecorder;
 import java.util.List;
@@ -41,7 +42,8 @@ class ActivitySearchControllerTest {
                 new InMemoryActivityRepository(),
                 weatherAdapter,
                 new InMemoryUserRepository(),
-                org.mockito.Mockito.mock(StatisticsEventRecorder.class)));
+                org.mockito.Mockito.mock(StatisticsEventRecorder.class),
+                new InMemoryVotationRepository()));
     mockMvc =
         MockMvcBuilders.standaloneSetup(controller)
             .setControllerAdvice(new GlobalExceptionHandler())

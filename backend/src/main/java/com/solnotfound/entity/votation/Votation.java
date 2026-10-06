@@ -36,6 +36,14 @@ public class Votation {
   private Double minQuorum;
 
   @Getter @Setter private VotationStatus status;
+
+  /**
+   * Number of times this votation was stored. The repository only accepts a save made over the
+   * version it read, so a vote, an organizer edit and the closing pass cannot overwrite each other.
+   * Votations stored before this field existed read as version 0.
+   */
+  private long version;
+
   private List<VotationOption> options = new ArrayList<>();
 
   @edu.umd.cs.findbugs.annotations.SuppressFBWarnings(
@@ -66,6 +74,14 @@ public class Votation {
 
   public synchronized void setClosingDate(LocalDateTime closingDate) {
     this.closingDate = closingDate;
+  }
+
+  public synchronized long getVersion() {
+    return version;
+  }
+
+  public synchronized void setVersion(long version) {
+    this.version = version;
   }
 
   public synchronized Double getMinQuorum() {

@@ -178,6 +178,7 @@
 				<configuration>
 					<systemPropertyVariables>
 						<activity.weather-check-on-startup>false</activity.weather-check-on-startup>
+						<votation.closing-check-on-startup>false</votation.closing-check-on-startup>
 					</systemPropertyVariables>
 				</configuration>
 			</plugin>

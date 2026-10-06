@@ -28,6 +28,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.OptimisticLockingFailureException;
 
 class VotationClosingSchedulerTest {
 
@@ -67,6 +68,25 @@ class VotationClosingSchedulerTest {
     verify(votationRepository).save(votation);
     verify(activityRepository).save(activity);
     assertNotificationType(ReprogrammedNotificationType.class);
+  }
+
+  @Test
+  void resolvesTheStoredVotationWhenAVoteWasSavedAfterItWasRead() {
+    Activity activity = activity(1);
+    Votation read = votation(option(FUTURE_OPTION));
+    read.setActivity(activity);
+    Votation stored = votation(option(FUTURE_OPTION, activity.getParticipants().getFirst()));
+    stored.setActivity(activity);
+    when(votationRepository.findActiveDueToClose(any())).thenReturn(List.of(read));
+    when(votationRepository.save(read))
+        .thenThrow(new OptimisticLockingFailureException("stale votation"));
+    when(votationRepository.findById("votation-1")).thenReturn(stored);
+
+    scheduler.closeDueVotations();
+
+    assertThat(stored.getStatus()).isEqualTo(VotationStatus.CLOSED);
+    assertThat(activity.getStatus()).isEqualTo(ActivityStatus.RESCHEDULED);
+    verify(votationRepository).save(stored);
   }
 
   @Test

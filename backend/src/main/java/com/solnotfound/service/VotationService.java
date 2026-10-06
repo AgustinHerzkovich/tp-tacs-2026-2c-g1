@@ -15,6 +15,7 @@ import com.solnotfound.entity.votation.VotationStatus;
 import com.solnotfound.entity.weather.IBadWeatherChecker;
 import com.solnotfound.entity.weather.WeatherForecast;
 import com.solnotfound.exception.AccessDeniedException;
+import com.solnotfound.exception.ConcurrentUpdateException;
 import com.solnotfound.exception.ErrorCode;
 import com.solnotfound.exception.InvalidVotationOptionsException;
 import com.solnotfound.exception.InvalidVotationSettingsException;
@@ -33,9 +34,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -45,6 +48,8 @@ import org.springframework.stereotype.Service;
     value = "EI_EXPOSE_REP2",
     justification = "Spring injects shared application collaborators")
 public class VotationService {
+
+  private static final int MAX_SAVE_ATTEMPTS = 3;
 
   private final IVotationRepository votationRepository;
   private final IActivityRepository activityRepository;
@@ -139,8 +144,14 @@ public class VotationService {
    * @throws VotationVotesAtRiskException when voted alternatives would be dropped without being
    *     acknowledged
    * @throws WeatherUnavailableException when the forecast range cannot be retrieved
+   * @throws ConcurrentUpdateException when the votation kept changing while the edit was retried
    */
   public VotationDTO updateVotationOptions(
+      String votationId, UpdateVotationOptionsRequest request, String userId) {
+    return retryOnConflict(votationId, () -> replaceOptions(votationId, request, userId));
+  }
+
+  private VotationDTO replaceOptions(
       String votationId, UpdateVotationOptionsRequest request, String userId) {
     Votation votation = votationRepository.findById(votationId);
     if (votation == null) {
@@ -256,8 +267,14 @@ public class VotationService {
    * @throws ResourceNotFoundException when the votation or activity does not exist
    * @throws AccessDeniedException when the user is not the organizer or the votation is closed
    * @throws InvalidVotationSettingsException when duration or closing date is invalid
+   * @throws ConcurrentUpdateException when the votation kept changing while the update was retried
    */
   public VotationDTO updateVotationSettings(
+      String votationId, UpdateVotationSettingsRequest request, String userId) {
+    return retryOnConflict(votationId, () -> applySettings(votationId, request, userId));
+  }
+
+  private VotationDTO applySettings(
       String votationId, UpdateVotationSettingsRequest request, String userId) {
     Votation votation = findVotation(votationId);
     Activity activity = findActivity(votation);
@@ -305,6 +322,29 @@ public class VotationService {
     return activity;
   }
 
+  /**
+   * Runs a read-modify-save change of a votation, repeating it from the read when another request
+   * stored the votation in between. Each attempt validates against the freshly read state, so a
+   * vote that lost the race against the closing pass is rejected as closed instead of being lost.
+   *
+   * @throws ConcurrentUpdateException when every attempt collided with another change
+   */
+  private VotationDTO retryOnConflict(String votationId, Supplier<VotationDTO> change) {
+    for (int attempt = 1; attempt < MAX_SAVE_ATTEMPTS; attempt++) {
+      try {
+        return change.get();
+      } catch (OptimisticLockingFailureException conflict) {
+        // Another request stored the votation first: read it again and reapply the change.
+      }
+    }
+    try {
+      return change.get();
+    } catch (OptimisticLockingFailureException conflict) {
+      throw new ConcurrentUpdateException(
+          "Votation changed concurrently; the change could not be applied: " + votationId);
+    }
+  }
+
   private void requireOrganizer(Activity activity, String userId) {
     if (activity.getOrganizer() == null || !userId.equals(activity.getOrganizer().getId())) {
       throw new AccessDeniedException(
@@ -322,8 +362,13 @@ public class VotationService {
    * @return the votation with its updated partial result
    * @throws ResourceNotFoundException when the votation, activity, option, or user does not exist
    * @throws AccessDeniedException when the votation is closed
+   * @throws ConcurrentUpdateException when the votation kept changing while the vote was retried
    */
   public VotationDTO vote(String votationId, String userId, LocalDateTime vote) {
+    return retryOnConflict(votationId, () -> castVote(votationId, userId, vote));
+  }
+
+  private VotationDTO castVote(String votationId, String userId, LocalDateTime vote) {
     final Votation votation = votationRepository.findById(votationId);
     if (votation == null) {
       throw new ResourceNotFoundException(

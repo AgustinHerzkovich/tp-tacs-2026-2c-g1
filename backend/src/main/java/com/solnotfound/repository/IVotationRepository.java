@@ -13,7 +13,25 @@ public interface IVotationRepository {
 
   List<Votation> findAll();
 
+  /**
+   * Stores a votation. An existing votation is only replaced when it was not stored by anyone else
+   * since this instance was read; on success its version is incremented.
+   *
+   * @param votation votation to insert or replace
+   * @return the stored votation
+   * @throws org.springframework.dao.OptimisticLockingFailureException when the stored votation
+   *     changed after this instance was read; the caller must read it again and reapply its change
+   */
   Votation save(Votation votation);
+
+  /**
+   * Removes every vote a user cast in the active votations of an activity, in a single atomic
+   * update per votation. Does nothing when the user has not voted.
+   *
+   * @param activityId activity whose active votations are updated
+   * @param userId user whose votes are removed
+   */
+  void removeVotes(String activityId, String userId);
 
   List<Votation> findByActivityIds(List<String> activityIds);
 
