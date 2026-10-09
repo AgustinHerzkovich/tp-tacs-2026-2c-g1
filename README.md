@@ -102,6 +102,7 @@ Para usarla alcanza con abrir el frontend y crear una cuenta desde la pantalla d
 | Identidad | Keycloak + PostgreSQL | Keycloak en Cloud Run + Cloud SQL (PostgreSQL) |
 | Base de datos | MongoDB | MongoDB Atlas (M0) |
 | Imágenes de actividades | MinIO | Bucket privado de Cloud Storage con URLs firmadas |
+| Bot de Telegram | Contenedor `telegram` (Functions Framework) | Cloud Function HTTP (gen2) que recibe el webhook de Telegram |
 | Secretos | `.env` local (no versionado) | Secret Manager |
 | Imágenes de contenedor | Build local | Artifact Registry, etiquetadas con el SHA del commit |
 
@@ -124,6 +125,7 @@ Para usarla alcanza con abrir el frontend y crear una cuenta desde la pantalla d
   [`terraform/README.md`](terraform/README.md). El workflow `terraform-ci.yml` valida los cambios.
 - **Aplicación:** `.github/workflows/deploy.yml` se ejecuta con cada merge a `main` o `develop`,
   construye en Cloud Build solo los componentes que cambiaron y actualiza sus servicios de Cloud Run.
+  Si cambió `telegram/`, también vuelve a desplegar la función del bot.
   Se autentica con Workload Identity Federation, sin claves de servicio guardadas en GitHub. El
   detalle está en [`docs/CLOUD_BUILD.md`](docs/CLOUD_BUILD.md).
 - **Configuración de Keycloak en la nube:** el realm se importa solo la primera vez, porque Keycloak
@@ -148,6 +150,11 @@ Navegador
                                         |-- MinIO/GCS (imágenes)
                                         |-- Open-Meteo (clima)
                   |-- HTTP --> Nominatim/OpenStreetMap (geocodificación y mapas)
+
+Telegram
+  |-- webhook (secret) --> Función del bot
+                              |-- client_credentials --> Keycloak
+                              |-- Bearer JWT + API token --> Spring Boot REST API
 ```
 
 - **Frontend:** Next.js 16 App Router, React 19, TypeScript estricto, Tailwind CSS v4 y shadcn/ui.
@@ -161,6 +168,9 @@ Navegador
 - **Identidad:** Keycloak administra usuarios, contraseñas y roles, y persiste su configuración en
   PostgreSQL tanto localmente como en nube. Spring Security valida los JWT mediante issuer, audience
   y JWKS antes de obtener la identidad desde `sub`.
+- **Bot de Telegram:** función serverless en Node que recibe los updates por webhook y consulta la
+  misma API REST que el frontend, autenticada como cliente de máquina. Ver
+  [`telegram/README.md`](telegram/README.md).
 - **Procesamiento periódico:** schedulers configurables controlan clima, cierres de votación,
   finalización de actividades y avisos de inicio. Localmente se ejecutan mediante Spring Scheduler;
   en GCP los timers del servicio web se desactivan y Cloud Scheduler invoca
@@ -178,12 +188,17 @@ Navegador
   despliegue automático desde GitHub Actions, integración continua de backend y frontend y prueba de
   carga reproducible con Vegeta. Ver [Despliegue en la nube](#despliegue-en-la-nube).
 
-El bot de Telegram (`telegram/`), requerido para la promoción, está en desarrollo y no forma parte
-del alcance de la Entrega 3.
+- **Después de la Entrega 3:** integración con Telegram (requerida para la promoción), desplegada
+  como función serverless: vinculación del chat con la cuenta mediante un código de un solo uso y
+  consulta de las actividades en las que se participa y de las que se organizan. También se
+  corrigieron la zona horaria de los plazos, el chequeo periódico del clima, el cierre de las
+  votaciones y la concurrencia al sumarse y al votar, y se habilitó desde la UI la administración
+  de la votación por el organizador.
 
-La matriz de trazabilidad entre user stories, implementación y pruebas está disponible en
-[`docs/DELIVERY_1_TRACEABILITY.md`](docs/DELIVERY_1_TRACEABILITY.md). Los casos manuales para
-Swagger están en [`docs/SWAGGER_TEST_CASES.md`](docs/SWAGGER_TEST_CASES.md).
+La trazabilidad vigente entre user stories, implementación y pruebas está en
+[Trazabilidad de user stories](#trazabilidad-de-user-stories);
+[`docs/DELIVERY_1_TRACEABILITY.md`](docs/DELIVERY_1_TRACEABILITY.md) conserva la de la Entrega 1.
+Los casos manuales para Swagger están en [`docs/SWAGGER_TEST_CASES.md`](docs/SWAGGER_TEST_CASES.md).
 
 ## API y autenticación
 
@@ -269,8 +284,11 @@ Estas decisiones cubren aspectos no definidos de forma exhaustiva por el enuncia
 - **Quórum global:** el quórum mínimo se aplica a la participación total de la votación. Alcanzado el
   quórum, gana la alternativa más votada; si no hay ganadora o no se alcanza el quórum, la actividad
   se cancela.
-- **Opciones manuales validadas:** el organizador puede reemplazar las alternativas mientras la
-  votación está activa, pero todas deben pertenecer al rango permitido y tener clima aceptable.
+- **Opciones manuales validadas:** el organizador puede agregar y quitar alternativas mientras la
+  votación está activa. Todas deben pertenecer al rango permitido y ser posteriores al cierre de la
+  votación; el clima se consulta solo para las fechas nuevas, porque las ya publicadas se validaron
+  al aceptarlas. Quitar una fecha que ya tiene votos requiere confirmación explícita, y cuando
+  cambia el conjunto de fechas se notifica a todos los participantes.
 - **Consumo responsable del clima:** Open-Meteo se encapsula detrás de `IWeatherAdapter`; se usan
   cachés acotadas, timeout, retry y circuit breaker. La indisponibilidad no se interpreta como clima
   favorable.
@@ -473,6 +491,8 @@ enviaron secretos deliberadamente a los asistentes. Su uso se concentró en las 
 - Modelado de Interfaz de Usuario.
 - Integración del frontend con la API, autenticación con Keycloak, resolución de conflictos de
   merge y revisión de consistencia de la Entrega 2.
+- Después de la Entrega 3: revisión de las user stories contra backend y frontend, corrección de
+  problemas de zona horaria y de concurrencia, y diagnóstico del despliegue del bot de Telegram.
 - En la Entrega 3: revisión de la infraestructura en Terraform y de los workflows de CI/CD,
   diagnóstico de problemas de despliegue y de configuración de Keycloak (SMTP, redirecciones),
   diseño del script de prueba de carga y revisión de las correcciones de la entrega anterior.
@@ -493,6 +513,29 @@ reglas de seguridad e idioma y los comandos de verificación que deben pasar ant
 por terminado. `CLAUDE.md` solo importa ese archivo, de modo que Codex, Claude Code y otros
 asistentes compatibles leen las mismas reglas sin duplicarlas.
 
+## Trazabilidad de user stories
+
+Las rutas de backend son relativas a `backend/src/main/java/com/solnotfound/` y las de frontend a
+`frontend/src/`. Los tests de backend están en `backend/src/test/`, los de frontend junto al código
+(`*.test.ts(x)`) y los E2E en `frontend/e2e/`.
+
+| US | Backend | Frontend | Pruebas |
+| --- | --- | --- | --- |
+| 1. Crear actividad | `POST /activities`, `ActivityService.create` | `/crear`, `components/pages/wizard/` | `ActivityServiceTest`, `ActivityControllerTest`, `CreateActivityRequestValidationTest`, E2E `create-activity` |
+| 2. Condiciones de clima | `entity/weather/*Condition`, `BadWeatherChecker` | `StepClima` | `WeatherConditionTest` |
+| 3. Ventana de anticipación | `Activity.isTimeToCheckWeatherConditions` | `StepAlertas` | `ActivityIsTimeToCheckWeatherConditionsTest` |
+| 4. Rango de reprogramación | `ReprogramationRange` | `StepAlertas` | `ReprogramationRangeTest` |
+| 5. Buscar con filtros | `GET /activities`, `ActivityRepository.search` | `/explorar`, `components/search/` | `ActivitySearchControllerTest`, `MongoPersistenceTest`, E2E `explore` |
+| 6. Sumarse o bajarse | `PUT` y `DELETE /activities/{id}/participants/me` | Detalle, `hooks/useJoinActivity.ts` | `ActivityParticipantTest`, `ActivityParticipationControllerTest`, `MongoPersistenceTest`, E2E `detail` |
+| 7. Clima actual y pronóstico | `GET /activities/{id}/weather` | `WeatherWidget`, `hooks/useActivityWeather.ts` | `ActivityServiceTest`, `OpenMeteoWeatherAdapterTest` |
+| 8. Aviso por mal clima | `ActivityAnticipationCheckScheduler` | Notificaciones, `hooks/useNotifications.ts` | `ActivityAnticipationCheckSchedulerTest` |
+| 9. Votación automática o manual | `ActivityAnticipationCheckScheduler`, `PUT /votations/{id}/options` y `/settings` | `VotationAdminDialog` | `ActivityAnticipationCheckSchedulerTest`, `VotationServiceTest` |
+| 10. Votar y ver el parcial | `PUT /votations/{id}/votes/me`, `GET /votations` | `VotingRoom`, `hooks/useVoting.ts` | `VotationServiceTest`, `VotationVoteTest`, E2E `votation` |
+| 11. Resolver la votación | `VotationClosingScheduler` | Estado en el detalle | `VotationClosingSchedulerTest`, `VotationResolutionTest` |
+| 12. Mis actividades y votaciones | `GET /activities/organizers/me`, `/participants/me`, `GET /votations` | `/mis-actividades` | Tests de controllers, `useMisActividades.test.tsx` |
+| 13. Notificaciones de inicio, reprogramación y cancelación | `ActivityStatusScheduler`, `ActivityStatusTransitionService`, `GET /notifications` | Notificaciones | `ActivityStatusSchedulerTest`, `NotificationServiceTest`, E2E `notifications` |
+| 14. Estadísticas de administrador | `GET /statistics` (rol `ADMIN`), `StatisticsService` | `/estadisticas` | `StatisticsServiceTest`, `StatisticsSecurityTest`, E2E `statistics` |
+
 ## Trazabilidad de requisitos no funcionales
 
 | Requisito del enunciado             | Implementación y documentación                                                                                                           |
@@ -509,6 +552,7 @@ asistentes compatibles leen las mismas reglas sin duplicarlas.
 | Calidad y tests                     | Maven, Vitest, Testing Library y Playwright documentados en [Calidad de código](#calidad-de-código), con CI en GitHub Actions.           |
 | Load test                           | Vegeta con `loadtest/run.sh`, escenarios autenticados y umbrales en [`docs/LOAD_TEST.md`](docs/LOAD_TEST.md).                            |
 | Frontend amigable con framework CSS | Next.js responsive con Tailwind CSS v4 y componentes shadcn/ui.                                                                          |
+| Integración con Telegram (promoción) | Bot serverless en [`telegram/`](telegram/README.md), con vinculación de cuenta y consulta de actividades.                                |
 | Uso de IA                           | Herramientas, tareas, criterio y ejemplos documentados en [Uso de inteligencia artificial](#uso-de-inteligencia-artificial).             |
 
 ## Imágenes de actividades
