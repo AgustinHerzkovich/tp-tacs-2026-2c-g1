@@ -77,8 +77,7 @@ Seleccionar `multipart/form-data`, pegar el siguiente JSON en la parte `activity
 
 ## US7 - Clima de una actividad
 
-1. Sumarse con `PUT /activities/{activityId}/participants/me`.
-2. Ejecutar `GET /activities/{activityId}/weather`.
+1. Ejecutar `GET /activities/{activityId}/weather` (no hace falta ser participante).
 
 **Esperado:** `200` con clima actual y pronostico de la fecha de la actividad.
 

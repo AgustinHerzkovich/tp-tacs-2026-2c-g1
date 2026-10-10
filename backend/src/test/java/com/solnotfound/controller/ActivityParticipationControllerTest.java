@@ -129,9 +129,8 @@ class ActivityParticipationControllerTest {
   }
 
   @Test
-  void weatherUsesJwtSubjectAndSerializesLocation() throws Exception {
+  void weatherIsReadableByAUserWhoDoesNotParticipateAndSerializesLocation() throws Exception {
     var activity = service.create(request(1, 2));
-    service.join(activity.id(), "user-1");
     WeatherForecast current = new WeatherForecast(LocalDateTime.now(), 22.0f, 10.0f, 15.0f);
     WeatherForecast forecast = new WeatherForecast(activity.dateTime(), 18.0f, 60.0f, 30.0f);
     when(weatherAdapter.getWeather(any(Location.class))).thenReturn(current);
@@ -149,15 +148,12 @@ class ActivityParticipationControllerTest {
   }
 
   @Test
-  void weatherReturnsForbiddenOrNotFoundAsProblemDetail() throws Exception {
+  void weatherRequiresAuthenticationAndReturnsNotFoundAsProblemDetail() throws Exception {
     String activityId = service.create(request(1, 2)).id();
 
     mockMvc
-        .perform(
-            get("/activities/{id}/weather", activityId)
-                .with(jwt().jwt(jwt -> jwt.subject("outsider"))))
-        .andExpect(status().isForbidden())
-        .andExpect(jsonPath("$.title").value("Activity access denied"));
+        .perform(get("/activities/{id}/weather", activityId))
+        .andExpect(status().isUnauthorized());
 
     mockMvc
         .perform(

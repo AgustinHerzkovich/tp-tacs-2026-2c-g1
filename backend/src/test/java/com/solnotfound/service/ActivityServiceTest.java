@@ -30,7 +30,6 @@ import com.solnotfound.entity.votation.Votation;
 import com.solnotfound.entity.votation.VotationOption;
 import com.solnotfound.entity.votation.VotationStatus;
 import com.solnotfound.entity.weather.WeatherForecast;
-import com.solnotfound.exception.ActivityAccessDeniedException;
 import com.solnotfound.exception.ActivityNotFoundException;
 import com.solnotfound.exception.IllegalStateActivityException;
 import com.solnotfound.exception.ImageStorageException;
@@ -753,7 +752,7 @@ class ActivityServiceTest {
             any(Location.class), org.mockito.ArgumentMatchers.eq(activity.dateTime())))
         .thenReturn(activityForecast);
 
-    ActivityWeatherResponse result = activityService.getWeather(activity.id(), "user-1");
+    ActivityWeatherResponse result = activityService.getWeather(activity.id());
 
     assertThat(result.activityId()).isEqualTo(activity.id());
     assertThat(result.location()).isEqualTo(activity.location());
@@ -768,7 +767,7 @@ class ActivityServiceTest {
 
   @Test
   void rejectsGettingWeatherForNonExistentActivity() {
-    assertThatThrownBy(() -> activityService.getWeather("non-existent-id", "user-1"))
+    assertThatThrownBy(() -> activityService.getWeather("non-existent-id"))
         .isInstanceOf(ActivityNotFoundException.class)
         .hasMessage("Activity not found: non-existent-id");
 
@@ -777,16 +776,16 @@ class ActivityServiceTest {
   }
 
   @Test
-  void rejectsGettingWeatherForUserWhoIsNotParticipant() {
+  void returnsTheWeatherOfAnActivityWithoutAnyParticipant() {
     ActivityResponse activity = activityService.create(validRequest());
+    when(weatherAdapter.getWeather(any(Location.class)))
+        .thenReturn(new WeatherForecast(LocalDateTime.now(), 20.0f, 10.0f, 5.0f));
+    when(weatherAdapter.getFutureClimate(any(Location.class), any(LocalDateTime.class)))
+        .thenReturn(new WeatherForecast(activity.dateTime(), 22.0f, 40.0f, 15.0f));
 
-    assertThatThrownBy(() -> activityService.getWeather(activity.id(), "user-1"))
-        .isInstanceOf(ActivityAccessDeniedException.class)
-        .hasMessage("User is not participating in this activity");
+    ActivityWeatherResponse result = activityService.getWeather(activity.id());
 
-    verify(weatherAdapter, never()).getWeather(any(Location.class));
-
-    verify(weatherAdapter, never()).getFutureClimate(any(Location.class), any(LocalDateTime.class));
+    assertThat(result.activityForecast().temperature()).isEqualTo(22.0f);
   }
 
   @Test
