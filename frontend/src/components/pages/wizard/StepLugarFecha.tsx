@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { es } from "react-day-picker/locale";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -56,6 +57,7 @@ function DateField({ value, onChange, invalid }: { value: string; onChange: (val
       <PopoverContent align="start" className="w-auto p-4">
         <Calendar
           mode="single"
+          locale={es}
           selected={selected}
           onSelect={(date) => {
             onChange(date ? dateKey(date) : "");
@@ -66,6 +68,10 @@ function DateField({ value, onChange, invalid }: { value: string; onChange: (val
     </Popover>
   );
 }
+
+/** Typing lets either bound cross the other, so the opposite one follows it
+ * instead of the typed number being silently clamped. */
+const MAX_PARTICIPANTS = 99;
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 const MINUTES = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
@@ -94,11 +100,11 @@ function TimeField({ value, onChange, invalid }: { value: string; onChange: (val
           {value ? `${value} hs` : "Elegí una hora"}
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-64 p-4">
+      <PopoverContent align="start" className="w-48 p-4">
         <div className="grid grid-cols-2 gap-3">
           <div>
             <p className="mb-2 text-[10.5px] font-extrabold uppercase tracking-wide" style={{ color: "var(--muted-foreground)" }}>Hora</p>
-            <div className="grid grid-cols-3 gap-1 max-h-40 overflow-y-auto pr-1">
+            <div className="scrollbar-thin grid grid-cols-1 gap-1 max-h-40 overflow-y-auto pr-1">
               {HOURS.map((h) => (
                 <button
                   key={h}
@@ -114,7 +120,7 @@ function TimeField({ value, onChange, invalid }: { value: string; onChange: (val
           </div>
           <div>
             <p className="mb-2 text-[10.5px] font-extrabold uppercase tracking-wide" style={{ color: "var(--muted-foreground)" }}>Min</p>
-            <div className="grid grid-cols-2 gap-1 max-h-40 overflow-y-auto pr-1">
+            <div className="scrollbar-thin grid grid-cols-1 gap-1 max-h-40 overflow-y-auto pr-1">
               {MINUTES.map((m) => (
                 <button
                   key={m}
@@ -168,11 +174,23 @@ export function StepLugarFecha({ form, set, patch, errors }: StepProps) {
           <FieldError message={errors?.time} />
         </Field>
         <Field label="Mín. participantes">
-          <MiniStepper value={form.min} min={1} max={form.max} onChange={set("min")} />
+          <MiniStepper
+            label="Mínimo de participantes"
+            value={form.min}
+            min={1}
+            max={MAX_PARTICIPANTS}
+            onChange={(min) => patch({ min, max: Math.max(form.max, min) })}
+          />
           <FieldError message={errors?.min} />
         </Field>
         <Field label="Máx. participantes">
-          <MiniStepper value={form.max} min={form.min} max={99} onChange={set("max")} />
+          <MiniStepper
+            label="Máximo de participantes"
+            value={form.max}
+            min={1}
+            max={MAX_PARTICIPANTS}
+            onChange={(max) => patch({ max, min: Math.min(form.min, max) })}
+          />
           <FieldError message={errors?.max} />
         </Field>
       </div>

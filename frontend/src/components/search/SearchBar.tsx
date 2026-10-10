@@ -257,7 +257,9 @@ function FiltersTrigger({
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-96 rounded-3xl border-[3px] border-border p-5 shadow-[0_14px_30px_-14px_rgba(58,51,82,.3)]">
+      {/* The width is capped to the viewport (minus the page gutters) so the
+          panel never spills off a phone screen. */}
+      <PopoverContent align="end" collisionPadding={12} className="w-96 max-w-[calc(100vw-1.5rem)] rounded-3xl border-[3px] border-border p-5 shadow-[0_14px_30px_-14px_rgba(58,51,82,.3)]">
         <div className="flex items-center justify-between mb-4">
           <StickerTag tone="violet">
             <SlidersHorizontal className="size-3 mr-1" /> Filtros
