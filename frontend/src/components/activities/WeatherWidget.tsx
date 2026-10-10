@@ -4,11 +4,11 @@ import type { WeatherConditionsDTO, WeatherForecastDTO } from "@/types/backend";
 
 interface WeatherWidgetProps {
   loading: boolean;
-  /** True when the backend couldn't get a forecast — never render a
-   * "good weather" guess in this case (see useActivityWeather). This flag
-   * also covers "the activity is too far in the future to have a forecast
-   * yet", since the hook can't currently tell the two cases apart. */
+  /** True when there is no forecast to show; `tooEarly` and `expired` say why. */
   unavailable: boolean;
+  /** True when the forecast is missing only because the activity is beyond the
+   * provider's horizon. Any other reason is reported as a failed request. */
+  tooEarly?: boolean;
   forecast: WeatherForecastDTO | null;
   current?: WeatherForecastDTO | null;
   /** The organizer-configured weather limits, used only for the "within
@@ -31,7 +31,7 @@ interface WeatherWidgetProps {
 
 const SHELL = "relative rounded-[26px] border-[3px] border-white p-4 mb-6 shadow-[0_10px_22px_-10px_rgba(58,51,82,.32)] -rotate-1";
 
-export function WeatherWidget({ loading, unavailable, forecast, current, conditions, forcedExceeded, expired }: WeatherWidgetProps) {
+export function WeatherWidget({ loading, unavailable, tooEarly, forecast, current, conditions, forcedExceeded, expired }: WeatherWidgetProps) {
   if (loading) {
     return (
       <div className={`${SHELL} bg-muted`} aria-busy="true">
@@ -59,7 +59,11 @@ export function WeatherWidget({ loading, unavailable, forecast, current, conditi
           style={{ background: "var(--sun)", color: "var(--sun-ink)" }}
         >
           <span className="text-[11.5px] font-black leading-tight">
-            {expired ? "🕐 Esta actividad ya pasó" : "⏳ Todavía es pronto para el pronóstico"}
+            {expired
+              ? "🕐 Esta actividad ya pasó"
+              : tooEarly
+                ? "⏳ Todavía es pronto para el pronóstico"
+                : "🌥️ No pudimos consultar el pronóstico. Probá de nuevo en unos minutos."}
           </span>
         </div>
       </div>

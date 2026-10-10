@@ -239,8 +239,7 @@ class ActivityControllerTest {
     when(weatherAdapter.getFutureClimate(any(), eq(activity.dateTime())))
         .thenReturn(activityForecast);
 
-    ResponseEntity<ActivityWeatherResponse> response =
-        controller.getWeather(activity.id(), authentication("user-1"));
+    ResponseEntity<ActivityWeatherResponse> response = controller.getWeather(activity.id());
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
 

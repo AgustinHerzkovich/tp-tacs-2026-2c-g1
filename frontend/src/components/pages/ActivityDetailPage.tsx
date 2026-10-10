@@ -38,10 +38,9 @@ export function ActivityDetailPage({ id }: { id: string }) {
   const initialJoined = activity?.participants.some((p) => p.userId === user?.id) ?? false;
 
   // Joining or leaving changes what the backend is willing to tell us: the
-  // forecast endpoint requires a participant (403 otherwise) and the votations
-  // list only covers activities the user takes part in. So all three reads have
-  // to be redone, otherwise the page keeps showing the "not allowed yet" state
-  // until it is opened again.
+  // votations list only covers activities the user takes part in. The reads are
+  // redone together, otherwise the page keeps showing the previous state until
+  // it is opened again.
   const refreshEverything = () => {
     refresh();
     weather.refresh();
@@ -154,6 +153,7 @@ export function ActivityDetailPage({ id }: { id: string }) {
             <WeatherWidget
               loading={weather.loading}
               unavailable={weather.unavailable}
+              tooEarly={weather.tooEarly}
               forecast={weather.weather?.activityForecast ?? null}
               current={weather.weather?.currentWeather ?? null}
               conditions={activity.weatherConditions}

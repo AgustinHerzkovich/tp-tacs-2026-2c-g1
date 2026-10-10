@@ -22,7 +22,6 @@ import com.solnotfound.entity.weather.MaxWindCondition;
 import com.solnotfound.entity.weather.TemperatureRangeCondition;
 import com.solnotfound.entity.weather.WeatherCondition;
 import com.solnotfound.entity.weather.WeatherForecast;
-import com.solnotfound.exception.ActivityAccessDeniedException;
 import com.solnotfound.exception.ActivityNotFoundException;
 import com.solnotfound.exception.ErrorCode;
 import com.solnotfound.exception.IllegalStateActivityException;
@@ -378,18 +377,19 @@ public class ActivityService {
   }
 
   /**
-   * Retrieves current weather and the activity-time forecast for a participant.
+   * Retrieves current weather and the activity-time forecast. Any authenticated user can read it,
+   * participant or not: the forecast of a place and date is public information and helps decide
+   * whether to join.
    *
    * @param activityId activity identifier
-   * @param userId authenticated user identifier
    * @return weather information associated with the activity
    * @throws ActivityNotFoundException when the activity does not exist
-   * @throws ActivityAccessDeniedException when the user is not participating
+   * @throws com.solnotfound.exception.WeatherUnavailableException when the provider cannot answer
+   *     or the activity is beyond the forecast horizon
    */
-  public ActivityWeatherResponse getWeather(String activityId, String userId) {
+  public ActivityWeatherResponse getWeather(String activityId) {
     Activity activity = findActivityOrThrow(activityId);
 
-    verifyParticipant(activity, userId);
     WeatherForecast currentWeather = weatherAdapter.getWeather(activity.getLocation());
 
     WeatherForecast activityForecast =
@@ -486,16 +486,6 @@ public class ActivityService {
     if (range.initialHour().isAfter(range.finalHour())) {
       throw new InvalidActivityException(
           "Reprogramation range initial hour must not be after final hour");
-    }
-  }
-
-  private void verifyParticipant(Activity activity, String userId) {
-    boolean isOrganizer = activity.getOrganizer().getId().equals(userId);
-    boolean isParticipant =
-        isOrganizer || activity.getParticipants().stream().anyMatch(p -> p.getId().equals(userId));
-
-    if (!isParticipant) {
-      throw new ActivityAccessDeniedException("User is not participating in this activity");
     }
   }
 

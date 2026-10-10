@@ -1,11 +1,13 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { useActivityWeather } from "@/hooks/useActivityWeather";
+import { ApiError } from "@/lib/api";
 import type { ActivityWeatherResponse } from "@/types/backend";
 
 const { weather } = vi.hoisted(() => ({ weather: vi.fn() }));
 
-vi.mock("@/lib/api", () => ({
+vi.mock("@/lib/api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/api")>()),
   api: {
     activities: { weather },
   },
@@ -34,14 +36,21 @@ describe("useActivityWeather", () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.weather).toBeNull();
     expect(result.current.unavailable).toBe(true);
+    expect(result.current.tooEarly).toBe(false);
   });
 
-  it("re-requests the forecast on refresh, which is what joining does", async () => {
-    // The backend answers 403 to a non-participant, so the first load lands on
-    // `unavailable` and only a refresh (the page's join handler) can turn it
-    // into a real forecast. Without it the widget stays empty until the page is
-    // reopened.
-    weather.mockRejectedValueOnce(new Error("403")).mockResolvedValueOnce(FORECAST);
+  it("flags too early only when the backend says the date is beyond the forecast horizon", async () => {
+    weather.mockRejectedValueOnce(new ApiError(503, "Todavía es pronto", "FORECAST_NOT_YET_AVAILABLE"));
+    const { result } = renderHook(() => useActivityWeather("a1"));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.unavailable).toBe(true);
+    expect(result.current.tooEarly).toBe(true);
+  });
+
+  it("re-requests the forecast on refresh", async () => {
+    // A failed first load lands on `unavailable`; a refresh can turn it into a
+    // real forecast without reopening the page.
+    weather.mockRejectedValueOnce(new Error("provider timeout")).mockResolvedValueOnce(FORECAST);
     const { result } = renderHook(() => useActivityWeather("a1"));
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.unavailable).toBe(true);
