@@ -83,7 +83,7 @@ describe("StatisticsPage range filtering", () => {
     authState.hasRole = () => true;
   });
 
-  it("requests the range defaulting to no boundaries and renders the metrics", async () => {
+  it("defaults to the last 7 days, shows them in the fields and renders the metrics", async () => {
     render(<StatisticsPage />);
 
     expect(await screen.findByText("Creadas")).toBeInTheDocument();
@@ -94,11 +94,16 @@ describe("StatisticsPage range filtering", () => {
     expect(screen.getByText(/95% de éxito/)).toBeInTheDocument();
     expect(screen.getByText(/Período:/)).toBeInTheDocument();
 
-    // With no from/to in the URL the API is invoked without range boundaries;
-    // only the presets or a manual selection bound the query.
     const call = statisticsGet.mock.calls[0]?.[0] as { from?: string; to?: string } | undefined;
-    expect(call?.from).toBeUndefined();
-    expect(call?.to).toBeUndefined();
+    expect(call?.from).toBeDefined();
+    expect(call?.to).toBeDefined();
+    const fromField = screen.getByLabelText("Desde") as HTMLInputElement;
+    const toField = screen.getByLabelText("Hasta") as HTMLInputElement;
+    expect(fromField.value).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(toField.value).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    const days = (new Date(toField.value).getTime() - new Date(fromField.value).getTime()) / 86_400_000;
+    expect(days).toBe(6);
+    expect(screen.queryByText(/\d+ eventos/)).not.toBeInTheDocument();
   });
 
   it("shows an empty state when no events are registered in the range", async () => {

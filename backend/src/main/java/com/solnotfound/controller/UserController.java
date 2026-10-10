@@ -3,6 +3,7 @@ package com.solnotfound.controller;
 import com.solnotfound.dto.LinkTelegramChatRequest;
 import com.solnotfound.dto.TelegramLinkCodeResponse;
 import com.solnotfound.dto.UserDTO;
+import com.solnotfound.service.UserNameRecorder;
 import com.solnotfound.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -42,12 +43,8 @@ public class UserController {
       @Valid @RequestBody LinkTelegramChatRequest request, Authentication authentication) {
     Jwt jwt = jwt(authentication);
     return ResponseEntity.ok(
-        userService.linkTelegramChat(jwt.getSubject(), displayName(jwt), request.code()));
-  }
-
-  private String displayName(Jwt jwt) {
-    String name = jwt.getClaimAsString("name");
-    return name != null && !name.isBlank() ? name : jwt.getClaimAsString("preferred_username");
+        userService.linkTelegramChat(
+            jwt.getSubject(), UserNameRecorder.displayName(jwt), request.code()));
   }
 
   private Jwt jwt(Authentication authentication) {

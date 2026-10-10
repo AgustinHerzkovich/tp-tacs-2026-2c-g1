@@ -26,6 +26,7 @@ const INITIAL_FORM: WizardFormState = {
   reschedule: "3",
   reprogramStart: "09:00",
   reprogramEnd: "21:00",
+  joinAsParticipant: true,
 };
 
 export type FieldSetter = <K extends keyof WizardFormState>(key: K) => (value: WizardFormState[K]) => void;
