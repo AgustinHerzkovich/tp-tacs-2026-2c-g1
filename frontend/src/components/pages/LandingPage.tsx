@@ -44,7 +44,7 @@ const FEATURES: Feature[] = [
 const TRUST_ITEMS = ["☀️ Pronóstico en tiempo real", "🗳️ Decisiones en grupo", "🔒 Tu cuenta, tus datos"];
 
 const LINK_CLASS =
-  "h-auto p-0 text-[13.5px] font-extrabold text-foreground underline decoration-wavy decoration-[#ffb59c] underline-offset-[3px] hover:text-primary";
+  "h-auto p-0 text-[13.5px] font-extrabold text-foreground no-underline underline-offset-[3px] hover:text-primary hover:underline";
 
 const HEADER_CTA_CLASS =
   "hidden h-auto rounded-lg px-5 py-[11px] text-[13px] font-black shadow-[0_4px_0_var(--secondary-foreground)] hover:shadow-[0_2px_0_var(--secondary-foreground)] hover:translate-y-[2px] lg:inline-flex";
