@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import type { KeycloakTokenParsed } from "keycloak-js";
-import { getKeycloak } from "@/lib/keycloak";
+import { createRedirectAdapter, getKeycloak } from "@/lib/keycloak";
 import { useAppDispatch } from "@/store/hooks";
 import { anonymous, authenticated } from "@/store/session/sessionSlice";
 import type { CurrentUser } from "@/types/domain";
@@ -49,7 +49,12 @@ export function AuthBootstrap() {
     }, 30_000);
 
     void keycloak
-      .init({ onLoad: "check-sso", pkceMethod: "S256", checkLoginIframe: false })
+      .init({
+        onLoad: "check-sso",
+        pkceMethod: "S256",
+        checkLoginIframe: false,
+        adapter: createRedirectAdapter(keycloak),
+      })
       .then(synchronizeSession)
       .catch(() => dispatch(anonymous()));
     return () => window.clearInterval(refreshTimer);
