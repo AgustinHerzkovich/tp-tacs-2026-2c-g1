@@ -19,7 +19,7 @@ describe("getInitials", () => {
 describe("participantDisplayName", () => {
   it("returns the current user's name and the generic label for anyone else", () => {
     expect(participantDisplayName("me-1", me)).toBe("Vale Ríos");
-    expect(participantDisplayName("someone-else", me)).toBe("Invitade");
-    expect(participantDisplayName("u", null)).toBe("Invitade");
+    expect(participantDisplayName("someone-else", me)).toBe("Participante");
+    expect(participantDisplayName("u", null)).toBe("Participante");
   });
 });

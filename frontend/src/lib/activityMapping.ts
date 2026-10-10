@@ -7,6 +7,7 @@
 import type { ActivityResponse, ActivityStatus, ActivityType } from "@/types/backend";
 import type { ExploreActivity, MisActivity, MockActivityType, MockStatusKey, PatternKey, SceneKey } from "@/types/domain";
 import { formatActivityWhen } from "@/lib/formatDate";
+import { PARTICIPANT_FALLBACK_NAME } from "@/lib/initials";
 
 const SCENE_KEYS: SceneKey[] = ["skyMint", "sunRose", "lavSky", "roseViolet", "mintSun", "violetRose", "roseSky"];
 const PATTERN_KEYS: PatternKey[] = ["plain", "dots", "diagonal", "grid"];
@@ -91,7 +92,7 @@ function toBase(dto: ActivityResponse) {
     when: formatActivityWhen(dto.dateTime),
     where: dto.location.city ?? "Ubicación a confirmar",
     participantIds: dto.participants.map((p) => p.userId),
-    participantNames: dto.participants.map((p) => p.name ?? "Invitade"),
+    participantNames: dto.participants.map((p) => p.name ?? PARTICIPANT_FALLBACK_NAME),
   };
 }
 

@@ -125,6 +125,6 @@ describe("toExploreActivity / toMisActivity", () => {
 
   it("falls back to a placeholder name instead of the raw userId when a participant has no name", () => {
     const explore = toExploreActivity(makeActivity({ participants: [{ userId: "u1", name: null }] }));
-    expect(explore.participantNames).toEqual(["Invitade"]);
+    expect(explore.participantNames).toEqual(["Participante"]);
   });
 });

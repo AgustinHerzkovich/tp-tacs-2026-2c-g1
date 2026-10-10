@@ -20,6 +20,11 @@ public class InMemoryUserRepository implements IUserRepository {
   }
 
   @Override
+  public void rememberName(String id, String name) {
+    findOrCreate(id).setName(name);
+  }
+
+  @Override
   public Optional<User> findByTelegramChatId(Long telegramChatId) {
     return users.values().stream()
         .filter(user -> telegramChatId.equals(user.getTelegramChatId()))

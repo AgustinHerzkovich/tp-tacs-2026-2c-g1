@@ -70,7 +70,7 @@ class MongoPersistenceTest {
     activityRepository = new ActivityRepository(mongoActivityRepository, mongoTemplate);
     votationRepository = new VotationRepository(mongoVotationRepository, mongoTemplate);
     notificationRepository = new NotificationRepository(mongoNotificationRepository);
-    userRepository = new UserRepository(mongoUserRepository);
+    userRepository = new UserRepository(mongoUserRepository, mongoTemplate);
   }
 
   @Test
@@ -359,6 +359,20 @@ class MongoPersistenceTest {
     activity.setReprogramationRange(
         new ReprogramationRange(3, LocalTime.of(9, 0), LocalTime.of(21, 0)));
     return activity;
+  }
+
+  @Test
+  void remembersTheNameOfNewAndExistingUsersWithoutTouchingTheRestOfTheUser() {
+    userRepository.linkTelegramChat("existing", null, 4242L);
+
+    userRepository.rememberName("existing", "Vale Ríos");
+    userRepository.rememberName("new-user", "Juan Pérez");
+    userRepository.rememberName("existing", "Valeria Ríos");
+
+    User existing = userRepository.findOrCreate("existing");
+    assertThat(existing.getName()).isEqualTo("Valeria Ríos");
+    assertThat(existing.getTelegramChatId()).isEqualTo(4242L);
+    assertThat(userRepository.findOrCreate("new-user").getName()).isEqualTo("Juan Pérez");
   }
 
   @Test

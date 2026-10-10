@@ -42,19 +42,26 @@ export function StatisticsPage() {
   const [loading, setLoading] = useState(true);
   const [attempt, setAttempt] = useState(0);
 
-  const [from, setFrom] = useState(() => sanitizeDate(searchParams?.get("from")));
-  const [to, setTo] = useState(() => sanitizeDate(searchParams?.get("to")));
+  const todayKey = useMemo(() => dateKey(new Date()), []);
+
+  const urlRange = useMemo(() => {
+    const urlFrom = sanitizeDate(searchParams?.get("from"));
+    const urlTo = sanitizeDate(searchParams?.get("to"));
+    return urlFrom || urlTo ? { from: urlFrom, to: urlTo } : { from: shiftDays(todayKey, -6), to: todayKey };
+  }, [searchParams, todayKey]);
+
+  const [from, setFrom] = useState(urlRange.from);
+  const [to, setTo] = useState(urlRange.to);
   const [observedSignature, setObservedSignature] = useState(() => `${from}|${to}`);
 
   const [appliedSignature, setAppliedSignature] = useState<string | null>(null);
   const [appliedParams, setAppliedParams] = useState<{ from?: string; to?: string } | undefined>(undefined);
 
-  const todayKey = useMemo(() => dateKey(new Date()), []);
   const invalidRange = Boolean(from && to && from > to);
   const signature = `${from}|${to}`;
 
-  const urlFrom = sanitizeDate(searchParams?.get("from"));
-  const urlTo = sanitizeDate(searchParams?.get("to"));
+  const urlFrom = urlRange.from;
+  const urlTo = urlRange.to;
   const urlSignature = `${urlFrom}|${urlTo}`;
   if (urlSignature !== observedSignature) {
     setObservedSignature(urlSignature);
@@ -210,12 +217,8 @@ export function StatisticsPage() {
           </p>
         )}
         <div className="flex flex-wrap gap-2 mt-4">
-          {presets.map((preset, index) => {
-            // No explicit range yet (fresh load / cleared filters) defaults to
-            // the last 7 days server-side (see StatisticsService.DEFAULT_RANGE),
-            // so the first preset should read as selected in that state too.
-            const isDefaultRange = !from && !to;
-            const isActive = (from === preset.from && to === preset.to) || (isDefaultRange && index === 0);
+          {presets.map((preset) => {
+            const isActive = from === preset.from && to === preset.to;
             return (
               <Chip
                 key={preset.label}
@@ -244,7 +247,6 @@ export function StatisticsPage() {
           <div className="flex items-center gap-1.5 mb-2.5">
             <span className="text-sm">📊</span>
             <span className="text-[11px] font-black uppercase tracking-wide" style={{ color: "var(--muted-foreground)" }}>Actividad</span>
-            <span className="ml-auto text-[11px] font-extrabold" style={{ color: "var(--muted-foreground)" }}>{totalEvents} eventos</span>
           </div>
 
           {totalEvents > 0 ? (

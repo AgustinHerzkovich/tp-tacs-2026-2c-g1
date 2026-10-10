@@ -2,14 +2,23 @@ package com.solnotfound.repository;
 
 import com.solnotfound.entity.user.User;
 import java.util.Optional;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public class UserRepository implements IUserRepository {
   private final MongoUserRepository repository;
+  private final MongoTemplate mongoTemplate;
 
-  public UserRepository(MongoUserRepository repository) {
+  @edu.umd.cs.findbugs.annotations.SuppressFBWarnings(
+      value = "EI_EXPOSE_REP2",
+      justification = "Spring injects the shared MongoTemplate bean")
+  public UserRepository(MongoUserRepository repository, MongoTemplate mongoTemplate) {
     this.repository = repository;
+    this.mongoTemplate = mongoTemplate;
   }
 
   /**
@@ -33,6 +42,12 @@ public class UserRepository implements IUserRepository {
       return repository.findById(user.getId()).orElseGet(() -> repository.save(user));
     }
     return repository.save(user);
+  }
+
+  @Override
+  public void rememberName(String id, String name) {
+    mongoTemplate.upsert(
+        Query.query(Criteria.where("_id").is(id)), Update.update("name", name), User.class);
   }
 
   @Override
