@@ -23,9 +23,15 @@ describe("WeatherWidget", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Cargando pronóstico");
   });
 
-  it("blames the forecast when it's unavailable for an upcoming activity", () => {
-    render(<WeatherWidget loading={false} unavailable forecast={null} conditions={CONDITIONS} />);
+  it("says it is too early only when the activity is beyond the forecast horizon", () => {
+    render(<WeatherWidget loading={false} unavailable tooEarly forecast={null} conditions={CONDITIONS} />);
     expect(screen.getByText(/Todavía es pronto para el pronóstico/)).toBeInTheDocument();
+  });
+
+  it("reports a failed request as such, not as too early", () => {
+    render(<WeatherWidget loading={false} unavailable forecast={null} conditions={CONDITIONS} />);
+    expect(screen.getByText(/No pudimos consultar el pronóstico/)).toBeInTheDocument();
+    expect(screen.queryByText(/Todavía es pronto/)).not.toBeInTheDocument();
   });
 
   it("says the activity already happened when its date-time is past", () => {

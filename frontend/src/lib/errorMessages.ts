@@ -31,6 +31,7 @@ const MESSAGES_BY_CODE: Record<string, string> = {
   RESOURCE_NOT_FOUND: "No encontramos lo que buscabas.",
   TELEGRAM_LINK_CODE_INVALID: "El link para vincular Telegram venció o ya se usó. Pedí uno nuevo mandando /start al bot.",
   WEATHER_UNAVAILABLE: "No pudimos consultar el pronóstico. Probá de nuevo en unos minutos.",
+  FORECAST_NOT_YET_AVAILABLE: "Todavía es pronto para el pronóstico de esa fecha.",
   STATISTICS_UNAVAILABLE: "No pudimos cargar las estadísticas. Probá de nuevo en unos minutos.",
 };
 
