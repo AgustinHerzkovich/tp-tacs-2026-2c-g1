@@ -52,7 +52,7 @@ class VotationMapperTest {
   }
 
   @Test
-  void voterNamesFallsBackToUserIdWhenNameIsMissing() {
+  void voterNamesUseAGenericLabelInsteadOfTheUserIdWhenNameIsMissing() {
     LocalDateTime optionDate = LocalDateTime.of(2026, 8, 29, 10, 0);
     User unnamed = user("participant-1", null, null);
     Votation votation = new Votation();
@@ -65,7 +65,7 @@ class VotationMapperTest {
 
     VotationDTO dto = VotationMapper.toDTO(votation, "someone-else");
 
-    assertThat(dto.options().getFirst().voterNames()).containsExactly("participant-1");
+    assertThat(dto.options().getFirst().voterNames()).containsExactly("Participante");
     assertThat(dto.votedOption()).isNull();
   }
 
