@@ -98,7 +98,7 @@ class ActivityAnticipationCheckSchedulerTest {
     return new ActivityAnticipationCheckScheduler(
         activityRepository,
         votationRepository,
-        weatherAdapter,
+        WeatherGateway.mainOnly(weatherAdapter),
         badWeatherChecker,
         eventPublisher,
         new ActivityStatusTransitionService(

@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Load test for the Planazo backend using Vegeta.
 #
-# Usage: loadtest/run.sh <smoke|read|mixed> [rate ...]
+# Usage: loadtest/run.sh <smoke|read|mixed|legacy> [rate ...]
 #   loadtest/run.sh read            # default stages: 10/s 50/s 100/s
 #   loadtest/run.sh mixed 20/s 40/s
+#   loadtest/run.sh legacy          # users of the legacy weather provider (Entrega 4)
 #
 # Every stage gets fresh tokens, runs `vegeta attack`, writes its reports under
 # loadtest/results/<timestamp>-<scenario>/<rate>/ and is checked against the thresholds below.
@@ -187,6 +188,29 @@ read_targets() {
   target GET "/notifications" "$token"
 }
 
+# Makes every load test user a user of the legacy weather provider, so their weather lookups and
+# the monitoring of their activities go through it (and through its fallback when it is down).
+choose_legacy_provider() {
+  local i
+  for ((i = 1; i <= LOADTEST_USERS; i++)); do
+    curl -fsS -X PUT       -H "Authorization: Bearer ${TOKENS[i]}"       -H "Content-Type: application/json"       -d '{"weatherProvider":"LEGACY"}'       "$BASE_URL/users/me/preferences" >/dev/null || fail "could not choose the legacy provider"
+  done
+  log "legacy: ${LOADTEST_USERS} users now use the legacy weather provider"
+}
+
+# Prints the targets of user $1 in the legacy scenario: mostly weather lookups, which are what the
+# legacy provider answers, plus a few reads that must keep working whatever the provider does.
+legacy_targets() {
+  local i="$1" token="${TOKENS[$1]}"
+  local seed_id="${SEED_IDS[$(((i - 1) % ${#SEED_IDS[@]}))]}"
+  target GET "/activities/${OWN_IDS[i]}/weather" "$token"
+  target GET "/activities/${OWN_IDS[i]}/weather" "$token"
+  target GET "/activities/${OWN_IDS[i]}/weather" "$token"
+  target GET "/activities/$seed_id/weather" "$token"
+  target GET "/activities?page=0&size=12" "$token"
+  target GET "/activities/$seed_id" "$token"
+}
+
 # Writes the targets of $SCENARIO to $1.
 write_targets() {
   local file="$1" body_dir="$2" i other body_file
@@ -198,6 +222,11 @@ write_targets() {
     read)
       for ((i = 1; i <= LOADTEST_USERS; i++)); do
         read_targets "$i" >>"$file"
+      done
+      ;;
+    legacy)
+      for ((i = 1; i <= LOADTEST_USERS; i++)); do
+        legacy_targets "$i" >>"$file"
       done
       ;;
     mixed)
@@ -266,7 +295,7 @@ run_stage() {
 main() {
   SCENARIO="${1:-}"
   case "$SCENARIO" in
-    smoke | read | mixed) shift ;;
+    smoke | read | mixed | legacy) shift ;;
     *) usage ;;
   esac
   configure_target
@@ -287,6 +316,9 @@ main() {
 
   if [[ "$SCENARIO" != smoke ]]; then
     warm_up
+  fi
+  if [[ "$SCENARIO" == legacy ]]; then
+    choose_legacy_provider
   fi
 
   local rate

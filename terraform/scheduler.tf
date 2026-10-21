@@ -12,6 +12,10 @@ locals {
       schedule = "0 * * * *"
       path     = "votations"
     }
+    weather-providers = {
+      schedule = "*/5 * * * *"
+      path     = "weather-providers"
+    }
   }
 }
 

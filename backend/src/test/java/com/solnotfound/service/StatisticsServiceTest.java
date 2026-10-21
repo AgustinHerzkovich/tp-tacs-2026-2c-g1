@@ -74,6 +74,76 @@ class StatisticsServiceTest {
   }
 
   @Test
+  void reportsEachProviderWithItsErrorsRefusalsCacheAndLatestStatus() {
+    stubEvents(
+        providerEvent(StatisticsEventType.WEATHER_PROVIDER_SUCCEEDED, null, NOW, 10L),
+        providerEvent(StatisticsEventType.WEATHER_PROVIDER_FAILED, "TIMEOUT", NOW, 1500L),
+        providerEvent(StatisticsEventType.WEATHER_PROVIDER_FAILED, "TIMEOUT", NOW, 1500L),
+        providerEvent(StatisticsEventType.WEATHER_PROVIDER_FAILED, "MALFORMED_RESPONSE", NOW, 5L),
+        providerEvent(StatisticsEventType.WEATHER_PROVIDER_REFUSED, "CIRCUIT_OPEN", NOW, null),
+        providerEvent(StatisticsEventType.WEATHER_PROVIDER_FALLBACK, null, NOW, null),
+        snapshot("OK", "CLOSED", NOW.minusSeconds(120), 3, 1),
+        snapshot("DOWN", "OPEN", NOW.minusSeconds(60), 1, 1),
+        event(StatisticsEventType.WEATHER_PROVIDER_SUCCEEDED, null, 100L));
+
+    StatisticsResponse response = service.getStatistics(NOW.minusSeconds(600), NOW);
+
+    var legacy =
+        response.providers().stream().filter(p -> p.provider().equals("Legacy")).findFirst();
+    assertThat(legacy).isPresent();
+    assertThat(legacy.get().requests()).isEqualTo(4);
+    assertThat(legacy.get().successful()).isEqualTo(1);
+    assertThat(legacy.get().errors())
+        .containsEntry("TIMEOUT", 2L)
+        .containsEntry("MALFORMED_RESPONSE", 1L);
+    assertThat(legacy.get().refusals()).containsEntry("CIRCUIT_OPEN", 1L);
+    assertThat(legacy.get().fallbacks()).isEqualTo(1);
+    assertThat(legacy.get().cacheHits()).isEqualTo(4);
+    assertThat(legacy.get().cacheMisses()).isEqualTo(2);
+    assertThat(legacy.get().cacheHitRatio()).isEqualTo(4 / 6.0);
+    assertThat(legacy.get().status()).isEqualTo("DOWN");
+    assertThat(legacy.get().circuitBreakerState()).isEqualTo("OPEN");
+    assertThat(legacy.get().timeline()).extracting("status").containsExactly("OK", "DOWN");
+    assertThat(response.weatherProvider().requests()).isEqualTo(1);
+  }
+
+  @Test
+  void summarizesALongTimelineKeepingTheWorstStatusOfEachStretch() {
+    StatisticsEvent[] snapshots = new StatisticsEvent[240];
+    for (int index = 0; index < snapshots.length; index++) {
+      String status = index == 101 ? "DOWN" : "OK";
+      snapshots[index] = snapshot(status, "CLOSED", NOW.minusSeconds(240 - index), 0, 0);
+    }
+    stubEvents(snapshots);
+
+    StatisticsResponse response = service.getStatistics(NOW.minusSeconds(600), NOW);
+
+    var timeline =
+        response.providers().stream()
+            .filter(p -> p.provider().equals("Legacy"))
+            .findFirst()
+            .orElseThrow()
+            .timeline();
+    assertThat(timeline).hasSize(120);
+    assertThat(timeline).extracting("status").contains("DOWN");
+  }
+
+  @Test
+  void aProviderWithoutLookupsHasNoHitRatioAndNoStatus() {
+    stubEvents();
+
+    StatisticsResponse response = service.getStatistics(NOW.minusSeconds(60), NOW);
+
+    assertThat(response.providers()).hasSize(2);
+    assertThat(response.providers())
+        .allSatisfy(
+            p -> {
+              assertThat(p.cacheHitRatio()).isNull();
+              assertThat(p.status()).isNull();
+            });
+  }
+
+  @Test
   void rejectsInvertedRange() {
     assertThatThrownBy(() -> service.getStatistics(NOW, NOW.minusSeconds(1)))
         .isInstanceOf(InvalidStatisticsRangeException.class);
@@ -92,6 +162,28 @@ class StatisticsServiceTest {
 
   private void stubEvents(StatisticsEvent... events) {
     when(repository.findOccurredBetween(any(), any())).thenReturn(Arrays.asList(events));
+  }
+
+  private StatisticsEvent providerEvent(
+      StatisticsEventType type, String outcome, Instant at, Long durationMs) {
+    return new StatisticsEvent(
+        null, type, at, null, null, durationMs, "Legacy", outcome, null, null, null);
+  }
+
+  private StatisticsEvent snapshot(
+      String status, String breaker, Instant at, long hits, long misses) {
+    return new StatisticsEvent(
+        null,
+        StatisticsEventType.WEATHER_PROVIDER_SNAPSHOT,
+        at,
+        null,
+        null,
+        null,
+        "Legacy",
+        status,
+        hits,
+        misses,
+        breaker);
   }
 
   private StatisticsEvent event(

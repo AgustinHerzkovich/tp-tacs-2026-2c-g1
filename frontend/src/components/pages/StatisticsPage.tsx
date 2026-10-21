@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Chip } from "@/components/common/Chip";
 import { ErrorState, LoadingState } from "@/components/common/AsyncState";
 import { StatisticsSkeleton } from "@/components/common/Skeletons";
+import { ProviderHealthCard } from "@/components/statistics/ProviderHealthCard";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 import type { ActivityStatisticsResponse, StatisticsResponse } from "@/types/backend";
@@ -330,6 +331,22 @@ export function StatisticsPage() {
               </div>
             )}
           </div>
+
+          {statistics.providers.length > 0 && (
+            <div className="mt-6">
+              <div className="flex items-center gap-1.5 mb-2.5">
+                <span className="text-sm">🛰️</span>
+                <span className="text-[11px] font-black uppercase tracking-wide" style={{ color: "var(--muted-foreground)" }}>
+                  Proveedores de clima
+                </span>
+              </div>
+              <div className="grid gap-3 lg:grid-cols-2">
+                {statistics.providers.map((provider) => (
+                  <ProviderHealthCard key={provider.provider} provider={provider} />
+                ))}
+              </div>
+            </div>
+          )}
         </>
       )}
     </main>

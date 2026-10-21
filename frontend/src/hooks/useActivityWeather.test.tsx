@@ -19,6 +19,8 @@ const FORECAST: ActivityWeatherResponse = {
   activityDateTime: "2026-09-20T14:00:00",
   currentWeather: { dateTime: "2026-09-13T12:00:00", temperature: 18, chanceOfRain: 20, windSpeed: 10 },
   activityForecast: { dateTime: "2026-09-20T14:00:00", temperature: 22, chanceOfRain: 40, windSpeed: 15 },
+  provider: "OPEN_METEO",
+  fallback: false,
 };
 
 describe("useActivityWeather", () => {

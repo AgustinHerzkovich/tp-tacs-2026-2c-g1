@@ -14,6 +14,13 @@ public class User {
   @Indexed(unique = true, sparse = true)
   private Long telegramChatId;
 
+  /** Weather provider chosen by the user; {@code null} means the default one. */
+  private WeatherProvider weatherProvider;
+
+  public WeatherProvider effectiveWeatherProvider() {
+    return weatherProvider == null ? WeatherProvider.OPEN_METEO : weatherProvider;
+  }
+
   public static User withId(String id) {
     User user = new User();
     user.setId(id);

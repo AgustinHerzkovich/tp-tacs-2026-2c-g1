@@ -1,6 +1,5 @@
 package com.solnotfound.service;
 
-import com.solnotfound.adapters.IWeatherAdapter;
 import com.solnotfound.dto.PageResponse;
 import com.solnotfound.dto.UpdateVotationOptionsRequest;
 import com.solnotfound.dto.UpdateVotationSettingsRequest;
@@ -9,6 +8,7 @@ import com.solnotfound.dto.VotationFilterDTO;
 import com.solnotfound.entity.activity.Activity;
 import com.solnotfound.entity.notification.VotationOptionsChangedNotificationType;
 import com.solnotfound.entity.user.User;
+import com.solnotfound.entity.user.WeatherProvider;
 import com.solnotfound.entity.votation.Votation;
 import com.solnotfound.entity.votation.VotationOption;
 import com.solnotfound.entity.votation.VotationStatus;
@@ -53,7 +53,7 @@ public class VotationService {
 
   private final IVotationRepository votationRepository;
   private final IActivityRepository activityRepository;
-  private final IWeatherAdapter weatherAdapter;
+  private final WeatherGateway weatherGateway;
   private final IBadWeatherChecker badWeatherChecker;
   private final IUserRepository userRepository;
   private final ApplicationEventPublisher eventPublisher;
@@ -61,13 +61,13 @@ public class VotationService {
   public VotationService(
       IVotationRepository votationRepository,
       IActivityRepository activityRepository,
-      IWeatherAdapter weatherAdapter,
+      WeatherGateway weatherGateway,
       IBadWeatherChecker badWeatherChecker,
       IUserRepository userRepository,
       ApplicationEventPublisher eventPublisher) {
     this.votationRepository = votationRepository;
     this.activityRepository = activityRepository;
-    this.weatherAdapter = weatherAdapter;
+    this.weatherGateway = weatherGateway;
     this.badWeatherChecker = badWeatherChecker;
     this.userRepository = userRepository;
     this.eventPublisher = eventPublisher;
@@ -213,7 +213,7 @@ public class VotationService {
     List<WeatherForecast> forecasts =
         newDates.isEmpty()
             ? List.of()
-            : weatherAdapter.getForecastRange(activity.getLocation(), newDates);
+            : weatherGateway.forecastRange(activity, newDates, providerOf(activity));
     if (forecasts.size() != newDates.size()) {
       throw new WeatherUnavailableException("Provider returned an incomplete forecast range");
     }
@@ -405,5 +405,12 @@ public class VotationService {
     }
     votationRepository.save(votation);
     return VotationMapper.toDTO(votation, userId);
+  }
+
+  /** Weather provider of the activity's organizer, who decides how the activity is monitored. */
+  private static WeatherProvider providerOf(Activity activity) {
+    return activity.getOrganizer() == null
+        ? WeatherProvider.OPEN_METEO
+        : activity.getOrganizer().effectiveWeatherProvider();
   }
 }

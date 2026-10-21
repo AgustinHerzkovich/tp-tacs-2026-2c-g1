@@ -65,3 +65,8 @@ frontend/CLAUDE.md
 ### Load test ###
 # Vegeta outputs are local artifacts (see docs/LOAD_TEST.md).
 loadtest/results/
+
+### Legacy weather binaries ###
+# They embed the course's Google OAuth client, so they are not versioned. Locally they are copied
+# to bin/bin/; Cloud Build downloads the Linux one from a private bucket (docs/PROVEEDOR_LEGACY.md).
+bin/

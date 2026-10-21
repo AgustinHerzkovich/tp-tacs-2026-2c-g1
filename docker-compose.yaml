@@ -56,8 +56,13 @@ services:
       APP_SEED_ENABLED: ${APP_SEED_ENABLED:-false}
       APP_DEV_SEED_ENABLED: ${APP_DEV_SEED_ENABLED:-false}
       APP_DEV_SEED_USER_ID: ${APP_DEV_SEED_USER_ID:-}
-      # Development-only default, shared with the telegram service; a blank value rejects every bot call.
       TELEGRAM_API_TOKEN: ${TELEGRAM_API_TOKEN:-local-telegram-api-token}
+      LEGACY_WEATHER_URL: http://legacy-weather:9978
+      LEGACY_WEATHER_TOKEN: ${LEGACY_WEATHER_TOKEN:-}
+      LEGACY_WEATHER_TOKEN_FILE: /legacy-token/api-token
+      LEGACY_WEATHER_USER_REQUESTS_PER_MINUTE: ${LEGACY_WEATHER_USER_REQUESTS_PER_MINUTE:-30}
+    volumes:
+      - legacy-weather-token:/legacy-token:ro
     depends_on:
       minio:
         condition: service_healthy
@@ -252,7 +257,21 @@ services:
     networks:
       - tacs-network
 
+  legacy-weather:
+    build:
+      context: .
+      dockerfile: legacy-weather/Dockerfile
+    restart: unless-stopped
+    init: true
+    volumes:
+      - legacy-weather-session:/data
+      - legacy-weather-token:/token
+    networks:
+      - tacs-network
+
 volumes:
+  legacy-weather-session:
+  legacy-weather-token:
   mongodb-data:
   mongodb-config:
   minio-data:

@@ -3,6 +3,7 @@ package com.solnotfound.controller;
 import com.solnotfound.dto.LinkTelegramChatRequest;
 import com.solnotfound.dto.TelegramLinkCodeResponse;
 import com.solnotfound.dto.UserDTO;
+import com.solnotfound.dto.UserPreferencesDTO;
 import com.solnotfound.service.UserNameRecorder;
 import com.solnotfound.service.UserService;
 import jakarta.validation.Valid;
@@ -45,6 +46,18 @@ public class UserController {
     return ResponseEntity.ok(
         userService.linkTelegramChat(
             jwt.getSubject(), UserNameRecorder.displayName(jwt), request.code()));
+  }
+
+  @GetMapping("/me/preferences")
+  public ResponseEntity<UserPreferencesDTO> getPreferences(Authentication authentication) {
+    return ResponseEntity.ok(userService.getPreferences(jwt(authentication).getSubject()));
+  }
+
+  @PutMapping("/me/preferences")
+  public ResponseEntity<UserPreferencesDTO> updatePreferences(
+      @Valid @RequestBody UserPreferencesDTO preferences, Authentication authentication) {
+    return ResponseEntity.ok(
+        userService.updatePreferences(jwt(authentication).getSubject(), preferences));
   }
 
   private Jwt jwt(Authentication authentication) {

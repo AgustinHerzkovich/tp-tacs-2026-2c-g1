@@ -5,7 +5,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.solnotfound.dto.TelegramLinkCodeResponse;
 import com.solnotfound.dto.UserDTO;
+import com.solnotfound.dto.UserPreferencesDTO;
 import com.solnotfound.entity.user.User;
+import com.solnotfound.entity.user.WeatherProvider;
 import com.solnotfound.exception.ErrorCode;
 import com.solnotfound.exception.InvalidTelegramLinkCodeException;
 import com.solnotfound.exception.ResourceNotFoundException;
@@ -32,6 +34,28 @@ class UserServiceTest {
     userRepository = new InMemoryUserRepository();
     linkCodeRepository = new InMemoryTelegramLinkCodeRepository();
     service = serviceAt(NOW);
+  }
+
+  @Test
+  void usesOpenMeteoUntilTheUserChoosesAnotherProvider() {
+    assertThat(service.getPreferences("user-1").weatherProvider())
+        .isEqualTo(WeatherProvider.OPEN_METEO);
+
+    var updated =
+        service.updatePreferences("user-1", new UserPreferencesDTO(WeatherProvider.LEGACY));
+
+    assertThat(updated.weatherProvider()).isEqualTo(WeatherProvider.LEGACY);
+    assertThat(service.getPreferences("user-1").weatherProvider())
+        .isEqualTo(WeatherProvider.LEGACY);
+  }
+
+  @Test
+  void changingTheProviderKeepsTheRestOfTheUser() {
+    userRepository.rememberName("user-1", "Jane Doe");
+
+    service.updatePreferences("user-1", new UserPreferencesDTO(WeatherProvider.LEGACY));
+
+    assertThat(userRepository.findOrCreate("user-1").getName()).isEqualTo("Jane Doe");
   }
 
   private UserService serviceAt(Instant instant) {

@@ -1,0 +1,220 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1660 1080" width="1660" height="1080">
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10" fill="none" stroke="#1e40af" stroke-width="1.6"/></marker></defs>
+<rect width="1660" height="1080" fill="#ffffff"/>
+<text x="30" y="34" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="20" font-weight="bold" fill="#0f172a" text-anchor="start">Planazo: diagrama de despliegue (producción en Google Cloud)</text>
+<rect x="270" y="58" width="1030" height="950" rx="10" fill="#fafcff" stroke="#2563eb" stroke-width="1.6" stroke-dasharray="9 5"/>
+<rect x="270" y="58" width="370" height="28" rx="10" fill="#2563eb"/>
+<text x="285" y="77" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="13.5" font-weight="bold" fill="#ffffff" text-anchor="start">«cloud» Google Cloud Platform · us-central1</text>
+<polygon points="30,130 42,118 242,118 230,130" fill="#cdf3dc" stroke="#475569" stroke-width="1.2"/>
+<polygon points="230,130 242,118 242,233 230,245" fill="#a8e6c1" stroke="#475569" stroke-width="1.2"/>
+<rect x="30" y="130" width="200" height="115" fill="#ecfdf3" stroke="#475569" stroke-width="1.2"/>
+<text x="130.0" y="150" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" font-style="italic">«device»</text>
+<text x="130.0" y="169" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Navegador</text>
+<text x="130.0" y="190" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" fill="#475569" text-anchor="middle">Usuario de la app</text>
+<text x="130.0" y="207" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" fill="#475569" text-anchor="middle">web, PC o celular</text>
+<polygon points="30,560 42,548 242,548 230,560" fill="#e2e8f0" stroke="#475569" stroke-width="1.2"/>
+<polygon points="230,560 242,548 242,638 230,650" fill="#cbd5e1" stroke="#475569" stroke-width="1.2"/>
+<rect x="30" y="560" width="200" height="90" fill="#f1f5f9" stroke="#475569" stroke-width="1.2"/>
+<text x="130.0" y="580" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" font-style="italic">«external system»</text>
+<text x="130.0" y="599" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Nominatim / OSM</text>
+<text x="130.0" y="620" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" fill="#475569" text-anchor="middle">geocodificación y mapas</text>
+<polygon points="30,700 42,688 242,688 230,700" fill="#e2e8f0" stroke="#475569" stroke-width="1.2"/>
+<polygon points="230,700 242,688 242,778 230,790" fill="#cbd5e1" stroke="#475569" stroke-width="1.2"/>
+<rect x="30" y="700" width="200" height="90" fill="#f1f5f9" stroke="#475569" stroke-width="1.2"/>
+<text x="130.0" y="720" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" font-style="italic">«external system»</text>
+<text x="130.0" y="739" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Telegram</text>
+<text x="130.0" y="760" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" fill="#475569" text-anchor="middle">servidores del bot</text>
+<polygon points="30,880 42,868 242,868 230,880" fill="#e2e8f0" stroke="#475569" stroke-width="1.2"/>
+<polygon points="230,880 242,868 242,958 230,970" fill="#cbd5e1" stroke="#475569" stroke-width="1.2"/>
+<rect x="30" y="880" width="200" height="90" fill="#f1f5f9" stroke="#475569" stroke-width="1.2"/>
+<text x="130.0" y="900" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" font-style="italic">«external system»</text>
+<text x="130.0" y="919" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14.5" font-weight="bold" fill="#0f172a" text-anchor="middle">GitHub Actions</text>
+<text x="130.0" y="940" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" fill="#475569" text-anchor="middle">deploy.yml, en cada merge</text>
+<polygon points="310,320 322,308 532,308 520,320" fill="#c6d8fb" stroke="#475569" stroke-width="1.2"/>
+<polygon points="520,320 532,308 532,483 520,495" fill="#a9c4f5" stroke="#475569" stroke-width="1.2"/>
+<rect x="310" y="320" width="210" height="175" fill="#e8f0fe" stroke="#475569" stroke-width="1.2"/>
+<text x="415.0" y="340" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" font-style="italic">«Cloud Run»</text>
+<text x="415.0" y="359" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Frontend</text>
+<text x="415.0" y="380" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" fill="#475569" text-anchor="middle">0 a 2 instancias</text>
+<rect x="325" y="400" width="180" height="26" fill="#ffffff" stroke="#475569" stroke-width="1"/>
+<path d="M487,406 h7 l4,4 v10 h-11 z M494,406 v4 h4" fill="none" stroke="#475569" stroke-width="0.9"/>
+<text x="333" y="417" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#0f172a" text-anchor="start">Next.js: UI</text>
+<rect x="325" y="434" width="180" height="26" fill="#ffffff" stroke="#475569" stroke-width="1"/>
+<path d="M487,440 h7 l4,4 v10 h-11 z M494,440 v4 h4" fill="none" stroke="#475569" stroke-width="0.9"/>
+<text x="333" y="451" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#0f172a" text-anchor="start">proxies /api → backend</text>
+<polygon points="310,690 322,678 572,678 560,690" fill="#c6d8fb" stroke="#475569" stroke-width="1.2"/>
+<polygon points="560,690 572,678 572,803 560,815" fill="#a9c4f5" stroke="#475569" stroke-width="1.2"/>
+<rect x="310" y="690" width="250" height="125" fill="#e8f0fe" stroke="#475569" stroke-width="1.2"/>
+<text x="435.0" y="710" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" font-style="italic">«Cloud Functions gen2»</text>
+<text x="435.0" y="729" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Bot de Telegram</text>
+<text x="435.0" y="750" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" fill="#475569" text-anchor="middle">Node.js, webhook HTTP</text>
+<polygon points="310,880 322,868 572,868 560,880" fill="#c6d8fb" stroke="#475569" stroke-width="1.2"/>
+<polygon points="560,880 572,868 572,958 560,970" fill="#a9c4f5" stroke="#475569" stroke-width="1.2"/>
+<rect x="310" y="880" width="250" height="90" fill="#e8f0fe" stroke="#475569" stroke-width="1.2"/>
+<text x="435.0" y="900" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" font-style="italic">«Cloud Build»</text>
+<text x="435.0" y="919" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Cloud Build</text>
+<text x="435.0" y="940" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" fill="#475569" text-anchor="middle">construye y despliega</text>
+<text x="435.0" y="957" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" fill="#475569" text-anchor="middle">lo que cambió</text>
+<polygon points="650,110 662,98 922,98 910,110" fill="#c6d8fb" stroke="#475569" stroke-width="1.2"/>
+<polygon points="910,110 922,98 922,218 910,230" fill="#a9c4f5" stroke="#475569" stroke-width="1.2"/>
+<rect x="650" y="110" width="260" height="120" fill="#e8f0fe" stroke="#475569" stroke-width="1.2"/>
+<text x="780.0" y="130" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" font-style="italic">«Cloud Run»</text>
+<text x="780.0" y="149" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Keycloak</text>
+<text x="780.0" y="170" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" fill="#475569" text-anchor="middle">identidad y roles</text>
+<text x="780.0" y="187" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" fill="#475569" text-anchor="middle">1 instancia</text>
+<polygon points="650,300 662,288 922,288 910,300" fill="#c6d8fb" stroke="#475569" stroke-width="1.2"/>
+<polygon points="910,300 922,288 922,553 910,565" fill="#a9c4f5" stroke="#475569" stroke-width="1.2"/>
+<rect x="650" y="300" width="260" height="265" fill="#e8f0fe" stroke="#475569" stroke-width="1.2"/>
+<text x="780.0" y="320" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" font-style="italic">«Cloud Run»</text>
+<text x="780.0" y="339" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Backend</text>
+<text x="780.0" y="360" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" fill="#475569" text-anchor="middle">0 a 2 instancias</text>
+<rect x="665" y="380" width="230" height="26" fill="#ffffff" stroke="#475569" stroke-width="1"/>
+<path d="M877,386 h7 l4,4 v10 h-11 z M884,386 v4 h4" fill="none" stroke="#475569" stroke-width="0.9"/>
+<text x="673" y="397" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#0f172a" text-anchor="start">Spring Boot: API REST</text>
+<rect x="665" y="414" width="230" height="26" fill="#ffffff" stroke="#475569" stroke-width="1"/>
+<path d="M877,420 h7 l4,4 v10 h-11 z M884,420 v4 h4" fill="none" stroke="#475569" stroke-width="0.9"/>
+<text x="673" y="431" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#0f172a" text-anchor="start">WeatherGateway</text>
+<rect x="665" y="448" width="230" height="26" fill="#ffffff" stroke="#475569" stroke-width="1"/>
+<path d="M877,454 h7 l4,4 v10 h-11 z M884,454 v4 h4" fill="none" stroke="#475569" stroke-width="0.9"/>
+<text x="673" y="465" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#0f172a" text-anchor="start">LegacyWeatherProvider</text>
+<rect x="665" y="482" width="230" height="26" fill="#ffffff" stroke="#475569" stroke-width="1"/>
+<path d="M877,488 h7 l4,4 v10 h-11 z M884,488 v4 h4" fill="none" stroke="#475569" stroke-width="0.9"/>
+<text x="673" y="499" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#0f172a" text-anchor="start">Resilience4j + Caffeine</text>
+<rect x="665" y="516" width="230" height="26" fill="#ffffff" stroke="#475569" stroke-width="1"/>
+<path d="M877,522 h7 l4,4 v10 h-11 z M884,522 v4 h4" fill="none" stroke="#475569" stroke-width="0.9"/>
+<text x="673" y="533" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#0f172a" text-anchor="start">schedulers (/internal/*)</text>
+<polygon points="650,690 662,678 922,678 910,690" fill="#c6d8fb" stroke="#475569" stroke-width="1.2"/>
+<polygon points="910,690 922,678 922,793 910,805" fill="#a9c4f5" stroke="#475569" stroke-width="1.2"/>
+<rect x="650" y="690" width="260" height="115" fill="#e8f0fe" stroke="#475569" stroke-width="1.2"/>
+<text x="780.0" y="710" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" font-style="italic">«Cloud Scheduler»</text>
+<text x="780.0" y="729" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Tareas periódicas</text>
+<text x="780.0" y="750" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" fill="#475569" text-anchor="middle">clima y votaciones: cada hora</text>
+<text x="780.0" y="767" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" fill="#475569" text-anchor="middle">estado de actividades: 5 min</text>
+<polygon points="650,880 662,868 922,868 910,880" fill="#c6d8fb" stroke="#475569" stroke-width="1.2"/>
+<polygon points="910,880 922,868 922,958 910,970" fill="#a9c4f5" stroke="#475569" stroke-width="1.2"/>
+<rect x="650" y="880" width="260" height="90" fill="#e8f0fe" stroke="#475569" stroke-width="1.2"/>
+<text x="780.0" y="900" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" font-style="italic">«Artifact Registry»</text>
+<text x="780.0" y="919" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Imágenes</text>
+<text x="780.0" y="940" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" fill="#475569" text-anchor="middle">de todos los servicios,</text>
+<text x="780.0" y="957" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" fill="#475569" text-anchor="middle">etiquetadas con el SHA</text>
+<polygon points="1000,110 1012,98 1262,98 1250,110" fill="#c6d8fb" stroke="#475569" stroke-width="1.2"/>
+<polygon points="1250,110 1262,98 1262,203 1250,215" fill="#a9c4f5" stroke="#475569" stroke-width="1.2"/>
+<rect x="1000" y="110" width="250" height="105" fill="#e8f0fe" stroke="#475569" stroke-width="1.2"/>
+<text x="1125.0" y="130" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" font-style="italic">«Cloud SQL»</text>
+<text x="1125.0" y="149" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14.5" font-weight="bold" fill="#0f172a" text-anchor="middle">PostgreSQL</text>
+<text x="1125.0" y="170" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" fill="#475569" text-anchor="middle">base de Keycloak</text>
+<text x="1125.0" y="187" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" fill="#475569" text-anchor="middle">db-f1-micro</text>
+<polygon points="1000,290 1012,278 1262,278 1250,290" fill="#fde2b4" stroke="#475569" stroke-width="1.2"/>
+<polygon points="1250,290 1262,278 1262,470 1250,482" fill="#f8cf8a" stroke="#475569" stroke-width="1.2"/>
+<rect x="1000" y="290" width="250" height="192" fill="#fff4e0" stroke="#475569" stroke-width="1.2"/>
+<text x="1125.0" y="310" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" font-style="italic">«Cloud Run privado»</text>
+<text x="1125.0" y="329" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Legacy weather</text>
+<text x="1125.0" y="350" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" fill="#475569" text-anchor="middle">1 instancia, sin invocador público</text>
+<text x="1125.0" y="367" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" fill="#475569" text-anchor="middle">pide ID token + token legacy</text>
+<rect x="1015" y="385" width="220" height="26" fill="#ffffff" stroke="#475569" stroke-width="1"/>
+<path d="M1217,391 h7 l4,4 v10 h-11 z M1224,391 v4 h4" fill="none" stroke="#475569" stroke-width="0.9"/>
+<text x="1023" y="402" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#0f172a" text-anchor="start">socat :9978 → :9977</text>
+<rect x="1015" y="419" width="220" height="26" fill="#ffffff" stroke="#475569" stroke-width="1"/>
+<path d="M1217,425 h7 l4,4 v10 h-11 z M1224,425 v4 h4" fill="none" stroke="#475569" stroke-width="0.9"/>
+<text x="1023" y="436" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#0f172a" text-anchor="start">binario tacs (sin modificar)</text>
+<rect x="1015" y="453" width="220" height="26" fill="#ffffff" stroke="#475569" stroke-width="1"/>
+<path d="M1217,459 h7 l4,4 v10 h-11 z M1224,459 v4 h4" fill="none" stroke="#475569" stroke-width="0.9"/>
+<text x="1023" y="470" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#0f172a" text-anchor="start">entrypoint + watchdog</text>
+<polygon points="1000,590 1012,578 1262,578 1250,590" fill="#c6d8fb" stroke="#475569" stroke-width="1.2"/>
+<polygon points="1250,590 1262,578 1262,673 1250,685" fill="#a9c4f5" stroke="#475569" stroke-width="1.2"/>
+<rect x="1000" y="590" width="250" height="95" fill="#e8f0fe" stroke="#475569" stroke-width="1.2"/>
+<text x="1125.0" y="610" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" font-style="italic">«Cloud Storage»</text>
+<text x="1125.0" y="629" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Bucket privado</text>
+<text x="1125.0" y="650" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" fill="#475569" text-anchor="middle">imágenes de actividades</text>
+<polygon points="1000,880 1012,868 1262,868 1250,880" fill="#c6d8fb" stroke="#475569" stroke-width="1.2"/>
+<polygon points="1250,880 1262,868 1262,958 1250,970" fill="#a9c4f5" stroke="#475569" stroke-width="1.2"/>
+<rect x="1000" y="880" width="250" height="90" fill="#e8f0fe" stroke="#475569" stroke-width="1.2"/>
+<text x="1125.0" y="900" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" font-style="italic">«Secret Manager»</text>
+<text x="1125.0" y="919" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Secretos</text>
+<text x="1125.0" y="940" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" fill="#475569" text-anchor="middle">backend, Keycloak, legacy</text>
+<polygon points="1345,290 1357,278 1642,278 1630,290" fill="#e2e8f0" stroke="#475569" stroke-width="1.2"/>
+<polygon points="1630,290 1642,278 1642,383 1630,395" fill="#cbd5e1" stroke="#475569" stroke-width="1.2"/>
+<rect x="1345" y="290" width="285" height="105" fill="#f1f5f9" stroke="#475569" stroke-width="1.2"/>
+<text x="1487.5" y="310" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" font-style="italic">«external system»</text>
+<text x="1487.5" y="329" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Google OAuth · tacs.dale.ar</text>
+<text x="1487.5" y="350" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" fill="#475569" text-anchor="middle">sesión del legacy,</text>
+<text x="1487.5" y="367" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" fill="#475569" text-anchor="middle">configuración y telemetría</text>
+<polygon points="1345,445 1357,433 1642,433 1630,445" fill="#e2e8f0" stroke="#475569" stroke-width="1.2"/>
+<polygon points="1630,445 1642,433 1642,518 1630,530" fill="#cbd5e1" stroke="#475569" stroke-width="1.2"/>
+<rect x="1345" y="445" width="285" height="85" fill="#f1f5f9" stroke="#475569" stroke-width="1.2"/>
+<text x="1487.5" y="465" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" font-style="italic">«external system»</text>
+<text x="1487.5" y="484" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14.5" font-weight="bold" fill="#0f172a" text-anchor="middle">Open-Meteo</text>
+<text x="1487.5" y="505" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" fill="#475569" text-anchor="middle">proveedor de clima principal</text>
+<polygon points="1345,580 1357,568 1642,568 1630,580" fill="#e2e8f0" stroke="#475569" stroke-width="1.2"/>
+<polygon points="1630,580 1642,568 1642,663 1630,675" fill="#cbd5e1" stroke="#475569" stroke-width="1.2"/>
+<rect x="1345" y="580" width="285" height="95" fill="#f1f5f9" stroke="#475569" stroke-width="1.2"/>
+<text x="1487.5" y="600" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#475569" text-anchor="middle" font-style="italic">«database»</text>
+<text x="1487.5" y="619" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14.5" font-weight="bold" fill="#0f172a" text-anchor="middle">MongoDB Atlas</text>
+<text x="1487.5" y="640" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" fill="#475569" text-anchor="middle">M0: dominio, votaciones,</text>
+<text x="1487.5" y="657" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" fill="#475569" text-anchor="middle">eventos de estadísticas</text>
+<path d="M230,160 L650,160" fill="none" stroke="#1e40af" stroke-width="1.5" marker-end="url(#arrow)"/>
+<rect x="375.1" y="142" width="129.7" height="17" rx="3" fill="#ffffff" fill-opacity="0.95"/>
+<text x="440" y="154" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#1e3a8a" text-anchor="middle">«HTTPS» OIDC + PKCE</text>
+<path d="M230,215 L288,215 L288,360 L310,360" fill="none" stroke="#1e40af" stroke-width="1.5" marker-end="url(#arrow)"/>
+<rect x="260.9" y="278" width="54.1" height="17" rx="3" fill="#ffffff" fill-opacity="0.95"/>
+<text x="288" y="290" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#1e3a8a" text-anchor="middle">«HTTPS»</text>
+<path d="M310,470 L262,470 L262,605 L230,605" fill="none" stroke="#1e40af" stroke-width="1.5" marker-end="url(#arrow)"/>
+<rect x="234.9" y="528" width="54.1" height="17" rx="3" fill="#ffffff" fill-opacity="0.95"/>
+<text x="262" y="540" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#1e3a8a" text-anchor="middle">«HTTPS»</text>
+<path d="M520,395 L650,395" fill="none" stroke="#1e40af" stroke-width="1.5" marker-end="url(#arrow)"/>
+<rect x="538.4" y="377" width="79.3" height="17" rx="3" fill="#ffffff" fill-opacity="0.95"/>
+<text x="578" y="389" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#1e3a8a" text-anchor="middle">«HTTPS» JWT</text>
+<path d="M780,300 L780,230" fill="none" stroke="#1e40af" stroke-width="1.5" marker-end="url(#arrow)"/>
+<rect x="737.2" y="258" width="85.6" height="17" rx="3" fill="#ffffff" fill-opacity="0.95"/>
+<text x="780" y="270" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#1e3a8a" text-anchor="middle">«HTTPS» JWKS</text>
+<path d="M910,160 L1000,160" fill="none" stroke="#1e40af" stroke-width="1.5" marker-end="url(#arrow)"/>
+<rect x="931.1" y="142" width="47.8" height="17" rx="3" fill="#ffffff" fill-opacity="0.95"/>
+<text x="955" y="154" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#1e3a8a" text-anchor="middle">«JDBC»</text>
+<path d="M910,350 L1000,350" fill="none" stroke="#1e40af" stroke-width="1.5" marker-end="url(#arrow)"/>
+<rect x="928.0" y="332" width="54.1" height="17" rx="3" fill="#ffffff" fill-opacity="0.95"/>
+<text x="955" y="344" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#1e3a8a" text-anchor="middle">«HTTPS»</text>
+<path d="M1250,340 L1345,340" fill="none" stroke="#1e40af" stroke-width="1.5" marker-end="url(#arrow)"/>
+<rect x="1270.0" y="322" width="54.1" height="17" rx="3" fill="#ffffff" fill-opacity="0.95"/>
+<text x="1297" y="334" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#1e3a8a" text-anchor="middle">«HTTPS»</text>
+<path d="M910,500 L1345,500" fill="none" stroke="#1e40af" stroke-width="1.5" marker-end="url(#arrow)"/>
+<rect x="931.0" y="482" width="54.1" height="17" rx="3" fill="#ffffff" fill-opacity="0.95"/>
+<text x="958" y="494" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#1e3a8a" text-anchor="middle">«HTTPS»</text>
+<path d="M910,545 L1300,545 L1300,625 L1345,625" fill="none" stroke="#1e40af" stroke-width="1.5" marker-end="url(#arrow)"/>
+<rect x="1066.5" y="527" width="117.1" height="17" rx="3" fill="#ffffff" fill-opacity="0.95"/>
+<text x="1125" y="539" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#1e3a8a" text-anchor="middle">«TLS» mongodb+srv</text>
+<path d="M880,565 L880,640 L1000,640" fill="none" stroke="#1e40af" stroke-width="1.5" marker-end="url(#arrow)"/>
+<rect x="868.9" y="622" width="142.3" height="17" rx="3" fill="#ffffff" fill-opacity="0.95"/>
+<text x="940" y="634" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#1e3a8a" text-anchor="middle">«HTTPS» URLs firmadas</text>
+<path d="M230,745 L310,745" fill="none" stroke="#1e40af" stroke-width="1.5" marker-end="url(#arrow)"/>
+<rect x="242.9" y="727" width="54.1" height="17" rx="3" fill="#ffffff" fill-opacity="0.95"/>
+<text x="270" y="739" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#1e3a8a" text-anchor="middle">«HTTPS»</text>
+<path d="M560,770 L600,770 L600,535 L650,535" fill="none" stroke="#1e40af" stroke-width="1.5" marker-end="url(#arrow)"/>
+<rect x="519.7" y="643" width="79.3" height="17" rx="3" fill="#ffffff" fill-opacity="0.95"/>
+<text x="594" y="655" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#1e3a8a" text-anchor="end">«HTTPS» JWT</text>
+<path d="M560,715 L628,715 L628,402 A7,7 0 0 0 628,388 L628,205 L650,205" fill="none" stroke="#1e40af" stroke-width="1.5" marker-end="url(#arrow)"/>
+<rect x="541.1" y="250" width="173.8" height="17" rx="3" fill="#ffffff" fill-opacity="0.95"/>
+<text x="628" y="262" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#1e3a8a" text-anchor="middle">«HTTPS» client_credentials</text>
+<path d="M780,690 L780,565" fill="none" stroke="#1e40af" stroke-width="1.5" marker-end="url(#arrow)"/>
+<rect x="737.2" y="620" width="85.6" height="17" rx="3" fill="#ffffff" fill-opacity="0.95"/>
+<text x="780" y="632" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#1e3a8a" text-anchor="middle">«HTTPS» OIDC</text>
+<path d="M230,925 L310,925" fill="none" stroke="#1e40af" stroke-width="1.5" marker-end="url(#arrow)"/>
+<rect x="249.2" y="907" width="41.5" height="17" rx="3" fill="#ffffff" fill-opacity="0.95"/>
+<text x="270" y="919" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#1e3a8a" text-anchor="middle">«WIF»</text>
+<path d="M560,925 L650,925" fill="none" stroke="#1e40af" stroke-width="1.5" marker-end="url(#arrow)"/>
+<rect x="587.4" y="907" width="35.2" height="17" rx="3" fill="#ffffff" fill-opacity="0.95"/>
+<text x="605" y="919" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="normal" fill="#1e3a8a" text-anchor="middle">push</text>
+<rect x="1345" y="760" width="285" height="210" rx="6" fill="#ffffff" stroke="#cbd5e1"/>
+<text x="1360" y="784" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#0f172a" text-anchor="start">Referencias</text>
+<rect x="1360" y="800" width="22" height="16" fill="#e8f0fe" stroke="#475569"/>
+<text x="1392" y="813" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" fill="#0f172a" text-anchor="start">servicio administrado de GCP</text>
+<rect x="1360" y="828" width="22" height="16" fill="#fff4e0" stroke="#475569"/>
+<text x="1392" y="841" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" fill="#0f172a" text-anchor="start">proveedor legacy (Entrega 4)</text>
+<rect x="1360" y="856" width="22" height="16" fill="#f1f5f9" stroke="#475569"/>
+<text x="1392" y="869" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" fill="#0f172a" text-anchor="start">sistema externo</text>
+<rect x="1360" y="884" width="22" height="16" fill="#ecfdf3" stroke="#475569"/>
+<text x="1392" y="897" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" fill="#0f172a" text-anchor="start">dispositivo del usuario</text>
+<line x1="1360" y1="928" x2="1392" y2="928" stroke="#1e40af" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="1400" y="932" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" fill="#0f172a" text-anchor="start">canal de comunicación «protocolo»</text>
+<rect x="1360" y="944" width="22" height="16" fill="#ffffff" stroke="#475569"/>
+<text x="1392" y="957" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" fill="#0f172a" text-anchor="start">artefacto desplegado</text>
+</svg>

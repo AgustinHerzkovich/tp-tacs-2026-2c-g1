@@ -1,6 +1,7 @@
 package com.solnotfound.repository;
 
 import com.solnotfound.entity.user.User;
+import com.solnotfound.entity.user.WeatherProvider;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -22,6 +23,11 @@ public class InMemoryUserRepository implements IUserRepository {
   @Override
   public void rememberName(String id, String name) {
     findOrCreate(id).setName(name);
+  }
+
+  @Override
+  public void saveWeatherProvider(String id, WeatherProvider provider) {
+    findOrCreate(id).setWeatherProvider(provider);
   }
 
   @Override

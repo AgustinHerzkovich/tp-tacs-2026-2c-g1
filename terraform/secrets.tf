@@ -5,6 +5,8 @@ locals {
     "${local.name}-keycloak-db-password",
     # Shared by the backend (TELEGRAM_API_TOKEN) and the Telegram bot function (X-Api-Token).
     "${local.name}-telegram-api-token",
+    "${local.name}-legacy-weather-session",
+    "${local.name}-legacy-weather-token",
   ])
 }
 

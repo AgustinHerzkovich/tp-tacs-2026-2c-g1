@@ -57,6 +57,7 @@ resource "google_service_account_iam_member" "github_deployer_runtime_accounts" 
     backend     = google_service_account.backend.name
     frontend    = google_service_account.frontend.name
     keycloak    = google_service_account.keycloak.name
+    legacy      = google_service_account.legacy_weather.name
     cloud_build = "projects/${var.gcp_project_id}/serviceAccounts/${data.google_project.current.number}-compute@developer.gserviceaccount.com"
   }
 

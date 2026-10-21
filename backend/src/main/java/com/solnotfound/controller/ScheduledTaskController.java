@@ -1,5 +1,6 @@
 package com.solnotfound.controller;
 
+import com.solnotfound.service.WeatherProviderMonitor;
 import com.solnotfound.service.schedulers.ActivityAnticipationCheckScheduler;
 import com.solnotfound.service.schedulers.ActivityStatusScheduler;
 import com.solnotfound.service.schedulers.VotationClosingScheduler;
@@ -20,6 +21,7 @@ public class ScheduledTaskController {
   private final ActivityAnticipationCheckScheduler anticipationScheduler;
   private final ActivityStatusScheduler statusScheduler;
   private final VotationClosingScheduler votationScheduler;
+  private final WeatherProviderMonitor weatherProviderMonitor;
 
   /** Runs the weather anticipation maintenance pass synchronously. */
   @PostMapping("/weather")
@@ -39,6 +41,13 @@ public class ScheduledTaskController {
   @PostMapping("/votations")
   public ResponseEntity<Void> closeVotations() {
     runTask("votations", votationScheduler::closeDueVotations);
+    return ResponseEntity.noContent().build();
+  }
+
+  /** Records the snapshot of every weather provider used by the statistics. */
+  @PostMapping("/weather-providers")
+  public ResponseEntity<Void> snapshotWeatherProviders() {
+    runTask("weather-providers", weatherProviderMonitor::snapshot);
     return ResponseEntity.noContent().build();
   }
 

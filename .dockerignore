@@ -11,3 +11,10 @@
 *.docx
 graphify-out
 terraform
+
+# Legacy weather binaries: only the Linux ones are needed to build its image.
+bin/
+!bin/bin/
+bin/bin/*
+!bin/bin/tacs-linux-amd64
+!bin/bin/tacs-linux-arm64

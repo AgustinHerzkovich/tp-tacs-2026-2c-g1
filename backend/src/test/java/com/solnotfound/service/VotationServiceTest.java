@@ -68,7 +68,7 @@ class VotationServiceTest {
         new VotationService(
             votationRepository,
             activityRepository,
-            weatherAdapter,
+            WeatherGateway.mainOnly(weatherAdapter),
             badWeatherChecker,
             new InMemoryUserRepository(),
             eventPublisher);
@@ -590,7 +590,7 @@ class VotationServiceTest {
     return new VotationService(
         repository,
         activityRepository,
-        weatherAdapter,
+        WeatherGateway.mainOnly(weatherAdapter),
         badWeatherChecker,
         new InMemoryUserRepository(),
         eventPublisher);

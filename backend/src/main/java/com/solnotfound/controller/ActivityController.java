@@ -143,8 +143,9 @@ public class ActivityController {
   }
 
   @GetMapping("/{id}/weather")
-  public ResponseEntity<ActivityWeatherResponse> getWeather(@PathVariable String id) {
-    return ResponseEntity.ok(activityService.getWeather(id));
+  public ResponseEntity<ActivityWeatherResponse> getWeather(
+      @PathVariable String id, Authentication authentication) {
+    return ResponseEntity.ok(activityService.getWeather(id, jwt(authentication).getSubject()));
   }
 
   @GetMapping("/organizers/me")

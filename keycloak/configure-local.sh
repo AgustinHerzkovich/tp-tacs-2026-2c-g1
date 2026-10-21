@@ -75,6 +75,14 @@ frontend_client_uuid=$("$KCADM" get clients -r "$REALM" -q "clientId=solnotfound
 ensure_user alumno alumno alumno@planazo.local
 ensure_user admin admin admin@planazo.local
 
+# The realm's user profile requires a first and last name; without them Keycloak asks the test
+# users to complete their profile before signing in, which breaks scripted logins (E2E, load tests).
+for username in alumno admin; do
+  test_user_id=$("$KCADM" get users -r "$REALM" -q "username=$username" -q exact=true --fields id --format csv --noquotes)
+  "$KCADM" update "users/$test_user_id" -r "$REALM" \
+    -s "firstName=$username" -s lastName=Planazo -s 'requiredActions=[]'
+done
+
 "$KCADM" add-roles -r "$REALM" --uusername admin --rolename ADMIN
 
 ensure_realm_role "$BOT_ROLE" \
