@@ -206,6 +206,29 @@ el circuit breaker: cada una espera hasta el presupuesto de 2 s por intento. Una
 fallback responde en milisegundos. La primera versión, sin presupuesto total y reintentando un
 servicio inalcanzable, tenía p95 de 653 ms y p99 de 4,7 s en esa etapa, y no pasaba el umbral.
 
+Repetición con las estadísticas best-effort, los rechazos y fallbacks contados en memoria y los
+rechazos ignorados por el circuit breaker (23/10/2026, Docker Engine 29.8 en Linux, 8 núcleos y
+15 GB de RAM, `BASE_URL` por defecto):
+
+| Escenario | Etapa | Respuestas 200 | p50 | p95 | p99 | Resultado |
+| --- | --- | --- | --- | --- | --- | --- |
+| Legacy funcionando | 10/s | 100 % de 600 | 7 ms | 36 ms | 70 ms | PASS |
+| Legacy funcionando | 50/s | 100 % de 3000 | 4 ms | 11 ms | 25 ms | PASS |
+| Legacy funcionando | 100/s | 100 % de 6000 | 3 ms | 22 ms | 56 ms | PASS |
+| Legacy caído | 10/s | 100 % de 600 | 9 ms | 49 ms | 77 ms | PASS |
+| Legacy caído | 50/s | 100 % de 3000 | 4 ms | 13 ms | 27 ms | PASS |
+| Legacy caído | 100/s | 100 % de 6000 | 3 ms | 10 ms | 24 ms | PASS |
+
+- **Legacy funcionando:** 9 consultas fuera de la caché y 15 llamadas (9 correctas; 3 `TIMEOUT` y 3
+  `MALFORMED_RESPONSE` resueltas por el reintento). Ninguna consulta usó el fallback, el circuit
+  breaker quedó cerrado y la caché acertó el 99,9 % (9.511 de 9.520).
+- **Legacy caído:** 25 llamadas, todas `UNREACHABLE`; el circuit breaker quedó abierto (12.775
+  consultas rechazadas sin llamar) y las 12.800 consultas se resolvieron con el fallback. Esos
+  25.575 rechazos y fallbacks quedaron guardados en 8 documentos, uno por tipo en cada foto.
+- **Primera etapa con el legacy caído:** p99 de 77 ms contra 3728 ms en Windows. En este entorno,
+  resolver el nombre del contenedor detenido falla al instante; en la corrida de Windows tardaba 8 a
+  9 s (ver la tabla de fallas).
+
 ## Consumo desde el backend
 
 Código: `backend/src/main/java/com/solnotfound/adapters/legacy/` y
@@ -319,7 +342,16 @@ cada actividad usa el proveedor de su organizador, con el mismo fallback.
 - **Decisión:** un servicio de Cloud Run sin invocador público; solo la cuenta de servicio del
   backend tiene `roles/run.invoker`. El backend presenta un token de identidad en
   `X-Serverless-Authorization`, porque `Authorization` lleva el token del legacy. Una única
-  instancia como máximo.
+  instancia como máximo, que puede escalar a cero y solo tiene CPU mientras atiende pedidos
+  (`min_instance_count = 0`, `cpu_idle = true`).
+- **Por qué alcanza sin una instancia siempre encendida:** la sesión no vive en la instancia (el
+  entrypoint la copia del secreto en cada arranque), así que escalar a cero no obliga a iniciar
+  sesión de nuevo. Al colgado lo reinicia la sonda de liveness de Cloud Run, no el watchdog (ADR 2).
+  El monitor de proveedores consulta su `/healthz` cada 5 minutos, así que rara vez queda frío. Si
+  arranca en frío, las consultas de esos segundos no entran en el presupuesto de 2 s y responde el
+  proveedor principal, como con cualquier otra falla.
 - **Alternativas descartadas:** ingress interno con un conector VPC (costo y complejidad para un
-  único consumidor) y exponerlo público con el token como única protección.
+  único consumidor), exponerlo público con el token como única protección, y una instancia mínima
+  con CPU siempre asignada: elimina el arranque en frío, pero cobra una vCPU todo el día para
+  ahorrar unos segundos de fallback poco frecuentes.
 

@@ -163,9 +163,11 @@ warm_up() {
       -F "activity=$body;type=application/json" \
       "$BASE_URL/activities" | jq -er .id)" || fail "warm-up could not create an activity"
   done
+  # Only future activities: a past one has no forecast and its weather answers 503. Its local time
+  # is compared with the UTC clock, which errs on the safe side for zones behind UTC.
   mapfile -t SEED_IDS < <(
     curl -fsS -H "Authorization: Bearer ${TOKENS[1]}" "$BASE_URL/activities?page=0&size=50" |
-      jq -r '.content[].id'
+      jq -r '(now | strftime("%Y-%m-%dT%H:%M:%S")) as $now | .content[] | select(.dateTime > $now) | .id'
   )
   ((${#SEED_IDS[@]} > 0)) || fail "GET /activities returned no activities"
   log "warm-up: ${#OWN_IDS[@]} activities created, ${#SEED_IDS[@]} activities available to read"

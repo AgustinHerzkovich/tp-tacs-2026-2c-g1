@@ -89,7 +89,7 @@ y se toman hasta 50 ids de `GET /activities` (incluye las actividades del seed).
 | `smoke` | `GET /healthcheck` |
 | `read` | `GET /activities` (paginado, con filtros por tipo/estado y por ciudad/disponibilidad), `GET /activities/{id}`, `GET /activities/{id}/weather` sobre su propia actividad, `GET /activities/organizers/me`, `GET /activities/participants/me`, `GET /votations`, `GET /notifications` |
 | `mixed` | Todo lo de `read`, más `POST /activities` (multipart, sin imágenes) y `PUT /activities/{id}/participants/me` sobre la actividad de otro usuario |
-| `legacy` | Cada usuario elige el proveedor legacy; luego 3 veces `GET /activities/{id}/weather` de su actividad, el clima de una actividad del seed, `GET /activities` y `GET /activities/{id}`. Resultados con el legacy funcionando y caído en [`PROVEEDOR_LEGACY.md`](PROVEEDOR_LEGACY.md#prueba-de-carga) |
+| `legacy` | Cada usuario elige el proveedor legacy; luego 3 veces `GET /activities/{id}/weather` de su actividad, el clima de una actividad futura del seed (una pasada no tiene pronóstico), `GET /activities` y `GET /activities/{id}`. Resultados con el legacy funcionando y caído en [`PROVEEDOR_LEGACY.md`](PROVEEDOR_LEGACY.md#prueba-de-carga) |
 
 Los targets se reparten entre los usuarios y Vegeta los recorre en round-robin, así que cada request
 viaja con el JWT de un usuario distinto, igual que en uso real.
