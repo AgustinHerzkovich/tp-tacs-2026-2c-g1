@@ -63,6 +63,37 @@ class WeatherProviderMonitorTest {
         .recordProviderSnapshot(eq("Open-Meteo"), anyString(), anyString(), anyLong(), anyLong());
   }
 
+  @Test
+  void storesTheCountedRefusalsAndFallbacksWithEachSnapshot() {
+    LegacyWeatherProvider legacy = mock(LegacyWeatherProvider.class);
+    when(legacy.circuitBreakerState()).thenReturn(State.CLOSED);
+    when(legacy.failureRate()).thenReturn(-1f);
+    when(legacy.isAlive()).thenReturn(true);
+    when(legacy.cacheStats()).thenReturn(stats(0, 0));
+    StatisticsEventRecorder recorder = mock(StatisticsEventRecorder.class);
+
+    new WeatherProviderMonitor(
+            legacy, CircuitBreakerRegistry.ofDefaults(), new NoOpCacheManager(), recorder)
+        .snapshot();
+
+    verify(recorder).flushProviderCounters();
+  }
+
+  @Test
+  void aFailingLegacySnapshotDoesNotSkipTheRestOfTheRound() {
+    LegacyWeatherProvider legacy = mock(LegacyWeatherProvider.class);
+    when(legacy.circuitBreakerState()).thenThrow(new IllegalStateException("broken"));
+    StatisticsEventRecorder recorder = mock(StatisticsEventRecorder.class);
+
+    new WeatherProviderMonitor(
+            legacy, CircuitBreakerRegistry.ofDefaults(), new NoOpCacheManager(), recorder)
+        .snapshot();
+
+    verify(recorder)
+        .recordProviderSnapshot(eq("Open-Meteo"), anyString(), anyString(), anyLong(), anyLong());
+    verify(recorder).flushProviderCounters();
+  }
+
   private static CacheStats stats(long hits, long misses) {
     return CacheStats.of(hits, misses, 0, 0, 0, 0, 0);
   }

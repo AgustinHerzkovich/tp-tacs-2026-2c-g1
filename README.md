@@ -579,7 +579,7 @@ Las rutas de backend son relativas a `backend/src/main/java/com/solnotfound/` y 
 | --- | --- | --- | --- |
 | E4.1 Elegir el proveedor | `GET` y `PUT /users/me/preferences`, `User.weatherProvider` | Menú de perfil, `hooks/useWeatherProvider.ts` | `UserServiceTest`, `useWeatherProvider.test.tsx` |
 | E4.2 Usar el proveedor elegido | `WeatherGateway` en `ActivityService`, `ActivityAnticipationCheckScheduler` y `VotationService` | `WeatherWidget` | `WeatherGatewayTest`, `LegacyWeatherProviderTest` |
-| E4.3 Seguir usable sin el legacy | Fallback en `WeatherGateway`, campo `fallback` de la respuesta | Aviso en `WeatherWidget` | `WeatherGatewayTest`, `WeatherWidget.test.tsx`, prueba de carga con el legacy caído |
+| E4.3 Seguir usable sin el legacy | Fallback en `WeatherGateway`, campo `fallback` de la respuesta | Aviso en `WeatherWidget` | `WeatherGatewayTest`, `LegacyWeatherProviderTest`, `StatisticsEventRecorderTest`, `WeatherWidget.test.tsx`, prueba de carga con el legacy caído |
 | E4.4 Estadísticas por proveedor | `WeatherProviderMonitor`, `StatisticsService.providerStatistics` | `components/statistics/ProviderHealthCard.tsx` | `StatisticsServiceTest`, `WeatherProviderMonitorTest`, `StatisticsPage.test.tsx` |
 
 

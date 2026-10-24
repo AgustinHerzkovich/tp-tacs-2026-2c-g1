@@ -160,14 +160,43 @@ class StatisticsServiceTest {
     verify(repository).findOccurredBetween(from, to);
   }
 
+  @Test
+  void addsUpRefusalsAndFallbacksStoredAsCounts() {
+    stubEvents(
+        counted(StatisticsEventType.WEATHER_PROVIDER_REFUSED, "CIRCUIT_OPEN", 120),
+        counted(StatisticsEventType.WEATHER_PROVIDER_REFUSED, "CIRCUIT_OPEN", 30),
+        counted(StatisticsEventType.WEATHER_PROVIDER_REFUSED, "OVERLOADED", 4),
+        counted(StatisticsEventType.WEATHER_PROVIDER_FALLBACK, null, 154),
+        // Recorded one by one before refusals and fallbacks were counted in memory.
+        providerEvent(StatisticsEventType.WEATHER_PROVIDER_FALLBACK, null, NOW, null));
+
+    StatisticsResponse response = service.getStatistics(NOW.minusSeconds(600), NOW);
+
+    var legacy =
+        response.providers().stream()
+            .filter(p -> p.provider().equals("Legacy"))
+            .findFirst()
+            .orElseThrow();
+    assertThat(legacy.refusals())
+        .containsEntry("CIRCUIT_OPEN", 150L)
+        .containsEntry("OVERLOADED", 4L);
+    assertThat(legacy.fallbacks()).isEqualTo(155);
+    assertThat(legacy.requests()).isZero();
+  }
+
   private void stubEvents(StatisticsEvent... events) {
     when(repository.findOccurredBetween(any(), any())).thenReturn(Arrays.asList(events));
+  }
+
+  private StatisticsEvent counted(StatisticsEventType type, String outcome, long occurrences) {
+    return new StatisticsEvent(
+        null, type, NOW, null, null, null, "Legacy", outcome, null, null, null, occurrences);
   }
 
   private StatisticsEvent providerEvent(
       StatisticsEventType type, String outcome, Instant at, Long durationMs) {
     return new StatisticsEvent(
-        null, type, at, null, null, durationMs, "Legacy", outcome, null, null, null);
+        null, type, at, null, null, durationMs, "Legacy", outcome, null, null, null, null);
   }
 
   private StatisticsEvent snapshot(
@@ -183,7 +212,8 @@ class StatisticsServiceTest {
         status,
         hits,
         misses,
-        breaker);
+        breaker,
+        null);
   }
 
   private StatisticsEvent event(

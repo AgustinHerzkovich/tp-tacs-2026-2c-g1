@@ -52,17 +52,23 @@ public class WeatherProviderMonitor {
   }
 
   /**
-   * Records one snapshot per provider. Failures are logged and never stop the schedule. On Cloud
-   * Run the timer is disabled and Cloud Scheduler calls it through {@code
-   * /internal/scheduled/weather-providers}, because an idle instance gets no CPU.
+   * Records one snapshot per provider and stores the refusals and fallbacks counted since the
+   * previous one. Each step runs on its own: a failure is logged and never skips the others nor
+   * stops the schedule. On Cloud Run the timer is disabled and Cloud Scheduler calls it through
+   * {@code /internal/scheduled/weather-providers}, because an idle instance gets no CPU.
    */
   @Scheduled(cron = "${weather.monitor.cron:0 * * * * *}")
   public synchronized void snapshot() {
+    runStep("legacy snapshot", this::snapshotLegacy);
+    runStep("Open-Meteo snapshot", this::snapshotOpenMeteo);
+    runStep("provider counters", statisticsRecorder::flushProviderCounters);
+  }
+
+  private static void runStep(String step, Runnable action) {
     try {
-      snapshotLegacy();
-      snapshotOpenMeteo();
+      action.run();
     } catch (RuntimeException exception) {
-      log.warn("Could not record weather provider snapshots", exception);
+      log.warn("Could not record weather provider statistics: step={}", step, exception);
     }
   }
 

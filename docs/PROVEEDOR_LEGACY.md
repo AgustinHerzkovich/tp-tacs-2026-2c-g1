@@ -281,6 +281,11 @@ cada actividad usa el proveedor de su organizador, con el mismo fallback.
   pantalla muestra el aviso. Un rango de alternativas se resuelve completo con el mismo proveedor.
 - **Por qué:** la aplicación nunca queda sin clima por culpa del proveedor elegido, y el usuario no
   es engañado sobre de dónde vienen los datos.
+- **Estadísticas best-effort:** los eventos del proveedor se registran en medio de la consulta,
+  muchas veces justo antes del fallback. Si no se pueden guardar, se registra un warning y la
+  consulta sigue; las estadísticas nunca dejan a la aplicación sin clima. Los rechazos y fallbacks,
+  que con el legacy caído ocurren en cada consulta, se cuentan en memoria y se guardan con cada
+  foto de los proveedores: el camino del fallback no escribe en la base.
 
 ### ADR 10 — Topología en la nube: servicio privado en Cloud Run
 

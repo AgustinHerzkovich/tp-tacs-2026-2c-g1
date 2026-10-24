@@ -91,11 +91,11 @@ public class StatisticsService {
   }
 
   /**
-   * Aggregates the events of one weather provider. Calls, failures, refusals and fallbacks come
-   * from one event each; cache counters and the status timeline come from the periodic snapshots
-   * taken by {@link WeatherProviderMonitor}. The timeline keeps at most {@value
-   * #MAX_TIMELINE_POINTS} points: when there are more, each point summarizes a stretch of time with
-   * the worst status seen in it, so a short outage is never averaged away.
+   * Aggregates the events of one weather provider. Calls and failures come from one event each;
+   * refusals and fallbacks from the counts stored with each snapshot; cache counters and the status
+   * timeline come from the periodic snapshots taken by {@link WeatherProviderMonitor}. The timeline
+   * keeps at most {@value #MAX_TIMELINE_POINTS} points: when there are more, each point summarizes
+   * a stretch of time with the worst status seen in it, so a short outage is never averaged away.
    */
   private ProviderStatisticsResponse providerStatistics(
       String provider, List<StatisticsEvent> events) {
@@ -160,7 +160,7 @@ public class StatisticsService {
             Collectors.groupingBy(
                 event -> event.outcome() == null ? unknown : event.outcome(),
                 TreeMap::new,
-                Collectors.counting()));
+                Collectors.summingLong(StatisticsService::occurrences)));
   }
 
   private double averageDuration(List<StatisticsEvent> events) {
@@ -185,7 +185,15 @@ public class StatisticsService {
   }
 
   private long count(List<StatisticsEvent> events, StatisticsEventType type) {
-    return events.stream().filter(event -> event.type() == type).count();
+    return events.stream()
+        .filter(event -> event.type() == type)
+        .mapToLong(StatisticsService::occurrences)
+        .sum();
+  }
+
+  /** Refusals and fallbacks are stored as counts; every other event stands for a single one. */
+  private static long occurrences(StatisticsEvent event) {
+    return event.occurrences() == null ? 1 : event.occurrences();
   }
 
   private boolean isWeatherRequest(StatisticsEvent event) {
