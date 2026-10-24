@@ -71,7 +71,8 @@ public class LegacyWeatherClient {
       Supplier<String> serviceIdentity) {
     this.httpClient = httpClient;
     this.rpcUri = properties.baseUrl().resolve("/rpc");
-    this.apiToken = properties.apiToken();
+    // Secrets are often stored with a trailing newline, which is not a valid header value.
+    this.apiToken = properties.apiToken() == null ? null : properties.apiToken().strip();
     this.apiTokenFile =
         properties.apiTokenFile() == null || properties.apiTokenFile().isBlank()
             ? null
@@ -105,17 +106,18 @@ public class LegacyWeatherClient {
    * while forecast calls hang, so it is used to tell "down" apart, never to call the service
    * healthy.
    *
-   * @return {@code true} when the probe answers 200 within the read timeout
+   * @return {@code true} when the probe answers 200 within the read timeout; {@code false} on any
+   *     failure, including one obtaining the identity token, so the monitor reports it as down
    */
   public boolean isAlive() {
-    HttpRequest request =
-        authenticated(HttpRequest.newBuilder(rpcUri.resolve("/healthz")))
-            .timeout(readTimeout)
-            .GET()
-            .build();
     try {
+      HttpRequest request =
+          authenticated(HttpRequest.newBuilder(rpcUri.resolve("/healthz")))
+              .timeout(readTimeout)
+              .GET()
+              .build();
       return exchange(request, HttpResponse.BodyHandlers.discarding()).statusCode() == 200;
-    } catch (LegacyProviderException exception) {
+    } catch (RuntimeException exception) {
       return false;
     }
   }

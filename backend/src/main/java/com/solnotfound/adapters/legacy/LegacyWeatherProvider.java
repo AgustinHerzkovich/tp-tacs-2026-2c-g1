@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * The legacy weather service as the rest of the backend sees it: a forecast for a place and hour,
@@ -43,6 +44,7 @@ import java.util.function.Supplier;
  * <p>Any refusal or failure surfaces as {@link LegacyProviderUnavailableException}; the caller
  * decides the fallback. Every attempt and every refusal is recorded as a statistics event.
  */
+@Slf4j
 public class LegacyWeatherProvider {
 
   public static final String PROVIDER = "Legacy";
@@ -169,6 +171,11 @@ public class LegacyWeatherProvider {
       throw new LegacyProviderUnavailableException("Legacy provider rate limit reached", exception);
     } catch (LegacyProviderException exception) {
       throw new LegacyProviderUnavailableException(exception.getMessage(), exception);
+    } catch (RuntimeException exception) {
+      // Anything else (an invalid header, a failure of the identity token library) must still end
+      // in the fallback: the weather never fails because of the legacy provider.
+      log.warn("Unexpected failure calling the legacy weather service", exception);
+      throw new LegacyProviderUnavailableException("Unexpected legacy provider failure", exception);
     }
   }
 

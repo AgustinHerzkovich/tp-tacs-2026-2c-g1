@@ -202,6 +202,22 @@ class LegacyWeatherProviderTest {
   }
 
   @Test
+  void anUnexpectedFailureStillEndsInTheFallback() {
+    LegacyWeatherClient client =
+        new LegacyWeatherClient(
+            java.net.http.HttpClient.newHttpClient(),
+            LegacyWeatherClientTest.properties(stub.baseUrl()),
+            tools.jackson.databind.json.JsonMapper.builder().build(),
+            () -> {
+              throw new IllegalStateException("identity token library failed");
+            });
+
+    assertThatThrownBy(() -> providerFor(client, 10).forecast(PLACE, WHEN, ZONE))
+        .isInstanceOf(LegacyProviderUnavailableException.class);
+    assertThat(stub.requests()).isZero();
+  }
+
+  @Test
   void needsCoordinatesBecauseTheServiceTakesNoPlaceNames() {
     Location cityOnly = new Location(null, null, null);
 

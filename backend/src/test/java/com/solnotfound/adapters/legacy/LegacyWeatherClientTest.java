@@ -7,6 +7,7 @@ import com.solnotfound.entity.weather.WeatherForecast;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.URI;
+import java.net.http.HttpClient;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -153,6 +154,40 @@ class LegacyWeatherClientTest {
         .isInstanceOfSatisfying(
             LegacyProviderException.class,
             exception -> assertThat(exception.getFailure()).isEqualTo(expected));
+  }
+
+  @Test
+  void acceptsAnApiTokenStoredWithATrailingNewline() {
+    LegacyWeatherProperties properties = properties(stub.baseUrl());
+    LegacyWeatherClient client =
+        new LegacyWeatherClient(
+            new LegacyWeatherProperties(
+                properties.baseUrl(),
+                "test-token\n",
+                null,
+                properties.connectTimeout(),
+                properties.readTimeout(),
+                properties.cacheTtl(),
+                properties.cacheMaximumSize(),
+                properties.userRequestsPerMinute(),
+                null),
+            JsonMapper.builder().build());
+
+    assertThat(client.forecast(-34.6037, -58.3816, HOUR, ZONE)).isNotNull();
+  }
+
+  @Test
+  void reportsTheServiceAsNotAliveWhenTheIdentityTokenCannotBeObtained() {
+    LegacyWeatherClient client =
+        new LegacyWeatherClient(
+            HttpClient.newHttpClient(),
+            properties(stub.baseUrl()),
+            JsonMapper.builder().build(),
+            () -> {
+              throw new IllegalStateException("identity token library failed");
+            });
+
+    assertThat(client.isAlive()).isFalse();
   }
 
   static LegacyWeatherClient client(URI baseUrl) {
