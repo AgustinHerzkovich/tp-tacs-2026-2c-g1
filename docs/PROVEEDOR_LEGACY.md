@@ -106,6 +106,30 @@ gcloud run services update planazo-prod-legacy-weather --region=us-central1 \
   --update-env-vars=SESSION_REFRESHED_AT=$(date +%s)
 ```
 
+### La sesión
+
+- **Qué es:** `token.json` es una sesión OAuth de Google, con un access token que dura una hora y un
+  refresh token. Al arrancar, el binario renueva el access token y reescribe el archivo; por eso en
+  la nube recibe una copia escribible del secreto. En las pruebas, la sesión sobrevivió a 9 caídas
+  y a varios reinicios del contenedor sin volver a iniciar sesión.
+- **Cuánto dura:** lo que dure el refresh token, y eso lo decide Google. Según sus reglas generales,
+  se invalida si se revoca el acceso desde la cuenta, si no se usa durante 6 meses o, si la app
+  OAuth de la cátedra está en modo de prueba, a los 7 días. No pudimos medirlo ni ver cómo está
+  configurada esa app.
+- **Sin sesión:** el binario no escucha y espera un inicio de sesión durante 5 minutos; después
+  termina y la política de reinicio lo levanta con un link nuevo. El watchdog no lo interrumpe
+  mientras espera. Si todavía no hay token, el backend ni lo llama (`The legacy service has not
+  signed in yet`); si quedó el de una sesión anterior, la llamada falla. En los dos casos responde
+  el proveedor principal y las estadísticas marcan al legacy como caído, porque su `/healthz` no
+  responde mientras espera el inicio de sesión. Distinto es si el binario está vivo pero rechaza
+  el token (`UNAUTHENTICATED`): también responde el proveedor principal, pero ese rechazo se trata
+  como un pedido inválido y no como una falla del servicio, así que el circuit breaker no se abre
+  y el legacy sigue figurando OK; los rechazos se ven en el desglose de errores
+  (`REJECTED_REQUEST`).
+- **Cómo se nota que venció:** el legacy figura caído en las estadísticas y sus logs muestran
+  `SIGN IN` en lugar de `session restored`. En local se corre de nuevo `./legacy-weather/login.sh`;
+  en la nube se repiten los pasos 1 y 3 y se despliega una revisión nueva (comando de arriba).
+
 ### Cuenta institucional utilizada
 
 - `aherzkovich@frba.utn.edu.ar`
@@ -121,8 +145,9 @@ Los porcentajes son de esas corridas.
 | Escucha solo en `127.0.0.1:9977`: ningún otro contenedor puede alcanzarlo | Lo imprime al arrancar; las conexiones desde otro contenedor se rechazan | `socat` dentro del mismo contenedor publica el puerto 9978 hacia la red de Compose (`legacy-weather/entrypoint.sh`) |
 | El inicio de sesión espera la redirección de Google en `http://localhost:<puerto aleatorio>`, que el navegador no alcanza dentro de un contenedor | Primer arranque | `legacy-weather/login.sh` entrega la dirección de redirección dentro del contenedor |
 | Si nadie inicia sesión en 5 minutos, el proceso termina con error | Logs: `timed out waiting for the callback` | La política de reinicio lo vuelve a levantar con un link nuevo |
+| Mientras espera el inicio de sesión no escucha, así que el watchdog lo mataba a los ~40 s y el link cambiaba antes de poder usarlo | Logs: un `SIGN IN` nuevo cada 40 s; el callback de un link anterior no llega a ningún proceso | El watchdog solo vigila después de que `/healthz` respondió una vez; el link dura sus 5 minutos |
 | Ignora los argumentos (`--help`) y no se configura por variables de entorno | Ejecución con `--help` | Todo se resuelve alrededor del binario, sin tocarlo |
-| Se cae solo, con el mensaje `I don't want to do this anymore` | 3 caídas en 17 minutos; el contenedor reinició | `restart: unless-stopped` en Compose; en Cloud Run el contenedor se reinicia solo. La sesión persiste, así que vuelve sin intervención |
+| Se cae solo, con el mensaje `I don't want to do this anymore` o `Tell my goroutines I love them` / `server crashed` | 3 caídas en 17 minutos; el contenedor reinició | `restart: unless-stopped` en Compose; en Cloud Run el contenedor se reinicia solo. La sesión persiste, así que vuelve sin intervención |
 | No responde nunca a algunos pedidos (~21 %) | Pedidos cortados a los 15 y 30 segundos sin respuesta | Timeout de lectura de 1,5 s y reintentos |
 | Responde 200 con una página HTML `502 Bad Gateway` (~6 %) | Al parsear la respuesta | Validación: el cuerpo se parsea estrictamente; un error se reintenta |
 | Responde 200 con JSON roto: coma de más, fecha sin comillas, respuesta cortada a la mitad (~14 %) | Al parsear la respuesta | Parser JSON estricto (Jackson sin tolerancias); se reintenta |
@@ -216,7 +241,9 @@ cada actividad usa el proveedor de su organizador, con el mismo fallback.
 - **Decisión:** si el proceso termina, termina el contenedor y lo reinicia la plataforma
   (`restart: unless-stopped` en Compose, Cloud Run en la nube). Un watchdog en el entrypoint mata
   el proceso si `/healthz` falla 3 veces seguidas, porque Docker no reinicia contenedores
-  "unhealthy"; en Cloud Run lo hace la sonda de liveness.
+  "unhealthy"; en Cloud Run lo hace la sonda de liveness. El watchdog empieza a contar recién
+  cuando `/healthz` respondió una vez, para no matar al binario mientras espera un inicio de
+  sesión.
 - **Por qué:** el reinicio es la operación que la plataforma ya sabe hacer bien, y la sesión
   persiste fuera del proceso.
 

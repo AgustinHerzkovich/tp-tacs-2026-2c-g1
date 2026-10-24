@@ -26,14 +26,18 @@ socat TCP-LISTEN:9978,fork,reuseaddr,bind=0.0.0.0 TCP:127.0.0.1:9977 &
 
 # Watchdog: Docker only restarts a container whose main process exits, not an unhealthy one. When
 # the binary stops answering its liveness probe three times in a row it is killed, so the
-# container exits and the restart policy brings it back.
+# container exits and the restart policy brings it back. It only watches once the probe answered:
+# while the binary waits for a sign-in it does not listen yet, and killing it then would replace
+# the sign-in link every ~40 s instead of letting it wait its 5 minutes.
 (
   sleep 20
   failures=0
+  answered=false
   while true; do
     if curl -fsS --max-time 2 -o /dev/null http://127.0.0.1:9977/healthz; then
       failures=0
-    else
+      answered=true
+    elif [ "$answered" = true ]; then
       failures=$((failures + 1))
     fi
     if [ "$failures" -ge 3 ]; then
