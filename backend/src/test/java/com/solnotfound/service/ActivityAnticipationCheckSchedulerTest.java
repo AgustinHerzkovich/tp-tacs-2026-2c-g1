@@ -14,6 +14,8 @@ import com.solnotfound.entity.activity.Location;
 import com.solnotfound.entity.activity.ReprogramationRange;
 import com.solnotfound.entity.notification.BadWeatherAlertNotificationType;
 import com.solnotfound.entity.notification.CancelledNotificationType;
+import com.solnotfound.entity.user.User;
+import com.solnotfound.entity.user.WeatherProvider;
 import com.solnotfound.entity.votation.Votation;
 import com.solnotfound.entity.votation.VotationOption;
 import com.solnotfound.entity.votation.VotationStatus;
@@ -98,7 +100,7 @@ class ActivityAnticipationCheckSchedulerTest {
     return new ActivityAnticipationCheckScheduler(
         activityRepository,
         votationRepository,
-        weatherAdapter,
+        WeatherGateway.mainOnly(weatherAdapter),
         badWeatherChecker,
         eventPublisher,
         new ActivityStatusTransitionService(
@@ -107,6 +109,42 @@ class ActivityAnticipationCheckSchedulerTest {
         minQuorum,
         weatherCheckOnStartup,
         appMode);
+  }
+
+  @Test
+  void monitorsAndLooksForAlternativesWithTheOrganizersProvider() throws Exception {
+    User organizer = User.withId("organizer-1");
+    organizer.setWeatherProvider(WeatherProvider.LEGACY);
+    when(activityToCheck.getOrganizer()).thenReturn(organizer);
+    WeatherGateway gateway = mock(WeatherGateway.class);
+    when(gateway.forecast(activityToCheck, dateTime, WeatherProvider.LEGACY, null))
+        .thenReturn(new WeatherGateway.WeatherReading(weather, WeatherProvider.LEGACY, false));
+    when(gateway.forecastRange(eq(activityToCheck), anyList(), eq(WeatherProvider.LEGACY)))
+        .thenAnswer(
+            invocation -> {
+              List<LocalDateTime> dates = invocation.getArgument(1);
+              return dates.stream().map(ignored -> weather).toList();
+            });
+    when(activityRepository.findActive()).thenReturn(List.of(activityToCheck));
+    when(badWeatherChecker.isBadWeatherForActivity(weather, activityToCheck)).thenReturn(true);
+
+    new ActivityAnticipationCheckScheduler(
+            activityRepository,
+            votationRepository,
+            gateway,
+            badWeatherChecker,
+            eventPublisher,
+            new ActivityStatusTransitionService(
+                activityRepository, eventPublisher, mock(StatisticsEventRecorder.class)),
+            Duration.ofHours(24),
+            0.5,
+            true,
+            "")
+        .checkActivitiesClimate();
+
+    verify(gateway).forecast(activityToCheck, dateTime, WeatherProvider.LEGACY, null);
+    verify(gateway).forecastRange(eq(activityToCheck), anyList(), eq(WeatherProvider.LEGACY));
+    verifyNoInteractions(weatherAdapter);
   }
 
   @Test

@@ -26,6 +26,7 @@ import com.solnotfound.entity.activity.City;
 import com.solnotfound.entity.activity.Location;
 import com.solnotfound.entity.activity.ReprogramationRange;
 import com.solnotfound.entity.user.User;
+import com.solnotfound.entity.user.WeatherProvider;
 import com.solnotfound.entity.votation.Votation;
 import com.solnotfound.entity.votation.VotationOption;
 import com.solnotfound.entity.votation.VotationStatus;
@@ -786,6 +787,21 @@ class ActivityServiceTest {
     ActivityWeatherResponse result = activityService.getWeather(activity.id());
 
     assertThat(result.activityForecast().temperature()).isEqualTo(22.0f);
+  }
+
+  @Test
+  void returnsTheWeatherToAUserWhoIsNeitherOrganizerNorParticipant() {
+    ActivityResponse activity = activityService.create(validRequest());
+    when(weatherAdapter.getWeather(any(Location.class)))
+        .thenReturn(new WeatherForecast(LocalDateTime.now(), 20.0f, 10.0f, 5.0f));
+    when(weatherAdapter.getFutureClimate(any(Location.class), any(LocalDateTime.class)))
+        .thenReturn(new WeatherForecast(activity.dateTime(), 22.0f, 40.0f, 15.0f));
+
+    ActivityWeatherResponse result = activityService.getWeather(activity.id(), "stranger");
+
+    assertThat(result.activityForecast().temperature()).isEqualTo(22.0f);
+    assertThat(result.provider()).isEqualTo(WeatherProvider.OPEN_METEO);
+    assertThat(result.fallback()).isFalse();
   }
 
   @Test

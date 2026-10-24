@@ -1,11 +1,10 @@
 package com.solnotfound.service.schedulers;
 
-import com.solnotfound.adapters.IWeatherAdapter;
 import com.solnotfound.entity.activity.Activity;
 import com.solnotfound.entity.activity.ActivityStatus;
-import com.solnotfound.entity.activity.Location;
 import com.solnotfound.entity.notification.BadWeatherAlertNotificationType;
 import com.solnotfound.entity.statistics.ActivityTransitionReason;
+import com.solnotfound.entity.user.WeatherProvider;
 import com.solnotfound.entity.votation.Votation;
 import com.solnotfound.entity.votation.VotationOption;
 import com.solnotfound.entity.votation.VotationStatus;
@@ -16,6 +15,7 @@ import com.solnotfound.listener.ActivityNotificationEvent;
 import com.solnotfound.repository.IActivityRepository;
 import com.solnotfound.repository.IVotationRepository;
 import com.solnotfound.service.ActivityStatusTransitionService;
+import com.solnotfound.service.WeatherGateway;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -51,7 +51,7 @@ public class ActivityAnticipationCheckScheduler {
 
   private final IActivityRepository activityRepository;
   private final IVotationRepository votationRepository;
-  private final IWeatherAdapter weatherAdapter;
+  private final WeatherGateway weatherGateway;
   private final IBadWeatherChecker badWeatherChecker;
   private final ApplicationEventPublisher eventPublisher;
   private final ActivityStatusTransitionService transitionService;
@@ -63,7 +63,7 @@ public class ActivityAnticipationCheckScheduler {
   public ActivityAnticipationCheckScheduler(
       IActivityRepository activityRepository,
       IVotationRepository votationRepository,
-      IWeatherAdapter weatherAdapter,
+      WeatherGateway weatherGateway,
       IBadWeatherChecker badWeatherChecker,
       ApplicationEventPublisher eventPublisher,
       ActivityStatusTransitionService transitionService,
@@ -73,7 +73,7 @@ public class ActivityAnticipationCheckScheduler {
       @Value("${app.mode:}") String appMode) {
     this.activityRepository = activityRepository;
     this.votationRepository = votationRepository;
-    this.weatherAdapter = weatherAdapter;
+    this.weatherGateway = weatherGateway;
     this.badWeatherChecker = badWeatherChecker;
     this.eventPublisher = eventPublisher;
     this.transitionService = transitionService;
@@ -108,9 +108,11 @@ public class ActivityAnticipationCheckScheduler {
       }
 
       dueActivities++;
-      Location location = activity.getLocation();
       try {
-        WeatherForecast weather = weatherAdapter.getFutureClimate(location, activity.getDateTime());
+        WeatherForecast weather =
+            weatherGateway
+                .forecast(activity, activity.getDateTime(), providerOf(activity), null)
+                .forecast();
         boolean badWeather = badWeatherChecker.isBadWeatherForActivity(weather, activity);
         if (badWeather) {
           badWeatherActivities++;
@@ -200,7 +202,7 @@ public class ActivityAnticipationCheckScheduler {
     candidateTimes.removeIf(candidate -> !candidate.isAfter(earliestAllowed));
 
     List<WeatherForecast> forecasts =
-        weatherAdapter.getForecastRange(activity.getLocation(), candidateTimes);
+        weatherGateway.forecastRange(activity, candidateTimes, providerOf(activity));
     if (forecasts.size() != candidateTimes.size()) {
       throw new WeatherUnavailableException("Provider returned an incomplete forecast range");
     }
@@ -255,5 +257,12 @@ public class ActivityAnticipationCheckScheduler {
     LocalDateTime byDuration = creationDate.plus(votationDuration);
     LocalDateTime beforeEarliestOption = earliestOption.minus(CLOSING_MARGIN);
     return byDuration.isBefore(beforeEarliestOption) ? byDuration : beforeEarliestOption;
+  }
+
+  /** Weather provider of the activity's organizer, who decides how the activity is monitored. */
+  private static WeatherProvider providerOf(Activity activity) {
+    return activity.getOrganizer() == null
+        ? WeatherProvider.OPEN_METEO
+        : activity.getOrganizer().effectiveWeatherProvider();
   }
 }

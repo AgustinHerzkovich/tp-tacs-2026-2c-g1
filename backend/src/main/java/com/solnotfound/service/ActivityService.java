@@ -17,6 +17,7 @@ import com.solnotfound.entity.activity.Location;
 import com.solnotfound.entity.activity.ReprogramationRange;
 import com.solnotfound.entity.statistics.StatisticsEventType;
 import com.solnotfound.entity.user.User;
+import com.solnotfound.entity.user.WeatherProvider;
 import com.solnotfound.entity.weather.MaxRainProbabilityCondition;
 import com.solnotfound.entity.weather.MaxWindCondition;
 import com.solnotfound.entity.weather.TemperatureRangeCondition;
@@ -50,7 +51,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class ActivityService {
   private final IActivityRepository activityRepository;
-  private final IWeatherAdapter weatherAdapter;
+  private final WeatherGateway weatherGateway;
   private final IUserRepository userRepository;
   private final StatisticsEventRecorder statisticsRecorder;
   private final ImageStorage imageStorage;
@@ -68,17 +69,33 @@ public class ActivityService {
   @Autowired
   public ActivityService(
       IActivityRepository activityRepository,
-      IWeatherAdapter weatherAdapter,
+      WeatherGateway weatherGateway,
       IUserRepository userRepository,
       StatisticsEventRecorder statisticsRecorder,
       IVotationRepository votationRepository,
       ImageStorage imageStorage) {
     this.activityRepository = activityRepository;
-    this.weatherAdapter = weatherAdapter;
+    this.weatherGateway = weatherGateway;
     this.userRepository = userRepository;
     this.statisticsRecorder = statisticsRecorder;
     this.votationRepository = votationRepository;
     this.imageStorage = imageStorage;
+  }
+
+  public ActivityService(
+      IActivityRepository activityRepository,
+      IWeatherAdapter weatherAdapter,
+      IUserRepository userRepository,
+      StatisticsEventRecorder statisticsRecorder,
+      IVotationRepository votationRepository,
+      ImageStorage imageStorage) {
+    this(
+        activityRepository,
+        WeatherGateway.mainOnly(weatherAdapter),
+        userRepository,
+        statisticsRecorder,
+        votationRepository,
+        imageStorage);
   }
 
   public ActivityService(
@@ -376,26 +393,43 @@ public class ActivityService {
     return toResponse(activity);
   }
 
+  public ActivityWeatherResponse getWeather(String activityId) {
+    return getWeather(activityId, null);
+  }
+
   /**
-   * Retrieves current weather and the activity-time forecast. Any authenticated user can read it,
-   * participant or not: the forecast of a place and date is public information and helps decide
-   * whether to join.
+   * Retrieves current weather and the activity-time forecast with the provider the viewer chose.
+   * Any authenticated user can read it, participant or not: the forecast of a place and date is
+   * public information and helps decide whether to join. When the viewer chose the legacy provider
+   * and it cannot answer, the main provider does and the response says so.
    *
    * @param activityId activity identifier
+   * @param viewerId user asking, whose provider and quota are used; {@code null} uses the main
+   *     provider
    * @return weather information associated with the activity
    * @throws ActivityNotFoundException when the activity does not exist
-   * @throws com.solnotfound.exception.WeatherUnavailableException when the provider cannot answer
-   *     or the activity is beyond the forecast horizon
+   * @throws com.solnotfound.exception.WeatherUnavailableException when no provider can answer or
+   *     the activity is beyond the forecast horizon
    */
-  public ActivityWeatherResponse getWeather(String activityId) {
+  public ActivityWeatherResponse getWeather(String activityId, String viewerId) {
     Activity activity = findActivityOrThrow(activityId);
+    WeatherProvider provider =
+        viewerId == null
+            ? WeatherProvider.OPEN_METEO
+            : userRepository.findOrCreate(viewerId).effectiveWeatherProvider();
 
-    WeatherForecast currentWeather = weatherAdapter.getWeather(activity.getLocation());
+    WeatherGateway.WeatherReading current = weatherGateway.current(activity, provider, viewerId);
+    WeatherGateway.WeatherReading forecast =
+        weatherGateway.forecast(activity, activity.getDateTime(), provider, viewerId);
 
-    WeatherForecast activityForecast =
-        weatherAdapter.getFutureClimate(activity.getLocation(), activity.getDateTime());
-
-    return toWeatherResponse(activity, currentWeather, activityForecast);
+    return new ActivityWeatherResponse(
+        activity.getId(),
+        toLocationDTO(activity.getLocation()),
+        activity.getDateTime(),
+        toWeatherForecastDTO(current.forecast()),
+        toWeatherForecastDTO(forecast.forecast()),
+        forecast.servedBy(),
+        current.fallback() || forecast.fallback());
   }
 
   public List<ActivityResponse> getByOrganizerId(String id) {
@@ -584,16 +618,6 @@ public class ActivityService {
     return participants.stream()
         .map(participant -> new ParticipantDTO(participant.getId(), participant.getName()))
         .toList();
-  }
-
-  private ActivityWeatherResponse toWeatherResponse(
-      Activity activity, WeatherForecast currentWeather, WeatherForecast activityForecast) {
-    return new ActivityWeatherResponse(
-        activity.getId(),
-        toLocationDTO(activity.getLocation()),
-        activity.getDateTime(),
-        toWeatherForecastDTO(currentWeather),
-        toWeatherForecastDTO(activityForecast));
   }
 
   private WeatherForecastDTO toWeatherForecastDTO(WeatherForecast weatherForecast) {

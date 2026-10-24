@@ -56,11 +56,25 @@ Se requiere Docker con Docker Compose. Desde la raíz del proyecto, ejecutar:
 docker compose up --build --wait
 ```
 
-Este único comando construye y levanta frontend, backend, MongoDB, MinIO, Keycloak y su PostgreSQL.
+Este único comando construye y levanta frontend, backend, MongoDB, MinIO, Keycloak y su PostgreSQL,
+además del proveedor de clima legacy (`legacy-weather`).
 Keycloak persiste realm, usuarios y sesiones en el volumen `keycloak-postgres-data`; el import del
 realm inicial sólo crea el realm cuando aún no existe. Para detener
 la aplicación, ejecutar `docker compose down`. `--wait` termina cuando los healthchecks confirman
 que todos los servicios están listos; puede verificarse también con `docker compose ps`.
+
+El binario del proveedor de clima legacy no está en el repositorio (trae embebidas credenciales de
+la cátedra): antes del primer `docker compose up` hay que copiar los binarios que entregó la cátedra
+a `bin/bin/`. La primera vez, el legacy necesita iniciar sesión con una cuenta institucional
+de Google. Con el stack levantado, ejecutar y seguir las instrucciones:
+
+```bash
+./legacy-weather/login.sh
+```
+
+La sesión queda guardada en un volumen y sobrevive a reinicios. Mientras el legacy no tenga sesión,
+la aplicación funciona igual: los usuarios que lo eligieron reciben el clima del proveedor
+principal. El detalle está en [`docs/PROVEEDOR_LEGACY.md`](docs/PROVEEDOR_LEGACY.md).
 
 ### Con Maven
 
@@ -92,17 +106,28 @@ La aplicación está desplegada en Google Cloud Platform (región `us-central1`)
 
 Para usarla alcanza con abrir el frontend y crear una cuenta desde la pantalla de registro.
 
+### Diagrama de despliegue
+
+![Diagrama de despliegue de Planazo en Google Cloud](docs/despliegue.svg)
+
+Las flechas son canales de comunicación con su protocolo. El servicio legacy es privado: solo lo
+invoca el backend, con un token de identidad de su cuenta de servicio más el token propio del
+legacy (ver [`docs/PROVEEDOR_LEGACY.md`](docs/PROVEEDOR_LEGACY.md#adr-10--topología-en-la-nube-servicio-privado-en-cloud-run)).
+Localmente, `docker compose` levanta los mismos componentes en una red interna, con MongoDB, MinIO
+y PostgreSQL en lugar de Atlas, Cloud Storage y Cloud SQL (ver [Componentes](#componentes)).
+
 ### Componentes
 
 | Componente | Local (`docker compose`) | Nube |
 | --- | --- | --- |
 | Frontend (Next.js) | Contenedor `frontend` | Cloud Run, escala de 0 a 2 instancias |
 | API (Spring Boot) | Contenedor `backend` | Cloud Run, escala de 0 a 2 instancias |
-| Procesos periódicos | Spring Scheduler dentro del backend | Cloud Scheduler llama a `POST /internal/scheduled/{tarea}` del backend con un token OIDC (clima y cierre de votaciones cada hora, estado de actividades cada 5 minutos) |
+| Procesos periódicos | Spring Scheduler dentro del backend | Cloud Scheduler llama a `POST /internal/scheduled/{tarea}` del backend con un token OIDC (clima y cierre de votaciones cada hora; estado de actividades y foto de los proveedores de clima cada 5 minutos) |
 | Identidad | Keycloak + PostgreSQL | Keycloak en Cloud Run + Cloud SQL (PostgreSQL) |
 | Base de datos | MongoDB | MongoDB Atlas (M0) |
 | Imágenes de actividades | MinIO | Bucket privado de Cloud Storage con URLs firmadas |
 | Bot de Telegram | Contenedor `telegram` (Functions Framework) | Cloud Function HTTP (gen2) que recibe el webhook de Telegram |
+| Proveedor de clima legacy | Contenedor `legacy-weather`, sin puertos publicados | Cloud Run privado (solo lo invoca el backend), una instancia, sesión en Secret Manager |
 | Secretos | `.env` local (no versionado) | Secret Manager |
 | Imágenes de contenedor | Build local | Artifact Registry, etiquetadas con el SHA del commit |
 
@@ -194,6 +219,12 @@ Telegram
   corrigieron la zona horaria de los plazos, el chequeo periódico del clima, el cierre de las
   votaciones y la concurrencia al sumarse y al votar, y se habilitó desde la UI la administración
   de la votación por el organizador.
+- **Entrega 4:** proveedor de clima legacy. El binario heredado corre como un servicio más en
+  Compose y en Cloud Run; cada usuario elige su proveedor, y el consumo del legacy está protegido
+  con timeouts, reintentos con backoff y jitter, circuit breaker, caché, rate limiting, bulkhead,
+  validación de respuestas y fallback al proveedor principal. Fallas descubiertas, ADRs y puesta
+  en marcha en [`docs/PROVEEDOR_LEGACY.md`](docs/PROVEEDOR_LEGACY.md); el despliegue completo, en el
+  [diagrama de despliegue](#diagrama-de-despliegue).
 
 La trazabilidad vigente entre user stories, implementación y pruebas está en
 [Trazabilidad de user stories](#trazabilidad-de-user-stories);
@@ -422,8 +453,10 @@ Playwright usa por defecto `alumno/alumno` y `admin/admin` del realm local. Se p
 `E2E_USER_USERNAME`, `E2E_USER_PASSWORD`, `E2E_ADMIN_USERNAME` y `E2E_ADMIN_PASSWORD`; la URL se
 configura con `E2E_BASE_URL`. Estas credenciales son datos de prueba, no cuentas productivas.
 
-La prueba de carga se corre con Vegeta mediante `loadtest/run.sh` (escenarios `smoke`, `read` y
-`mixed`, con usuarios autenticados). El procedimiento, los umbrales y cómo registrar los resultados
+La prueba de carga se corre con Vegeta mediante `loadtest/run.sh` (escenarios `smoke`, `read`,
+`mixed` y `legacy`, con usuarios autenticados). El escenario `legacy` se corrió con el proveedor
+legacy funcionando y caído; en ambos casos el 100 % de las respuestas fue exitoso (resultados en
+[`docs/PROVEEDOR_LEGACY.md`](docs/PROVEEDOR_LEGACY.md#prueba-de-carga)). El procedimiento, los umbrales y cómo registrar los resultados
 están en [`docs/LOAD_TEST.md`](docs/LOAD_TEST.md). Se usa el proveedor meteorológico en memoria para
 no trasladar la carga a un servicio público externo.
 
@@ -496,6 +529,10 @@ enviaron secretos deliberadamente a los asistentes. Su uso se concentró en las 
 - En la Entrega 3: revisión de la infraestructura en Terraform y de los workflows de CI/CD,
   diagnóstico de problemas de despliegue y de configuración de Keycloak (SMTP, redirecciones),
   diseño del script de prueba de carga y revisión de las correcciones de la entrega anterior.
+- En la Entrega 4: inspección del binario legacy, diseño de las pruebas para descubrir sus fallas,
+  propuesta y justificación de los parámetros de resiliencia, y revisión de los tests con stub.
+  El binario siempre se ejecutó dentro de contenedores, y el inicio de sesión con la cuenta
+  institucional lo hizo un integrante del equipo.
 
 Las respuestas de estas herramientas se tomaron como sugerencias y no como resultados definitivos.
 El equipo revisó las propuestas, las adaptó al diseño y las convenciones del proyecto, y validó los
@@ -536,6 +573,16 @@ Las rutas de backend son relativas a `backend/src/main/java/com/solnotfound/` y 
 | 13. Notificaciones de inicio, reprogramación y cancelación | `ActivityStatusScheduler`, `ActivityStatusTransitionService`, `GET /notifications` | Notificaciones | `ActivityStatusSchedulerTest`, `NotificationServiceTest`, E2E `notifications` |
 | 14. Estadísticas de administrador | `GET /statistics` (rol `ADMIN`), `StatisticsService` | `/estadisticas` | `StatisticsServiceTest`, `StatisticsSecurityTest`, E2E `statistics` |
 
+### Entrega 4
+
+| US | Backend | Frontend | Pruebas |
+| --- | --- | --- | --- |
+| E4.1 Elegir el proveedor | `GET` y `PUT /users/me/preferences`, `User.weatherProvider` | Menú de perfil, `hooks/useWeatherProvider.ts` | `UserServiceTest`, `useWeatherProvider.test.tsx` |
+| E4.2 Usar el proveedor elegido | `WeatherGateway` en `ActivityService`, `ActivityAnticipationCheckScheduler` y `VotationService` | `WeatherWidget` | `WeatherGatewayTest`, `LegacyWeatherProviderTest` |
+| E4.3 Seguir usable sin el legacy | Fallback en `WeatherGateway`, campo `fallback` de la respuesta | Aviso en `WeatherWidget` | `WeatherGatewayTest`, `LegacyWeatherProviderTest`, `StatisticsEventRecorderTest`, `WeatherWidget.test.tsx`, prueba de carga con el legacy caído |
+| E4.4 Estadísticas por proveedor | `WeatherProviderMonitor`, `StatisticsService.providerStatistics` | `components/statistics/ProviderHealthCard.tsx` | `StatisticsServiceTest`, `WeatherProviderMonitorTest`, `StatisticsPage.test.tsx` |
+
+
 ## Trazabilidad de requisitos no funcionales
 
 | Requisito del enunciado             | Implementación y documentación                                                                                                           |
@@ -552,6 +599,8 @@ Las rutas de backend son relativas a `backend/src/main/java/com/solnotfound/` y 
 | Calidad y tests                     | Maven, Vitest, Testing Library y Playwright documentados en [Calidad de código](#calidad-de-código), con CI en GitHub Actions.           |
 | Load test                           | Vegeta con `loadtest/run.sh`, escenarios autenticados y umbrales en [`docs/LOAD_TEST.md`](docs/LOAD_TEST.md).                            |
 | Frontend amigable con framework CSS | Next.js responsive con Tailwind CSS v4 y componentes shadcn/ui.                                                                          |
+| Proveedor legacy: resiliencia | Timeouts, reintentos con backoff y jitter, circuit breaker, caché, rate limiting, bulkhead, validación y fallback; ver [`docs/PROVEEDOR_LEGACY.md`](docs/PROVEEDOR_LEGACY.md). |
+| Proveedor legacy: hosting | Servicio en Compose y Cloud Run privado, reinicio automático, sesión fuera del repositorio. |
 | Integración con Telegram (promoción) | Bot serverless en [`telegram/`](telegram/README.md), con vinculación de cuenta y consulta de actividades.                                |
 | Uso de IA                           | Herramientas, tareas, criterio y ejemplos documentados en [Uso de inteligencia artificial](#uso-de-inteligencia-artificial).             |
 

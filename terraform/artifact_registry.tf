@@ -13,6 +13,7 @@ resource "google_artifact_registry_repository_iam_member" "runtime_readers" {
     backend  = google_service_account.backend.email
     frontend = google_service_account.frontend.email
     keycloak = google_service_account.keycloak.email
+    legacy   = google_service_account.legacy_weather.email
   }
 
   project    = google_artifact_registry_repository.containers.project

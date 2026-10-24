@@ -154,6 +154,7 @@ export function ActivityDetailPage({ id }: { id: string }) {
               loading={weather.loading}
               unavailable={weather.unavailable}
               tooEarly={weather.tooEarly}
+              fallback={weather.weather?.fallback ?? false}
               forecast={weather.weather?.activityForecast ?? null}
               current={weather.weather?.currentWeather ?? null}
               conditions={activity.weatherConditions}

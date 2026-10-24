@@ -52,6 +52,16 @@ describe("WeatherWidget", () => {
     expect(screen.getByText("✓ Dentro de lo permitido")).toBeInTheDocument();
   });
 
+  it("tells the user when the forecast comes from the main provider as a fallback", () => {
+    render(<WeatherWidget loading={false} unavailable={false} forecast={FORECAST} conditions={CONDITIONS} fallback />);
+    expect(screen.getByRole("status")).toHaveTextContent(/proveedor alternativo no está disponible/);
+  });
+
+  it("does not mention a fallback when the chosen provider answered", () => {
+    render(<WeatherWidget loading={false} unavailable={false} forecast={FORECAST} conditions={CONDITIONS} />);
+    expect(screen.queryByText(/proveedor alternativo/)).not.toBeInTheDocument();
+  });
+
   it("forces the exceeded visual when a votation is already open", () => {
     render(
       <WeatherWidget loading={false} unavailable={false} forecast={FORECAST} conditions={CONDITIONS} forcedExceeded />,

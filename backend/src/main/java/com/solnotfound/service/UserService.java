@@ -2,6 +2,7 @@ package com.solnotfound.service;
 
 import com.solnotfound.dto.TelegramLinkCodeResponse;
 import com.solnotfound.dto.UserDTO;
+import com.solnotfound.dto.UserPreferencesDTO;
 import com.solnotfound.entity.user.TelegramLinkCode;
 import com.solnotfound.exception.InvalidTelegramLinkCodeException;
 import com.solnotfound.exception.ResourceNotFoundException;
@@ -113,6 +114,15 @@ public class UserService {
                     new InvalidTelegramLinkCodeException(
                         "Telegram link code is unknown, expired or already used"));
     return UserMapper.toDTO(userRepository.linkTelegramChat(userId, name, linkCode.chatId()));
+  }
+
+  public UserPreferencesDTO getPreferences(String userId) {
+    return new UserPreferencesDTO(userRepository.findOrCreate(userId).effectiveWeatherProvider());
+  }
+
+  public UserPreferencesDTO updatePreferences(String userId, UserPreferencesDTO preferences) {
+    userRepository.saveWeatherProvider(userId, preferences.weatherProvider());
+    return getPreferences(userId);
   }
 
   private static String hash(String code) {

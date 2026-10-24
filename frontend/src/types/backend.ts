@@ -120,6 +120,10 @@ export interface ActivityWeatherResponse {
   activityDateTime: string;
   currentWeather: WeatherForecastDTO;
   activityForecast: WeatherForecastDTO;
+  provider: WeatherProvider;
+  /** True when the user chose the alternative provider but it could not
+   * answer, so the main one did. */
+  fallback: boolean;
 }
 
 export interface VotationOptionDTO {
@@ -178,6 +182,12 @@ export interface UserDTO {
   name: string;
 }
 
+export type WeatherProvider = "OPEN_METEO" | "LEGACY";
+
+export interface UserPreferencesDTO {
+  weatherProvider: WeatherProvider;
+}
+
 export interface ActivityStatisticsResponse {
   created: number;
   rescheduled: number;
@@ -192,9 +202,34 @@ export interface WeatherProviderStatisticsResponse {
   averageResponseTimeMs: number;
 }
 
+export interface ProviderStatusPoint {
+  at: string;
+  /** "OK", "DEGRADED" or "DOWN". */
+  status: string | null;
+  circuitBreakerState: string | null;
+}
+
+export interface ProviderStatisticsResponse {
+  provider: string;
+  status: string | null;
+  circuitBreakerState: string | null;
+  requests: number;
+  successful: number;
+  failed: number;
+  averageResponseTimeMs: number;
+  cacheHits: number;
+  cacheMisses: number;
+  cacheHitRatio: number | null;
+  fallbacks: number;
+  errors: Record<string, number>;
+  refusals: Record<string, number>;
+  timeline: ProviderStatusPoint[];
+}
+
 export interface StatisticsResponse {
   from: string;
   to: string;
   activities: ActivityStatisticsResponse;
   weatherProvider: WeatherProviderStatisticsResponse;
+  providers: ProviderStatisticsResponse[];
 }

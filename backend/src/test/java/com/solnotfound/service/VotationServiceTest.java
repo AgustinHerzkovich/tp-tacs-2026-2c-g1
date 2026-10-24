@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.solnotfound.adapters.IWeatherAdapter;
@@ -20,6 +21,7 @@ import com.solnotfound.entity.activity.Location;
 import com.solnotfound.entity.activity.ReprogramationRange;
 import com.solnotfound.entity.notification.VotationOptionsChangedNotificationType;
 import com.solnotfound.entity.user.User;
+import com.solnotfound.entity.user.WeatherProvider;
 import com.solnotfound.entity.votation.Votation;
 import com.solnotfound.entity.votation.VotationOption;
 import com.solnotfound.entity.votation.VotationStatus;
@@ -68,7 +70,7 @@ class VotationServiceTest {
         new VotationService(
             votationRepository,
             activityRepository,
-            weatherAdapter,
+            WeatherGateway.mainOnly(weatherAdapter),
             badWeatherChecker,
             new InMemoryUserRepository(),
             eventPublisher);
@@ -204,6 +206,35 @@ class VotationServiceTest {
         .containsExactly(activity.getParticipants().get(0));
     assertThat(votation.getOptions().get(1).getUsers()).isEmpty();
     assertThat(votation.getVoteByUser(activity.getParticipants().get(1))).isEmpty();
+  }
+
+  @Test
+  void checksNewOptionsWithTheOrganizersProvider() {
+    Activity activity = activity("a-1", "organizer", List.of("participant"));
+    activity.getOrganizer().setWeatherProvider(WeatherProvider.LEGACY);
+    activityRepository.save(activity);
+    Votation votation = votation("v-1", "a-1");
+    votation.setActivity(activity);
+    votationRepository.save(votation);
+    LocalDateTime candidate = activity.getDateTime().plusDays(1).withHour(12);
+    WeatherGateway gateway = mock(WeatherGateway.class);
+    when(gateway.forecastRange(activity, List.of(candidate), WeatherProvider.LEGACY))
+        .thenReturn(List.of(mock(WeatherForecast.class)));
+    when(badWeatherChecker.isBadWeatherForActivity(any(), any())).thenReturn(false);
+    VotationService legacyService =
+        new VotationService(
+            votationRepository,
+            activityRepository,
+            gateway,
+            badWeatherChecker,
+            new InMemoryUserRepository(),
+            eventPublisher);
+
+    legacyService.updateVotationOptions(
+        "v-1", new UpdateVotationOptionsRequest(List.of(candidate)), "organizer");
+
+    verify(gateway).forecastRange(activity, List.of(candidate), WeatherProvider.LEGACY);
+    verifyNoInteractions(weatherAdapter);
   }
 
   @Test
@@ -590,7 +621,7 @@ class VotationServiceTest {
     return new VotationService(
         repository,
         activityRepository,
-        weatherAdapter,
+        WeatherGateway.mainOnly(weatherAdapter),
         badWeatherChecker,
         new InMemoryUserRepository(),
         eventPublisher);

@@ -1,6 +1,7 @@
 package com.solnotfound.repository;
 
 import com.solnotfound.entity.user.User;
+import com.solnotfound.entity.user.WeatherProvider;
 import java.util.Optional;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -48,6 +49,14 @@ public class UserRepository implements IUserRepository {
   public void rememberName(String id, String name) {
     mongoTemplate.upsert(
         Query.query(Criteria.where("_id").is(id)), Update.update("name", name), User.class);
+  }
+
+  @Override
+  public void saveWeatherProvider(String id, WeatherProvider provider) {
+    mongoTemplate.upsert(
+        Query.query(Criteria.where("_id").is(id)),
+        Update.update("weatherProvider", provider),
+        User.class);
   }
 
   @Override

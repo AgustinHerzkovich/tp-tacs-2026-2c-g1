@@ -16,6 +16,7 @@ import type {
   UpdateVotationOptionsRequest,
   UpdateVotationSettingsRequest,
   UserDTO,
+  UserPreferencesDTO,
   VotationDTO,
   VotationFilterParams,
 } from "@/types/backend";
@@ -127,6 +128,9 @@ export const api = {
   users: {
     /** Redeems the bot's single-use link code, linking its Telegram chat to the current user. */
     linkTelegram: (code: string) => request<UserDTO>("/users/me/telegram", json("PUT", { code })),
+    getPreferences: () => request<UserPreferencesDTO>("/users/me/preferences"),
+    updatePreferences: (preferences: UserPreferencesDTO) =>
+      request<UserPreferencesDTO>("/users/me/preferences", json("PUT", preferences)),
   },
   statistics: {
     get: (params?: { from?: string; to?: string }) =>

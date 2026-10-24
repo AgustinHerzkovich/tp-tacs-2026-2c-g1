@@ -26,6 +26,12 @@ variable "resource_prefix" {
   default     = "planazo"
 }
 
+variable "legacy_weather_image" {
+  description = "Legacy weather provider image URI. Leave empty until the first image is pushed."
+  type        = string
+  default     = ""
+}
+
 variable "backend_image" {
   description = "Backend image URI. Leave empty until the first image is pushed."
   type        = string

@@ -22,6 +22,9 @@ interface WeatherWidgetProps {
    * trustworthy than re-deriving it from this component's own (separate)
    * weather fetch. */
   forcedExceeded?: boolean;
+  /** The user chose the alternative provider but it could not answer, so the
+   * forecast comes from the main one; the widget says so instead of hiding it. */
+  fallback?: boolean;
   /** True when the activity's date-time is already in the past. The backend
    * rejects forecasts for past activities (Open-Meteo has no history here), so
    * this state always arrives as `unavailable` — the badge then says the
@@ -31,7 +34,7 @@ interface WeatherWidgetProps {
 
 const SHELL = "relative rounded-[26px] border-[3px] border-white p-4 mb-6 shadow-[0_10px_22px_-10px_rgba(58,51,82,.32)] -rotate-1";
 
-export function WeatherWidget({ loading, unavailable, tooEarly, forecast, current, conditions, forcedExceeded, expired }: WeatherWidgetProps) {
+export function WeatherWidget({ loading, unavailable, tooEarly, forecast, current, conditions, forcedExceeded, expired, fallback }: WeatherWidgetProps) {
   if (loading) {
     return (
       <div className={`${SHELL} bg-muted`} aria-busy="true">
@@ -109,6 +112,11 @@ export function WeatherWidget({ loading, unavailable, tooEarly, forecast, curren
           {formatWeatherLimits(conditions)}
         </span>
       </div>
+      {fallback && (
+        <p role="status" className="mt-2.5 rounded-xl bg-white/70 px-2.5 py-1.5 text-[11px] font-bold" style={{ color: ink }}>
+          ⚠️ El proveedor alternativo no está disponible ahora: te mostramos el pronóstico del principal.
+        </p>
+      )}
     </div>
   );
 }
