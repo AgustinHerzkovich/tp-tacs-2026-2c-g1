@@ -246,7 +246,9 @@ cada actividad usa el proveedor de su organizador, con el mismo fallback.
 - **Por qué:** al medir consultas ya reintentadas, la tasa normal de falla es ~7 %; el 50 % solo se
   alcanza cuando el servicio está realmente caído. Medir intentos sueltos (~42 % de falla normal)
   lo abriría por error con frecuencia. Mientras está abierto no se envían llamadas que van a
-  fallar y el fallback responde al instante.
+  fallar y el fallback responde al instante. Las consultas que rechazan el bulkhead o el rate
+  limiter se ignoran (`LegacyRefusalPredicate`): no llegaron al servicio, y contarlas como éxitos
+  diluiría las fallas justo cuando el servicio está colgado.
 
 ### ADR 6 — Caché por lugar y hora, solo de respuestas válidas
 

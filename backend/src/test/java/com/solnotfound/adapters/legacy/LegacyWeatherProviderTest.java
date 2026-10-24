@@ -59,6 +59,7 @@ class LegacyWeatherProviderTest {
                 .failureRateThreshold(50)
                 .waitDurationInOpenState(Duration.ofMinutes(1))
                 .recordException(new LegacyProviderFaultPredicate())
+                .ignoreException(new LegacyRefusalPredicate())
                 .build());
   }
 
@@ -196,6 +197,8 @@ class LegacyWeatherProviderTest {
       assertThatThrownBy(() -> provider.forecast(PLACE, WHEN.plusHours(1), ZONE))
           .isInstanceOf(LegacyProviderUnavailableException.class);
       verify(statistics, atLeastOnce()).recordProviderRefusal("Legacy", "OVERLOADED");
+      // The turned-away lookup never reached the service: the breaker does not count it at all.
+      assertThat(circuitBreaker.getMetrics().getNumberOfBufferedCalls()).isZero();
     } finally {
       pool.shutdownNow();
     }
