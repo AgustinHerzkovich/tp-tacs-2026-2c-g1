@@ -7,6 +7,7 @@ import static org.mockito.Mockito.mock;
 import com.solnotfound.entity.activity.City;
 import com.solnotfound.entity.activity.Location;
 import com.solnotfound.entity.weather.WeatherForecast;
+import com.solnotfound.exception.ErrorCode;
 import com.solnotfound.exception.WeatherUnavailableException;
 import com.solnotfound.service.StatisticsEventRecorder;
 import com.sun.net.httpserver.HttpExchange;
@@ -97,7 +98,20 @@ class OpenMeteoWeatherAdapterTest {
 
     assertThatThrownBy(() -> adapter().getFutureClimate(location(), outsideHorizon))
         .isInstanceOf(WeatherUnavailableException.class)
-        .hasMessageContaining("outside the 16-day provider horizon");
+        .hasMessageContaining("outside the 16-day provider horizon")
+        .extracting(exception -> ((WeatherUnavailableException) exception).getCode())
+        .isEqualTo(ErrorCode.FORECAST_NOT_YET_AVAILABLE);
+    assertThat(requests).hasValue(0);
+  }
+
+  @Test
+  void reportsAPastDateAsUnavailableAndNotAsTooEarly() {
+    LocalDateTime past = LocalDate.now().minusDays(1).atStartOfDay();
+
+    assertThatThrownBy(() -> adapter().getFutureClimate(location(), past))
+        .isInstanceOf(WeatherUnavailableException.class)
+        .extracting(exception -> ((WeatherUnavailableException) exception).getCode())
+        .isEqualTo(ErrorCode.WEATHER_UNAVAILABLE);
     assertThat(requests).hasValue(0);
   }
 

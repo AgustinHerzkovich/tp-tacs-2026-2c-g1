@@ -40,6 +40,27 @@ const STATS: StatisticsResponse = {
   to: "2026-09-07T23:59:59.999Z",
   activities: { created: 10, rescheduled: 3, cancelled: 2, cancelledByWeather: 1 },
   weatherProvider: { requests: 100, successful: 95, failed: 5, averageResponseTimeMs: 240 },
+  providers: [
+    {
+      provider: "Legacy",
+      status: "DEGRADED",
+      circuitBreakerState: "HALF_OPEN",
+      requests: 40,
+      successful: 24,
+      failed: 16,
+      averageResponseTimeMs: 600,
+      cacheHits: 30,
+      cacheMisses: 10,
+      cacheHitRatio: 0.75,
+      fallbacks: 6,
+      errors: { TIMEOUT: 9, MALFORMED_RESPONSE: 7 },
+      refusals: { CIRCUIT_OPEN: 3 },
+      timeline: [
+        { at: "2026-09-08T10:00:00Z", status: "OK", circuitBreakerState: "CLOSED" },
+        { at: "2026-09-08T10:01:00Z", status: "DOWN", circuitBreakerState: "OPEN" },
+      ],
+    },
+  ],
 };
 
 const EMPTY_STATS: StatisticsResponse = {
@@ -83,7 +104,7 @@ describe("StatisticsPage range filtering", () => {
     authState.hasRole = () => true;
   });
 
-  it("requests the range defaulting to no boundaries and renders the metrics", async () => {
+  it("defaults to the last 7 days, shows them in the fields and renders the metrics", async () => {
     render(<StatisticsPage />);
 
     expect(await screen.findByText("Creadas")).toBeInTheDocument();
@@ -94,11 +115,28 @@ describe("StatisticsPage range filtering", () => {
     expect(screen.getByText(/95% de éxito/)).toBeInTheDocument();
     expect(screen.getByText(/Período:/)).toBeInTheDocument();
 
-    // With no from/to in the URL the API is invoked without range boundaries;
-    // only the presets or a manual selection bound the query.
     const call = statisticsGet.mock.calls[0]?.[0] as { from?: string; to?: string } | undefined;
-    expect(call?.from).toBeUndefined();
-    expect(call?.to).toBeUndefined();
+    expect(call?.from).toBeDefined();
+    expect(call?.to).toBeDefined();
+    const fromField = screen.getByLabelText("Desde") as HTMLInputElement;
+    const toField = screen.getByLabelText("Hasta") as HTMLInputElement;
+    expect(fromField.value).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(toField.value).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    const days = (new Date(toField.value).getTime() - new Date(fromField.value).getTime()) / 86_400_000;
+    expect(days).toBe(6);
+    expect(screen.queryByText(/\d+ eventos/)).not.toBeInTheDocument();
+  });
+
+  it("shows each weather provider with its status, circuit breaker, hit ratio and errors", async () => {
+    render(<StatisticsPage />);
+
+    const card = await screen.findByRole("region", { name: "Proveedor alternativo" });
+    expect(card).toHaveTextContent("Degradado");
+    expect(card).toHaveTextContent("Semiabierto");
+    expect(card).toHaveTextContent("75%");
+    expect(card).toHaveTextContent("No respondió a tiempo");
+    expect(card).toHaveTextContent("Circuito abierto");
+    expect(screen.getByRole("img", { name: /Estado de Proveedor alternativo/ })).toBeInTheDocument();
   });
 
   it("shows an empty state when no events are registered in the range", async () => {

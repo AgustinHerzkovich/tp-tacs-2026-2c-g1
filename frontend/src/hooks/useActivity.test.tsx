@@ -29,6 +29,7 @@ const ACTIVITY: ActivityResponse = {
   type: "OUTDOOR",
   location: { city: "CABA", latitude: null, longitude: null },
   dateTime: "2026-09-20T14:00:00",
+  timeZone: "America/Argentina/Buenos_Aires",
   availability: true,
   minParticipants: 4,
   maxParticipants: 12,

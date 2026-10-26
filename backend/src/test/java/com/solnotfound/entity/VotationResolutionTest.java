@@ -44,6 +44,18 @@ class VotationResolutionTest {
   }
 
   @Test
+  void onlyOptionsAfterTheGivenTimeCanWin() {
+    Votation votation =
+        votation(
+            option(10, User.withId("first"), User.withId("second")),
+            option(11, User.withId("third")));
+
+    assertThat(votation.winningOption(dateAt(9))).contains(dateAt(10));
+    assertThat(votation.winningOption(dateAt(10))).contains(dateAt(11));
+    assertThat(votation.winningOption(dateAt(11))).isEmpty();
+  }
+
+  @Test
   void onlyActiveVotationAtOrPastClosingDateIsDue() {
     LocalDateTime now = LocalDateTime.of(2026, 9, 1, 12, 0);
     Votation votation = votation();

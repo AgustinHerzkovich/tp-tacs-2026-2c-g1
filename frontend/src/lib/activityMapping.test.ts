@@ -18,6 +18,7 @@ function makeActivity(overrides: Partial<ActivityResponse> = {}): ActivityRespon
     type: "OUTDOOR",
     location: { city: "CABA", latitude: -34.6, longitude: -58.4 },
     dateTime: "2026-09-20T14:00:00",
+    timeZone: "America/Argentina/Buenos_Aires",
     availability: true,
     minParticipants: 4,
     maxParticipants: 12,
@@ -124,6 +125,6 @@ describe("toExploreActivity / toMisActivity", () => {
 
   it("falls back to a placeholder name instead of the raw userId when a participant has no name", () => {
     const explore = toExploreActivity(makeActivity({ participants: [{ userId: "u1", name: null }] }));
-    expect(explore.participantNames).toEqual(["Invitade"]);
+    expect(explore.participantNames).toEqual(["Participante"]);
   });
 });

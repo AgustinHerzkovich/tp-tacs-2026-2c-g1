@@ -1,16 +1,16 @@
 import type { CurrentUser } from "@/types/domain";
 
-/** The backend only ever exposes a participant as `{ userId }` (a Keycloak
- * subject id, e.g. a UUID) — there is no `/users/:id` endpoint and no name
- * embedded in ActivityResponse.participants, so there is no way to resolve a
- * real display name for anyone other than the current, logged-in user
- * (whose name we already have from their own Keycloak token, via
- * useAuth/session). Showing a fabricated name for other participants would
- * reintroduce fake data through the back door — this returns an honest,
- * generic placeholder instead. */
+/** Shown for a participant the backend has no name for yet. The backend
+ * stores each user's name the first time they use the app after signing in,
+ * so this only appears for an account that has not come back since names
+ * started being stored. */
+export const PARTICIPANT_FALLBACK_NAME = "Participante";
+
+/** Name to show for a participant whose `name` came back empty: the current
+ * user's own name (known from their token) or the generic fallback. */
 export function participantDisplayName(userId: string, currentUser: CurrentUser | null): string {
   if (currentUser && userId === currentUser.id) return currentUser.name;
-  return "Invitade";
+  return PARTICIPANT_FALLBACK_NAME;
 }
 
 /** Derives display initials from a name (e.g. "Vale Ríos" -> "VR"). The

@@ -1,6 +1,7 @@
 "use client";
 
 import type { DateRange } from "react-day-picker";
+import { es } from "react-day-picker/locale";
 import { Calendar } from "@/components/ui/calendar";
 import { DATE_PRESETS, dateKey, getDatePresetRange, parseDateKey } from "./dateRangePresets";
 
@@ -24,6 +25,7 @@ export function DateRangeFieldContent({ dateFrom, dateTo, onChange, invalid, num
     <div className="flex flex-col gap-4">
       <Calendar
         mode="range"
+        locale={es}
         numberOfMonths={numberOfMonths}
         selected={selected}
         onSelect={(range) => {

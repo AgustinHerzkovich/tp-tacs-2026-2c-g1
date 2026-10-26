@@ -2,12 +2,19 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BarChart3, Bell, LogOut, UserRound } from "lucide-react";
+import { BarChart3, Bell, CloudSun, LogOut, UserRound } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { getInitials } from "@/lib/initials";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
+import { useWeatherProvider } from "@/hooks/useWeatherProvider";
+import type { WeatherProvider } from "@/types/backend";
+
+const PROVIDER_OPTIONS: Array<{ value: WeatherProvider; label: string }> = [
+  { value: "OPEN_METEO", label: "Principal" },
+  { value: "LEGACY", label: "Alternativo" },
+];
 
 interface HeaderProps {
   onBellClick: () => void;
@@ -24,6 +31,7 @@ export function Header({ onBellClick, unread = 0, centerSlot }: HeaderProps) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const isAdmin = hasRole("ADMIN");
+  const weatherProvider = useWeatherProvider(profileOpen);
 
   return (
     <div
@@ -97,6 +105,39 @@ export function Header({ onBellClick, unread = 0, centerSlot }: HeaderProps) {
                   <p className="truncate text-sm font-extrabold">{user?.name}</p>
                   <p className="text-[11px] font-bold" style={{ color: "var(--muted-foreground)" }}>{isAdmin ? "Administrador" : "Usuario"}</p>
                 </div>
+              </div>
+              <div className="mt-2 border-b pb-3" style={{ borderColor: "var(--border)" }}>
+                <p className="flex items-center gap-1.5 px-1 text-[11px] font-extrabold uppercase tracking-wide" style={{ color: "var(--muted-foreground)" }}>
+                  <CloudSun className="size-3.5" aria-hidden="true" /> Proveedor del clima
+                </p>
+                <div role="radiogroup" aria-label="Proveedor del clima" className="mt-2 grid grid-cols-2 gap-1.5">
+                  {PROVIDER_OPTIONS.map((option) => {
+                    const selected = weatherProvider.provider === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        role="radio"
+                        aria-checked={selected}
+                        disabled={weatherProvider.provider === null || weatherProvider.saving}
+                        onClick={() => void weatherProvider.choose(option.value)}
+                        className="min-h-9 rounded-xl border-2 px-2 text-[12.5px] font-extrabold disabled:opacity-60"
+                        style={
+                          selected
+                            ? { background: "var(--primary)", color: "var(--primary-foreground)", borderColor: "var(--primary)" }
+                            : { borderColor: "var(--border)" }
+                        }
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {weatherProvider.error && (
+                  <p role="alert" className="mt-1.5 px-1 text-[11px] font-bold" style={{ color: "var(--destructive)" }}>
+                    {weatherProvider.error}
+                  </p>
+                )}
               </div>
               <div className="lg:hidden mt-2 pb-2 border-b" style={{ borderColor: "var(--border)" }}>
                 {isAdmin && (

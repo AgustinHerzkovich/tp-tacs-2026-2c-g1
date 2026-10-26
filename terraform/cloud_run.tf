@@ -157,6 +157,12 @@ resource "google_cloud_run_v2_service" "backend" {
         name  = "APP_SEED_ENABLED"
         value = "false"
       }
+      # Activities created before the time zone was stored get this zone on startup, so their
+      # deadlines stop being evaluated against the UTC server clock.
+      env {
+        name  = "ACTIVITY_LEGACY_TIME_ZONE"
+        value = var.activity_legacy_time_zone
+      }
       env {
         name  = "ACTIVITY_WEATHER_CHECK_CRON"
         value = "-"
@@ -168,6 +174,18 @@ resource "google_cloud_run_v2_service" "backend" {
       env {
         name  = "VOTATION_CLOSING_CHECK_CRON"
         value = "-"
+      }
+      env {
+        name  = "WEATHER_MONITOR_CRON"
+        value = "-"
+      }
+      env {
+        name  = "ACTIVITY_WEATHER_CHECK_ON_STARTUP"
+        value = "false"
+      }
+      env {
+        name  = "VOTATION_CLOSING_CHECK_ON_STARTUP"
+        value = "false"
       }
       env {
         name  = "SCHEDULER_OIDC_AUDIENCE"
@@ -187,12 +205,40 @@ resource "google_cloud_run_v2_service" "backend" {
           }
         }
       }
+      env {
+        name  = "LEGACY_WEATHER_URL"
+        value = local.legacy_weather_url == "" ? "http://legacy-weather.invalid" : local.legacy_weather_url
+      }
+      env {
+        name  = "LEGACY_WEATHER_AUDIENCE"
+        value = local.legacy_weather_url
+      }
+      env {
+        name = "LEGACY_WEATHER_TOKEN"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.application["${local.name}-legacy-weather-token"].secret_id
+            version = "latest"
+          }
+        }
+      }
+      env {
+        name = "TELEGRAM_API_TOKEN"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.application["${local.name}-telegram-api-token"].secret_id
+            version = "latest"
+          }
+        }
+      }
     }
   }
 
   depends_on = [
     google_project_service.required,
     google_secret_manager_secret_iam_member.backend_atlas,
+    google_secret_manager_secret_iam_member.backend_telegram_api_token,
+    google_secret_manager_secret_iam_member.backend_legacy_weather_token,
   ]
 
   lifecycle {

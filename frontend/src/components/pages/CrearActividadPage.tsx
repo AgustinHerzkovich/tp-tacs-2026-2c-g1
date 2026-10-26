@@ -82,8 +82,20 @@ export function CrearActividadPage() {
       const formData = new FormData();
       formData.append("activity", new Blob([JSON.stringify(activity)], { type: "application/json" }));
       wizard.form.images.forEach(({ file }) => formData.append("images", file));
-      await api.activities.create(formData);
-      toast("Actividad publicada correctamente.");
+      const created = await api.activities.create(formData);
+      let joined = true;
+      if (wizard.form.joinAsParticipant) {
+        try {
+          await api.activities.join(created.id);
+        } catch {
+          joined = false;
+        }
+      }
+      toast(
+        joined
+          ? "Actividad publicada correctamente."
+          : "Actividad publicada, pero no pudimos sumarte. Podés sumarte desde su detalle.",
+      );
       wizard.publish();
     } catch (err) {
       setSubmitError(err instanceof ApiError ? err.message : "No pudimos publicar la actividad. Probá de nuevo.");

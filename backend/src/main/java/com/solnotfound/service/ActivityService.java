@@ -16,17 +16,20 @@ import com.solnotfound.entity.activity.City;
 import com.solnotfound.entity.activity.Location;
 import com.solnotfound.entity.activity.ReprogramationRange;
 import com.solnotfound.entity.statistics.StatisticsEventType;
+import com.solnotfound.entity.user.User;
+import com.solnotfound.entity.user.WeatherProvider;
 import com.solnotfound.entity.weather.MaxRainProbabilityCondition;
 import com.solnotfound.entity.weather.MaxWindCondition;
 import com.solnotfound.entity.weather.TemperatureRangeCondition;
 import com.solnotfound.entity.weather.WeatherCondition;
 import com.solnotfound.entity.weather.WeatherForecast;
-import com.solnotfound.exception.ActivityAccessDeniedException;
 import com.solnotfound.exception.ActivityNotFoundException;
 import com.solnotfound.exception.ErrorCode;
+import com.solnotfound.exception.IllegalStateActivityException;
 import com.solnotfound.exception.InvalidActivityException;
 import com.solnotfound.repository.IActivityRepository;
 import com.solnotfound.repository.IUserRepository;
+import com.solnotfound.repository.IVotationRepository;
 import com.solnotfound.storage.ImageFile;
 import com.solnotfound.storage.ImageStorage;
 import com.solnotfound.storage.NoOpImageStorage;
@@ -48,11 +51,13 @@ import org.springframework.stereotype.Service;
 @Service
 public class ActivityService {
   private final IActivityRepository activityRepository;
-  private final IWeatherAdapter weatherAdapter;
+  private final WeatherGateway weatherGateway;
   private final IUserRepository userRepository;
   private final StatisticsEventRecorder statisticsRecorder;
   private final ImageStorage imageStorage;
+  private final IVotationRepository votationRepository;
   private static final int MAX_IMAGES = 5;
+  private static final int MAX_JOIN_ATTEMPTS = 3;
   private static final long MAX_IMAGE_SIZE = 5L * 1024 * 1024;
   private static final Duration IMAGE_URL_VALIDITY = Duration.ofHours(1);
   private static final Set<String> ALLOWED_IMAGE_TYPES =
@@ -64,14 +69,16 @@ public class ActivityService {
   @Autowired
   public ActivityService(
       IActivityRepository activityRepository,
-      IWeatherAdapter weatherAdapter,
+      WeatherGateway weatherGateway,
       IUserRepository userRepository,
       StatisticsEventRecorder statisticsRecorder,
+      IVotationRepository votationRepository,
       ImageStorage imageStorage) {
     this.activityRepository = activityRepository;
-    this.weatherAdapter = weatherAdapter;
+    this.weatherGateway = weatherGateway;
     this.userRepository = userRepository;
     this.statisticsRecorder = statisticsRecorder;
+    this.votationRepository = votationRepository;
     this.imageStorage = imageStorage;
   }
 
@@ -79,12 +86,30 @@ public class ActivityService {
       IActivityRepository activityRepository,
       IWeatherAdapter weatherAdapter,
       IUserRepository userRepository,
-      StatisticsEventRecorder statisticsRecorder) {
+      StatisticsEventRecorder statisticsRecorder,
+      IVotationRepository votationRepository,
+      ImageStorage imageStorage) {
+    this(
+        activityRepository,
+        WeatherGateway.mainOnly(weatherAdapter),
+        userRepository,
+        statisticsRecorder,
+        votationRepository,
+        imageStorage);
+  }
+
+  public ActivityService(
+      IActivityRepository activityRepository,
+      IWeatherAdapter weatherAdapter,
+      IUserRepository userRepository,
+      StatisticsEventRecorder statisticsRecorder,
+      IVotationRepository votationRepository) {
     this(
         activityRepository,
         weatherAdapter,
         userRepository,
         statisticsRecorder,
+        votationRepository,
         new NoOpImageStorage());
   }
 
@@ -152,6 +177,7 @@ public class ActivityService {
     activity.setWeatherConditions(toWeatherConditions(request.weatherConditions()));
     activity.setAnticipationWindow(request.anticipationWindow());
     activity.setReprogramationRange(toReprogramationRange(request.reprogramationRange()));
+    activity.setTimeZone(resolveZone(timeZoneId).getId());
 
     List<String> uploadedKeys = new ArrayList<>();
     try {
@@ -311,60 +337,99 @@ public class ActivityService {
   }
 
   /**
-   * Adds a user to an activity and persists the resulting participant state.
+   * Adds a user to an activity. The activity is validated first, so a closed or full activity is
+   * rejected with its specific error, and joining twice is idempotent. The participant is then
+   * added with an atomic conditional update instead of saving the whole activity: when several
+   * users compete for the last spot only one update matches, and concurrent changes to other fields
+   * (such as a status transition) are not overwritten. A request that loses that race reloads the
+   * activity and is validated again, which reports the activity as full.
    *
    * @param activityId activity identifier
    * @param userId authenticated user identifier
    * @return the updated activity
    * @throws ActivityNotFoundException when the activity does not exist
+   * @throws IllegalStateActivityException when the activity is full, no longer accepts
+   *     participants, or keeps changing concurrently
    */
   public ActivityResponse join(String activityId, String userId) {
-    Activity activity = findActivityOrThrow(activityId);
+    User user = userRepository.findOrCreate(userId);
 
-    activity.addParticipant(userRepository.findOrCreate(userId));
+    for (int attempt = 0; attempt < MAX_JOIN_ATTEMPTS; attempt++) {
+      Activity activity = findActivityOrThrow(activityId);
+      boolean alreadyParticipating = activity.findParticipant(userId).isPresent();
+      activity.addParticipant(user);
 
-    activityRepository.save(activity);
-
-    return toResponse(activity);
+      if (alreadyParticipating || activityRepository.addParticipant(activityId, userId)) {
+        return toResponse(activity);
+      }
+    }
+    throw new IllegalStateActivityException(
+        "Activity participants changed concurrently; the join could not be completed.");
   }
 
   /**
-   * Removes a user from an activity and persists the resulting participant state.
+   * Removes a user from an activity with an atomic update, so concurrent joins, leaves or status
+   * changes are not overwritten. Leaving an activity the user is not part of does nothing.
    *
    * @param activityId activity identifier
    * @param userId authenticated user identifier
    * @return the updated activity
    * @throws ActivityNotFoundException when the activity does not exist
+   * @throws IllegalStateActivityException when the activity no longer accepts participant changes
    */
   public ActivityResponse leave(String activityId, String userId) {
     Activity activity = findActivityOrThrow(activityId);
 
     activity.removeParticipant(userId);
 
-    activityRepository.save(activity);
+    activityRepository.removeParticipant(activityId, userId);
+
+    boolean isOrganizer =
+        activity.getOrganizer() != null && userId.equals(activity.getOrganizer().getId());
+    if (!isOrganizer) {
+      votationRepository.removeVotes(activityId, userId);
+    }
 
     return toResponse(activity);
   }
 
+  public ActivityWeatherResponse getWeather(String activityId) {
+    return getWeather(activityId, null);
+  }
+
   /**
-   * Retrieves current weather and the activity-time forecast for a participant.
+   * Retrieves current weather and the activity-time forecast with the provider the viewer chose.
+   * Any authenticated user can read it, participant or not: the forecast of a place and date is
+   * public information and helps decide whether to join. When the viewer chose the legacy provider
+   * and it cannot answer, the main provider does and the response says so.
    *
    * @param activityId activity identifier
-   * @param userId authenticated user identifier
+   * @param viewerId user asking, whose provider and quota are used; {@code null} uses the main
+   *     provider
    * @return weather information associated with the activity
    * @throws ActivityNotFoundException when the activity does not exist
-   * @throws ActivityAccessDeniedException when the user is not participating
+   * @throws com.solnotfound.exception.WeatherUnavailableException when no provider can answer or
+   *     the activity is beyond the forecast horizon
    */
-  public ActivityWeatherResponse getWeather(String activityId, String userId) {
+  public ActivityWeatherResponse getWeather(String activityId, String viewerId) {
     Activity activity = findActivityOrThrow(activityId);
+    WeatherProvider provider =
+        viewerId == null
+            ? WeatherProvider.OPEN_METEO
+            : userRepository.findOrCreate(viewerId).effectiveWeatherProvider();
 
-    verifyParticipant(activity, userId);
-    WeatherForecast currentWeather = weatherAdapter.getWeather(activity.getLocation());
+    WeatherGateway.WeatherReading current = weatherGateway.current(activity, provider, viewerId);
+    WeatherGateway.WeatherReading forecast =
+        weatherGateway.forecast(activity, activity.getDateTime(), provider, viewerId);
 
-    WeatherForecast activityForecast =
-        weatherAdapter.getFutureClimate(activity.getLocation(), activity.getDateTime());
-
-    return toWeatherResponse(activity, currentWeather, activityForecast);
+    return new ActivityWeatherResponse(
+        activity.getId(),
+        toLocationDTO(activity.getLocation()),
+        activity.getDateTime(),
+        toWeatherForecastDTO(current.forecast()),
+        toWeatherForecastDTO(forecast.forecast()),
+        forecast.servedBy(),
+        current.fallback() || forecast.fallback());
   }
 
   public List<ActivityResponse> getByOrganizerId(String id) {
@@ -458,16 +523,6 @@ public class ActivityService {
     }
   }
 
-  private void verifyParticipant(Activity activity, String userId) {
-    boolean isOrganizer = activity.getOrganizer().getId().equals(userId);
-    boolean isParticipant =
-        isOrganizer || activity.getParticipants().stream().anyMatch(p -> p.getId().equals(userId));
-
-    if (!isParticipant) {
-      throw new ActivityAccessDeniedException("User is not participating in this activity");
-    }
-  }
-
   private Location toLocation(LocationDTO dto) {
     City city =
         dto.city() == null || dto.city().isBlank() ? null : new City(null, dto.city().trim());
@@ -526,7 +581,8 @@ public class ActivityService {
         activity.getImageKeys().stream()
             .map(key -> imageStorage.signedReadUrl(key, IMAGE_URL_VALIDITY).toString())
             .toList(),
-        activity.getOrganizer() == null ? null : activity.getOrganizer().getId());
+        activity.getOrganizer() == null ? null : activity.getOrganizer().getId(),
+        activity.getTimeZone());
   }
 
   private LocationDTO toLocationDTO(Location location) {
@@ -562,16 +618,6 @@ public class ActivityService {
     return participants.stream()
         .map(participant -> new ParticipantDTO(participant.getId(), participant.getName()))
         .toList();
-  }
-
-  private ActivityWeatherResponse toWeatherResponse(
-      Activity activity, WeatherForecast currentWeather, WeatherForecast activityForecast) {
-    return new ActivityWeatherResponse(
-        activity.getId(),
-        toLocationDTO(activity.getLocation()),
-        activity.getDateTime(),
-        toWeatherForecastDTO(currentWeather),
-        toWeatherForecastDTO(activityForecast));
   }
 
   private WeatherForecastDTO toWeatherForecastDTO(WeatherForecast weatherForecast) {

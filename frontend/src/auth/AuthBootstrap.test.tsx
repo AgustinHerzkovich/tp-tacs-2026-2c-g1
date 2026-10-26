@@ -22,6 +22,7 @@ let adapter: FakeKeycloak;
 
 vi.mock("@/lib/keycloak", () => ({
   getKeycloak: () => adapter,
+  createRedirectAdapter: () => "redirect-adapter",
 }));
 
 function makeAdapter(overrides: Partial<FakeKeycloak> = {}): FakeKeycloak {
@@ -62,6 +63,7 @@ describe("AuthBootstrap (check-sso)", () => {
     expect(initArg.onLoad).toBe("check-sso");
     expect(initArg.pkceMethod).toBe("S256");
     expect(initArg.checkLoginIframe).toBe(false);
+    expect(initArg.adapter).toBe("redirect-adapter");
   });
 
   it("restores the session from the ID token after a successful init", async () => {

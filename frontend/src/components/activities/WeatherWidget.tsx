@@ -4,11 +4,11 @@ import type { WeatherConditionsDTO, WeatherForecastDTO } from "@/types/backend";
 
 interface WeatherWidgetProps {
   loading: boolean;
-  /** True when the backend couldn't get a forecast — never render a
-   * "good weather" guess in this case (see useActivityWeather). This flag
-   * also covers "the activity is too far in the future to have a forecast
-   * yet", since the hook can't currently tell the two cases apart. */
+  /** True when there is no forecast to show; `tooEarly` and `expired` say why. */
   unavailable: boolean;
+  /** True when the forecast is missing only because the activity is beyond the
+   * provider's horizon. Any other reason is reported as a failed request. */
+  tooEarly?: boolean;
   forecast: WeatherForecastDTO | null;
   current?: WeatherForecastDTO | null;
   /** The organizer-configured weather limits, used only for the "within
@@ -22,11 +22,19 @@ interface WeatherWidgetProps {
    * trustworthy than re-deriving it from this component's own (separate)
    * weather fetch. */
   forcedExceeded?: boolean;
+  /** The user chose the alternative provider but it could not answer, so the
+   * forecast comes from the main one; the widget says so instead of hiding it. */
+  fallback?: boolean;
+  /** True when the activity's date-time is already in the past. The backend
+   * rejects forecasts for past activities (Open-Meteo has no history here), so
+   * this state always arrives as `unavailable` — the badge then says the
+   * activity already happened instead of blaming the forecast. */
+  expired?: boolean;
 }
 
 const SHELL = "relative rounded-[26px] border-[3px] border-white p-4 mb-6 shadow-[0_10px_22px_-10px_rgba(58,51,82,.32)] -rotate-1";
 
-export function WeatherWidget({ loading, unavailable, forecast, current, conditions, forcedExceeded }: WeatherWidgetProps) {
+export function WeatherWidget({ loading, unavailable, tooEarly, forecast, current, conditions, forcedExceeded, expired, fallback }: WeatherWidgetProps) {
   if (loading) {
     return (
       <div className={`${SHELL} bg-muted`} aria-busy="true">
@@ -53,7 +61,13 @@ export function WeatherWidget({ loading, unavailable, forecast, current, conditi
           className="absolute left-1/2 top-1/2 max-w-[88%] -translate-x-1/2 -translate-y-1/2 rotate-[-7deg] rounded-2xl border-[3px] border-white px-4 py-2.5 text-center shadow-[0_6px_14px_-4px_rgba(58,51,82,.25)]"
           style={{ background: "var(--sun)", color: "var(--sun-ink)" }}
         >
-          <span className="text-[11.5px] font-black leading-tight">⏳ Todavía es pronto para el pronóstico</span>
+          <span className="text-[11.5px] font-black leading-tight">
+            {expired
+              ? "🕐 Esta actividad ya pasó"
+              : tooEarly
+                ? "⏳ Todavía es pronto para el pronóstico"
+                : "🌥️ No pudimos consultar el pronóstico. Probá de nuevo en unos minutos."}
+          </span>
         </div>
       </div>
     );
@@ -98,6 +112,11 @@ export function WeatherWidget({ loading, unavailable, forecast, current, conditi
           {formatWeatherLimits(conditions)}
         </span>
       </div>
+      {fallback && (
+        <p role="status" className="mt-2.5 rounded-xl bg-white/70 px-2.5 py-1.5 text-[11px] font-bold" style={{ color: ink }}>
+          ⚠️ El proveedor alternativo no está disponible ahora: te mostramos el pronóstico del principal.
+        </p>
+      )}
     </div>
   );
 }

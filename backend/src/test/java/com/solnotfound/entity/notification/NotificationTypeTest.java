@@ -76,6 +76,18 @@ class NotificationTypeTest {
   }
 
   @Test
+  void shouldGenerateCorrectTitleAndMessageForVotationOptionsChanged() {
+    NotificationType type = new VotationOptionsChangedNotificationType();
+
+    assertEquals(
+        "🗳️ Cambiaron las fechas de la votación: Partido de Fútbol", type.generateTitle(activity));
+    assertEquals(
+        "El organizador de Partido de Fútbol cambió las fechas alternativas de la votación. Revisá las opciones y votá de nuevo si querés cambiar tu voto.",
+        type.generateMessage(activity));
+    assertEquals("VOTATION_OPTIONS_CHANGED", type.code());
+  }
+
+  @Test
   void shouldHandleNullActivityTitleGracefully() {
     Activity emptyActivity = new Activity();
     emptyActivity.setDateTime(LocalDateTime.of(2026, 11, 20, 10, 0));

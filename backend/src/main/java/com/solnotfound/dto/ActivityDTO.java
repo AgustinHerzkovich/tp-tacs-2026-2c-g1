@@ -18,7 +18,12 @@ public record ActivityDTO(
     Integer anticipationWindow,
     ReprogramationRangeDTO reprogramationRange,
     UserDTO organizer,
-    List<UserDTO> participants) {
+    List<UserDTO> participants,
+    /**
+     * IANA zone the activity's dates are written in (e.g. {@code America/Argentina/Buenos_Aires}),
+     * or {@code null} when it was never recorded. See {@link ActivityResponse#timeZone()}.
+     */
+    String timeZone) {
 
   public ActivityDTO {
     if (participants != null) {

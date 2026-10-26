@@ -1,6 +1,6 @@
 import sendMessage from "../utils/sendMessage";
 import { backendFetch } from "../utils/auth";
-import { MAIN_MENU } from "../utils/command-tree";
+import { MAIN_MENU, mainMenuText } from "../utils/command-tree";
 import { setUserId } from "../utils/session";
 import type { User } from "../utils/user.type";
 import handleLogin from "./handleLogin";
@@ -23,7 +23,7 @@ export default async function handleStart(chatId: number): Promise<void> {
   }
 
   setUserId(chatId, user.id);
-  await sendMessage(chatId, `¡Hola${user.name ? ` ${user.name}` : ""}! ¿Qué querés hacer?`, {
+  await sendMessage(chatId, `¡Hola${user.name ? ` ${user.name}` : ""}! ¿Qué querés hacer?\n\n${mainMenuText()}`, {
     keyboard: MAIN_MENU.map((command) => [{ text: command }]),
     resize_keyboard: true,
   });

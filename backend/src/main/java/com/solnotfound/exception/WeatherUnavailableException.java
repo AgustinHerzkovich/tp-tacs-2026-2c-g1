@@ -7,6 +7,10 @@ public class WeatherUnavailableException extends CodedException {
     super(ErrorCode.WEATHER_UNAVAILABLE, message);
   }
 
+  public WeatherUnavailableException(ErrorCode code, String message) {
+    super(code, message);
+  }
+
   public WeatherUnavailableException(String message, Throwable cause) {
     super(ErrorCode.WEATHER_UNAVAILABLE, message, cause);
   }

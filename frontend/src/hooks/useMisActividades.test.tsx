@@ -33,6 +33,7 @@ function makeActivity(id: string, overrides: Partial<ActivityResponse> = {}): Ac
     type: "OUTDOOR",
     location: { city: "CABA", latitude: null, longitude: null },
     dateTime: "2026-09-20T14:00:00",
+    timeZone: "America/Argentina/Buenos_Aires",
     availability: true,
     minParticipants: 4,
     maxParticipants: 12,
@@ -67,6 +68,8 @@ function makeVotation(activityId: string): VotationDTO {
     creationDate: "2026-09-01T00:00:00",
     status: "ACTIVE",
     options: [{ dateTime: "2026-09-21T10:00:00", voteCount: 0, voterNames: [] }],
+    closingDate: "2026-09-20T00:00:00",
+    minQuorum: 0.5,
     votedOption: null,
   };
 }

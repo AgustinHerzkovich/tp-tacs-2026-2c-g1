@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
-import { formatActivityWhen } from "@/lib/formatDate";
+import { compareLocalDateTimes, formatActivityWhen } from "@/lib/formatDate";
 import type { VotationDTO } from "@/types/backend";
 
 export interface VoteOptionView {
@@ -28,8 +28,12 @@ export interface UseVoting {
   requestVote: () => void;
   cancelVote: () => void;
   confirmVote: () => Promise<void>;
-  updateOptions: (dates: string[]) => Promise<void>;
+  updateOptions: (dates: string[], allowVoteLoss?: boolean) => Promise<void>;
   updateSettings: (minQuorum: number, durationHours: number) => Promise<void>;
+  /** Re-requests the votation. Needed after joining or leaving, because the
+   * backend only lists votations of activities the user takes part in: without
+   * this the card stays empty (or stale) until the page is opened again. */
+  refresh: () => void;
 }
 
 /** Finds and drives the reprogramming vote for one activity: the most recent
@@ -39,7 +43,12 @@ export interface UseVoting {
  *
  * `votedId` comes from the backend's `votedOption`, computed from the
  * authenticated user's id, so it survives reloads and never confuses two
- * users that share a display name. */
+ * users that share a display name.
+ *
+ * `updateOptions` replaces the whole alternative list. Dropping an
+ * alternative that already carries votes needs `allowVoteLoss`, which the
+ * caller passes only after the organizer confirmed the loss; without it the
+ * backend rejects the request with `VOTATION_VOTES_AT_RISK`. */
 export function useVoting(activityId: string): UseVoting {
   const [votation, setVotation] = useState<VotationDTO | null>(null);
   const [loading, setLoading] = useState(true);
@@ -65,11 +74,17 @@ export function useVoting(activityId: string): UseVoting {
 
   const options: VoteOptionView[] = useMemo(
     () =>
-      (votation?.options ?? []).map((option) => ({
-        id: option.dateTime,
-        label: formatActivityWhen(option.dateTime),
-        votes: option.voteCount,
-      })),
+      (votation?.options ?? [])
+        .map((option) => ({
+          id: option.dateTime,
+          label: formatActivityWhen(option.dateTime),
+          votes: option.voteCount,
+        }))
+        // Earliest date first, so the alternatives always read as a calendar
+        // instead of the order the backend happened to store them in. Sorting
+        // here covers every screen that lists them (the activity detail above
+        // all), instead of each one sorting on its own.
+        .sort((a, b) => compareLocalDateTimes(a.id, b.id)),
     [votation],
   );
   const total = options.reduce((sum, option) => sum + option.votes, 0);
@@ -97,9 +112,9 @@ export function useVoting(activityId: string): UseVoting {
     }
   };
 
-  const updateOptions = async (dates: string[]) => {
+  const updateOptions = async (dates: string[], allowVoteLoss?: boolean) => {
     if (!votation) return;
-    setVotation(await api.votations.updateOptions(votation.id, { dates }));
+    setVotation(await api.votations.updateOptions(votation.id, { dates, allowVoteLoss }));
   };
 
   const updateSettings = async (minQuorum: number, durationHours: number) => {
@@ -124,5 +139,6 @@ export function useVoting(activityId: string): UseVoting {
     confirmVote,
     updateOptions,
     updateSettings,
+    refresh: load,
   };
 }

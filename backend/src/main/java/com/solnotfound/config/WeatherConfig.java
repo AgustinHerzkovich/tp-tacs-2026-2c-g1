@@ -57,6 +57,7 @@ public class WeatherConfig {
         Caffeine.newBuilder()
             .expireAfterWrite(properties.ttl())
             .maximumSize(properties.maximumSize())
+            .recordStats()
             .build());
   }
 }

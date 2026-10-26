@@ -6,6 +6,8 @@ import com.solnotfound.entity.votation.VotationOption;
 
 public final class VotationOptionMapper {
 
+  private static final String UNNAMED_VOTER = "Participante";
+
   private VotationOptionMapper() {}
 
   public static VotationOptionDTO toDTO(VotationOption option) {
@@ -20,6 +22,6 @@ public final class VotationOptionMapper {
   }
 
   private static String displayName(User user) {
-    return user.getName() == null || user.getName().isBlank() ? user.getId() : user.getName();
+    return user.getName() == null || user.getName().isBlank() ? UNNAMED_VOTER : user.getName();
   }
 }

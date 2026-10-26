@@ -62,6 +62,22 @@ public class GlobalExceptionHandler {
     return respond(HttpStatus.BAD_REQUEST, "Invalid votation settings", exception);
   }
 
+  @ExceptionHandler(VotationVotesAtRiskException.class)
+  public ResponseEntity<ProblemDetail> handleVotationVotesAtRisk(
+      VotationVotesAtRiskException exception) {
+    ResponseEntity<ProblemDetail> response =
+        respond(HttpStatus.CONFLICT, "Votation votes at risk", exception);
+    ProblemDetail problem = Objects.requireNonNull(response.getBody());
+    problem.setProperty("optionDates", exception.getOptionDates());
+    problem.setProperty("votesAtRisk", exception.getVotesAtRisk());
+    return response;
+  }
+
+  @ExceptionHandler(ConcurrentUpdateException.class)
+  public ResponseEntity<ProblemDetail> handleConcurrentUpdate(ConcurrentUpdateException exception) {
+    return respond(HttpStatus.CONFLICT, "Concurrent update", exception);
+  }
+
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ResponseEntity<ProblemDetail> handleValidation(MethodArgumentNotValidException exception) {
     Map<String, String> errors = new LinkedHashMap<>();
@@ -147,6 +163,12 @@ public class GlobalExceptionHandler {
   public ResponseEntity<ProblemDetail> handleInvalidStatusTransition(
       InvalidActivityStatusTransitionException exception) {
     return respond(HttpStatus.CONFLICT, "Invalid activity status transition", exception);
+  }
+
+  @ExceptionHandler(InvalidTelegramLinkCodeException.class)
+  public ResponseEntity<ProblemDetail> handleInvalidTelegramLinkCode(
+      InvalidTelegramLinkCodeException exception) {
+    return respond(HttpStatus.BAD_REQUEST, "Invalid Telegram link code", exception);
   }
 
   private ResponseEntity<ProblemDetail> respond(

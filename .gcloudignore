@@ -16,3 +16,6 @@
 *.docx
 graphify-out
 terraform
+
+# Legacy weather binaries: Cloud Build downloads the Linux one from a private bucket.
+bin/

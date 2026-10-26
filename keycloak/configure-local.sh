@@ -75,6 +75,14 @@ frontend_client_uuid=$("$KCADM" get clients -r "$REALM" -q "clientId=solnotfound
 ensure_user alumno alumno alumno@planazo.local
 ensure_user admin admin admin@planazo.local
 
+# The realm's user profile requires a first and last name; without them Keycloak asks the test
+# users to complete their profile before signing in, which breaks scripted logins (E2E, load tests).
+for username in alumno admin; do
+  test_user_id=$("$KCADM" get users -r "$REALM" -q "username=$username" -q exact=true --fields id --format csv --noquotes)
+  "$KCADM" update "users/$test_user_id" -r "$REALM" \
+    -s "firstName=$username" -s lastName=Planazo -s 'requiredActions=[]'
+done
+
 "$KCADM" add-roles -r "$REALM" --uusername admin --rolename ADMIN
 
 ensure_realm_role "$BOT_ROLE" \
@@ -112,6 +120,29 @@ bot_service_account_id=$("$KCADM" get "clients/$bot_client_uuid/service-account-
 bot_role_id=$("$KCADM" get "roles/$BOT_ROLE" -r "$REALM" --fields id --format csv --noquotes)
 "$KCADM" create "clients/$bot_client_uuid/scope-mappings/realm" -r "$REALM" \
   -b "[{\"id\":\"$bot_role_id\",\"name\":\"$BOT_ROLE\"}]"
+
+# En un realm importado antes de que el export trajera estos ajustes, el cliente
+# no tiene los scopes por defecto ni el mapper de audiencia: el token sale sin
+# "sub", sin roles y sin "aud", y el backend responde 401. Asignar un scope ya
+# asignado no hace nada.
+# La imagen de Keycloak no trae awk ni grep: se recorre la salida CSV con el shell.
+"$KCADM" get client-scopes -r "$REALM" --fields id,name --format csv --noquotes |
+  while IFS=, read -r scope_id scope_name; do
+    case "$scope_name" in
+      basic | roles | acr)
+        "$KCADM" update "clients/$bot_client_uuid/default-client-scopes/$scope_id" -r "$REALM"
+        ;;
+    esac
+  done
+
+BOT_AUDIENCE_MAPPER="backend audience"
+bot_mappers=$("$KCADM" get "clients/$bot_client_uuid/protocol-mappers/models" -r "$REALM" --fields name --format csv --noquotes)
+case "$bot_mappers" in
+  *"$BOT_AUDIENCE_MAPPER"*) ;;
+  *)
+    "$KCADM" create "clients/$bot_client_uuid/protocol-mappers/models" -r "$REALM"       -s "name=$BOT_AUDIENCE_MAPPER"       -s protocol=openid-connect       -s protocolMapper=oidc-audience-mapper       -s 'config."included.client.audience"=solnotfoundBackend'       -s 'config."id.token.claim"=false'       -s 'config."access.token.claim"=true'       -s 'config."introspection.token.claim"=true'
+    ;;
+esac
 
 # Load test support (local only): a public client with the password grant enabled so
 # loadtest/run.sh can obtain tokens without a browser, plus dedicated users. This is kept out of
@@ -153,11 +184,17 @@ if ! "$KCADM" get "clients/$loadtest_client_id/protocol-mappers/models" -r "$REA
     -s 'config."id.token.claim"=false'
 fi
 
-i=1
-while [ "$i" -le "$LOADTEST_USERS" ]; do
-  username=$(printf 'loadtest%02d' "$i")
-  ensure_user "$username" "$username" "$username@planazo.local"
-  "$KCADM" update "users/$("$KCADM" get users -r "$REALM" -q "username=$username" -q exact=true --fields id --format csv --noquotes)" \
-    -r "$REALM" -s firstName=Load -s "lastName=Test $i" -s 'requiredActions=[]'
-  i=$((i + 1))
-done
+# All users go in a single partial import: one kcadm.sh call instead of several per user, since
+# each call starts a JVM. Existing users are skipped, so their ids (the JWT sub) stay stable.
+# A partial import does not assign the realm default roles, so they are listed explicitly.
+if [ "$LOADTEST_USERS" -gt 0 ]; then
+  users_json=""
+  i=1
+  while [ "$i" -le "$LOADTEST_USERS" ]; do
+    username=$(printf 'loadtest%02d' "$i")
+    users_json="$users_json${users_json:+,}{\"username\":\"$username\",\"enabled\":true,\"email\":\"$username@planazo.local\",\"emailVerified\":true,\"firstName\":\"Load\",\"lastName\":\"Test $i\",\"requiredActions\":[],\"realmRoles\":[\"default-roles-$REALM\"],\"credentials\":[{\"type\":\"password\",\"value\":\"$username\",\"temporary\":false}]}"
+    i=$((i + 1))
+  done
+  printf '{"ifResourceExists":"SKIP","users":[%s]}' "$users_json" |
+    "$KCADM" create partialImport -r "$REALM" -f -
+fi

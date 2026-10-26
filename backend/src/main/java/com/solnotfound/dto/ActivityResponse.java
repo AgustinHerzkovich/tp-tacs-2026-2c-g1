@@ -22,7 +22,13 @@ public record ActivityResponse(
     ReprogramationRangeDTO reprogramationRange,
     ActivityStatus status,
     List<String> imageUrls,
-    String organizerId) {
+    String organizerId,
+    /**
+     * IANA zone the activity's dates are written in (e.g. {@code America/Argentina/Buenos_Aires}),
+     * or {@code null} when it was never recorded. Clients that need to know whether an already-past
+     * date is really past need it to resolve {@link #dateTime} against their own clock.
+     */
+    String timeZone) {
 
   public ActivityResponse {
     participants = List.copyOf(participants);

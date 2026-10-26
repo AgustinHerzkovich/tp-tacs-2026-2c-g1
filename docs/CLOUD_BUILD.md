@@ -36,6 +36,10 @@ Do not use `latest` in Terraform. Copy the resulting image URIs, including the S
 - `backend/**` builds and updates the backend Cloud Run service.
 - `frontend/**` builds the frontend with the production Keycloak URL and updates its service.
 - Keycloak, realm, or theme changes build and update the Keycloak service.
+- `telegram/**` runs the bot tests and redeploys the code of the `telegram-webhook` function, after
+  the backend and frontend jobs of the same push. Environment variables, secrets and the Telegram
+  webhook are not touched; `telegram/scripts/deploy.sh` still handles the first deploy and any secret
+  or URL change.
 
 Path filtering compares the files changed by each push, so components without effective source or build
 configuration changes are neither rebuilt nor deployed.
@@ -49,7 +53,7 @@ GCP_DEPLOY_SERVICE_ACCOUNT=planazo-github-deployer@planazo-tacs-g1-2026.iam.gser
 ```
 
 The deploy service account needs permission to submit Cloud Build builds, update Cloud Run services
-and jobs, and act as the runtime service accounts. Terraform ignores only externally deployed container
+and jobs, deploy Cloud Functions (`roles/cloudfunctions.developer`), and act as the runtime service accounts. Terraform ignores only externally deployed container
 image fields, so subsequent Terraform applies continue managing all other service configuration without
 rolling images back.
 

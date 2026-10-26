@@ -16,6 +16,7 @@ import type {
   UpdateVotationOptionsRequest,
   UpdateVotationSettingsRequest,
   UserDTO,
+  UserPreferencesDTO,
   VotationDTO,
   VotationFilterParams,
 } from "@/types/backend";
@@ -55,6 +56,18 @@ function json(method: string, body: unknown): RequestInit {
   return { method, headers: { "content-type": "application/json" }, body: JSON.stringify(body) };
 }
 
+/** The visitor's own IANA zone (e.g. "America/Argentina/Buenos_Aires"). The backend
+ * stores it on the activity so every deadline - the weather check, the votation
+ * closing, the status transitions - is judged against the organizer's clock
+ * instead of the server's, which would be UTC in the cloud. */
+function browserTimeZone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch {
+    return "UTC";
+  }
+}
+
 function queryString(
   params?: Record<string, string | number | boolean | string[] | undefined>,
 ): string {
@@ -84,8 +97,15 @@ export const api = {
     join: (id: string) => request<ActivityResponse>(`/activities/${id}/participants/me`, { method: "PUT" }),
     leave: (id: string) => request<ActivityResponse>(`/activities/${id}/participants/me`, { method: "DELETE" }),
     weather: (id: string) => request<ActivityWeatherResponse>(`/activities/${id}/weather`),
-    /** `body` is a FormData with an `activity` JSON part and optional `images` file parts. */
-    create: (body: FormData) => request<ActivityResponse>("/activities", { method: "POST", body }),
+    /** `body` is a FormData with an `activity` JSON part and optional `images` file parts.
+   * The caller's zone travels in the `X-Time-Zone` header the backend reads to store
+   * the activity's time zone. */
+    create: (body: FormData) =>
+      request<ActivityResponse>("/activities", {
+        method: "POST",
+        body,
+        headers: { "X-Time-Zone": browserTimeZone() },
+      }),
   },
   votations: {
     /** One page of the votations of activities the current user organizes or
@@ -106,8 +126,11 @@ export const api = {
     markRead: (id: string) => request<void>(`/notifications/${id}/read`, { method: "PATCH" }),
   },
   users: {
-    /** Links the Telegram chat that opened the login link to the current user. */
-    linkTelegram: (chatId: number) => request<UserDTO>("/users/me/telegram", json("PUT", { chatId })),
+    /** Redeems the bot's single-use link code, linking its Telegram chat to the current user. */
+    linkTelegram: (code: string) => request<UserDTO>("/users/me/telegram", json("PUT", { code })),
+    getPreferences: () => request<UserPreferencesDTO>("/users/me/preferences"),
+    updatePreferences: (preferences: UserPreferencesDTO) =>
+      request<UserPreferencesDTO>("/users/me/preferences", json("PUT", preferences)),
   },
   statistics: {
     get: (params?: { from?: string; to?: string }) =>

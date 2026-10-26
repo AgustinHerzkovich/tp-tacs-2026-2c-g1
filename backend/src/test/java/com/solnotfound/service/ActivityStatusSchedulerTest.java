@@ -55,6 +55,50 @@ class ActivityStatusSchedulerTest {
   }
 
   @Test
+  void usesTheActivityZoneInsteadOfTheServerClockToFinishActivities() {
+    // Kiritimati (UTC+14) and Pago Pago (UTC-11): wherever the JVM runs, at least one is far away.
+    // An activity still ahead in its own zone must not be finished because the server clock
+    // already passed that wall-clock time, and one that already started there must be.
+    for (String zone : new String[] {"Pacific/Kiritimati", "Pacific/Pago_Pago"}) {
+      LocalDateTime zoneNow = LocalDateTime.now(java.time.ZoneId.of(zone));
+      Activity upcoming = activityAt(zoneNow.plusHours(3));
+      upcoming.setTimeZone(zone);
+      Activity past = activityAt(zoneNow.minusMinutes(30));
+      past.setTimeZone(zone);
+      when(activityRepository.findActive()).thenReturn(List.of(upcoming, past));
+
+      scheduler.finishPastActivities();
+
+      assertThat(upcoming.getStatus()).as(zone).isEqualTo(ActivityStatus.CONFIRMED);
+      assertThat(past.getStatus()).as(zone).isEqualTo(ActivityStatus.FINISHED);
+    }
+  }
+
+  @Test
+  void leavesProposedActivityForItsVotationEvenIfItsDateHasPassed() {
+    Activity activity = activityAt(LocalDateTime.now().minusMinutes(1));
+    activity.setStatus(ActivityStatus.PROPOSED);
+    when(activityRepository.findActive()).thenReturn(List.of(activity));
+
+    scheduler.finishPastActivities();
+
+    assertThat(activity.getStatus()).isEqualTo(ActivityStatus.PROPOSED);
+    verify(activityRepository, never()).save(any());
+  }
+
+  @Test
+  void doesNotSendStartingSoonNoticeForProposedActivity() {
+    Activity activity = activityAt(LocalDateTime.now().plusMinutes(60));
+    activity.setStatus(ActivityStatus.PROPOSED);
+    when(activityRepository.findActive()).thenReturn(List.of(activity));
+
+    scheduler.finishPastActivities();
+
+    verify(eventPublisher, never()).publishEvent(any());
+    assertThat(activity.wasStartingSoonNotificationSent()).isFalse();
+  }
+
+  @Test
   void notifiesOnceWhenActivityIsInsideThreshold() {
     Activity activity = activityAt(LocalDateTime.now().plusMinutes(60));
     when(activityRepository.findActive()).thenReturn(List.of(activity));

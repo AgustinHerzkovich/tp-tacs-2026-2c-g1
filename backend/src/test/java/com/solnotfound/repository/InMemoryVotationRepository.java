@@ -36,6 +36,20 @@ public class InMemoryVotationRepository implements IVotationRepository {
   }
 
   @Override
+  public void removeVotes(String activityId, String userId) {
+    votations.values().stream()
+        .filter(votation -> votation.getStatus() == VotationStatus.ACTIVE)
+        .filter(votation -> activityId.equals(votation.getActivity().getId()))
+        .flatMap(votation -> votation.getOptions().stream())
+        .forEach(
+            option ->
+                option.setUsers(
+                    option.getUsers().stream()
+                        .filter(user -> !user.getId().equals(userId))
+                        .toList()));
+  }
+
+  @Override
   public List<Votation> findByActivityIds(List<String> activityIds) {
     return votations.values().stream()
         .filter(votation -> activityIds.contains(votation.getActivity().getId()))

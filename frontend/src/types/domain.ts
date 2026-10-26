@@ -35,9 +35,7 @@ interface ActivityBase {
   dateTime: string;
   when: string;
   where: string;
-  /** Real participant user ids (Keycloak subjects) — see
-   * src/lib/initials.ts's participantDisplayName for why these can't be
-   * resolved to real names for anyone but the current user. */
+  /** Real participant user ids (Keycloak subjects). */
   participantIds: string[];
   participantNames: string[];
 }
@@ -79,6 +77,9 @@ export interface WizardFormState {
   reschedule: string;
   reprogramStart: string;
   reprogramEnd: string;
+  /** Whether the organizer also joins as a participant right after publishing.
+   * Not part of the create request: it triggers a separate join call. */
+  joinAsParticipant: boolean;
 }
 
 /** Non-sensitive identity claims used by the UI, read from the Keycloak ID

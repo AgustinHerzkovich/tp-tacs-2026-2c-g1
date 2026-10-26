@@ -25,7 +25,7 @@ function SummaryRow({ icon: Icon, label, value }: { icon: ComponentType<{ classN
   );
 }
 
-export function StepResumen({ form }: StepProps) {
+export function StepResumen({ form, set }: StepProps) {
   const type = TYPE_META[form.type];
 
   return (
@@ -48,6 +48,22 @@ export function StepResumen({ form }: StepProps) {
           <SummaryRow icon={ImageIcon} label="Imágenes" value={`${form.images.length} ${form.images.length === 1 ? "imagen agregada" : "imágenes agregadas"}`} />
         )}
       </div>
+
+      <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border-2 px-4 py-3" style={{ borderColor: "var(--border)" }}>
+        <input
+          type="checkbox"
+          className="mt-0.5 size-5 shrink-0 cursor-pointer"
+          style={{ accentColor: "var(--primary)" }}
+          checked={form.joinAsParticipant}
+          onChange={(event) => set("joinAsParticipant")(event.target.checked)}
+        />
+        <span>
+          <span className="block text-[13.5px] font-extrabold">Sumarme como participante</span>
+          <span className="block text-[12px] font-bold" style={{ color: "var(--muted-foreground)" }}>
+            Ocupás uno de los lugares de la actividad. Si no, la organizás sin figurar entre los participantes.
+          </span>
+        </span>
+      </label>
     </div>
   );
 }

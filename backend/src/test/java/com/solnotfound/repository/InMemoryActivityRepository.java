@@ -84,6 +84,39 @@ public class InMemoryActivityRepository implements IActivityRepository {
         pageable);
   }
 
+  @Override
+  public synchronized boolean addParticipant(String activityId, String userId) {
+    Activity activity = activities.get(activityId);
+    if (activity == null || activity.findParticipant(userId).isPresent()) {
+      return false;
+    }
+    try {
+      activity.addParticipant(userId);
+      return true;
+    } catch (com.solnotfound.exception.IllegalStateActivityException exception) {
+      return false;
+    }
+  }
+
+  @Override
+  public synchronized void removeParticipant(String activityId, String userId) {
+    Activity activity = activities.get(activityId);
+    if (activity != null) {
+      activity.setParticipants(
+          activity.getParticipants().stream()
+              .filter(participant -> !participant.getId().equals(userId))
+              .toList());
+    }
+  }
+
+  @Override
+  public long assignTimeZoneWhereMissing(String timeZone) {
+    List<Activity> withoutZone =
+        findAll().stream().filter(activity -> activity.getTimeZone() == null).toList();
+    withoutZone.forEach(activity -> activity.setTimeZone(timeZone));
+    return withoutZone.size();
+  }
+
   private List<Activity> filterByDateRange(
       List<Activity> source, LocalDateTime dateFrom, LocalDateTime dateTo) {
     return source.stream()

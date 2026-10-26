@@ -56,6 +56,10 @@ export interface ActivityResponse {
   location: LocationDTO;
   /** LocalDateTime, e.g. "2026-09-06T09:00:00" */
   dateTime: string;
+  /** IANA zone the activity's dates are written in (e.g.
+   * "America/Argentina/Buenos_Aires"), `null` when the backend never recorded
+   * one. Needed to tell whether a date already passed is really past. */
+  timeZone: string | null;
   availability: boolean | null;
   minParticipants: number;
   maxParticipants: number;
@@ -116,6 +120,10 @@ export interface ActivityWeatherResponse {
   activityDateTime: string;
   currentWeather: WeatherForecastDTO;
   activityForecast: WeatherForecastDTO;
+  provider: WeatherProvider;
+  /** True when the user chose the alternative provider but it could not
+   * answer, so the main one did. */
+  fallback: boolean;
 }
 
 export interface VotationOptionDTO {
@@ -130,6 +138,10 @@ export interface VotationDTO {
   creationDate: string;
   status: VotationStatus;
   options: VotationOptionDTO[];
+  /** Instant at which the votation stops accepting votes. */
+  closingDate: string | null;
+  /** Minimum participation (0..1) required to resolve the votation. */
+  minQuorum: number | null;
   /** Option the current user voted for (its `dateTime`), or null if they
    * have not voted yet. The backend computes it from the user id. */
   votedOption: string | null;
@@ -146,6 +158,7 @@ export interface VotationFilterParams {
 
 export interface UpdateVotationOptionsRequest {
   dates: string[];
+  allowVoteLoss?: boolean;
 }
 
 export interface UpdateVotationSettingsRequest {
@@ -169,6 +182,12 @@ export interface UserDTO {
   name: string;
 }
 
+export type WeatherProvider = "OPEN_METEO" | "LEGACY";
+
+export interface UserPreferencesDTO {
+  weatherProvider: WeatherProvider;
+}
+
 export interface ActivityStatisticsResponse {
   created: number;
   rescheduled: number;
@@ -183,9 +202,34 @@ export interface WeatherProviderStatisticsResponse {
   averageResponseTimeMs: number;
 }
 
+export interface ProviderStatusPoint {
+  at: string;
+  /** "OK", "DEGRADED" or "DOWN". */
+  status: string | null;
+  circuitBreakerState: string | null;
+}
+
+export interface ProviderStatisticsResponse {
+  provider: string;
+  status: string | null;
+  circuitBreakerState: string | null;
+  requests: number;
+  successful: number;
+  failed: number;
+  averageResponseTimeMs: number;
+  cacheHits: number;
+  cacheMisses: number;
+  cacheHitRatio: number | null;
+  fallbacks: number;
+  errors: Record<string, number>;
+  refusals: Record<string, number>;
+  timeline: ProviderStatusPoint[];
+}
+
 export interface StatisticsResponse {
   from: string;
   to: string;
   activities: ActivityStatisticsResponse;
   weatherProvider: WeatherProviderStatisticsResponse;
+  providers: ProviderStatisticsResponse[];
 }

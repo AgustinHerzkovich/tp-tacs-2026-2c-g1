@@ -3,6 +3,7 @@ package com.solnotfound.adapters.openmeteo;
 import com.solnotfound.adapters.IWeatherAdapter;
 import com.solnotfound.entity.activity.Location;
 import com.solnotfound.entity.weather.WeatherForecast;
+import com.solnotfound.exception.ErrorCode;
 import com.solnotfound.exception.WeatherUnavailableException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -127,8 +128,13 @@ public class OpenMeteoWeatherAdapter implements IWeatherAdapter {
 
   private void validateHorizon(LocalDate startDate, LocalDate endDate) {
     LocalDate today = LocalDate.now();
-    if (startDate.isBefore(today) || endDate.isAfter(today.plusDays(15))) {
+    if (startDate.isBefore(today)) {
       throw new WeatherUnavailableException("Forecast is outside the 16-day provider horizon");
+    }
+
+    if (endDate.isAfter(today.plusDays(15))) {
+      throw new WeatherUnavailableException(
+          ErrorCode.FORECAST_NOT_YET_AVAILABLE, "Forecast is outside the 16-day provider horizon");
     }
   }
 

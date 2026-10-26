@@ -1,11 +1,10 @@
 package com.solnotfound.service.schedulers;
 
-import com.solnotfound.adapters.IWeatherAdapter;
 import com.solnotfound.entity.activity.Activity;
 import com.solnotfound.entity.activity.ActivityStatus;
-import com.solnotfound.entity.activity.Location;
 import com.solnotfound.entity.notification.BadWeatherAlertNotificationType;
 import com.solnotfound.entity.statistics.ActivityTransitionReason;
+import com.solnotfound.entity.user.WeatherProvider;
 import com.solnotfound.entity.votation.Votation;
 import com.solnotfound.entity.votation.VotationOption;
 import com.solnotfound.entity.votation.VotationStatus;
@@ -16,6 +15,7 @@ import com.solnotfound.listener.ActivityNotificationEvent;
 import com.solnotfound.repository.IActivityRepository;
 import com.solnotfound.repository.IVotationRepository;
 import com.solnotfound.service.ActivityStatusTransitionService;
+import com.solnotfound.service.WeatherGateway;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -23,7 +23,9 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -38,38 +40,60 @@ import org.springframework.stereotype.Component;
     justification = "Spring injects shared application collaborators")
 public class ActivityAnticipationCheckScheduler {
 
+  /** Minimum time participants get to vote before the votation closes. */
+  private static final Duration MIN_VOTING_TIME = Duration.ofHours(1);
+
+  /**
+   * Gap kept between the closing of the votation and its earliest alternative. It covers the hourly
+   * closing check, so the activity is rescheduled before the chosen date arrives.
+   */
+  private static final Duration CLOSING_MARGIN = Duration.ofHours(1);
+
   private final IActivityRepository activityRepository;
   private final IVotationRepository votationRepository;
-  private final IWeatherAdapter weatherAdapter;
+  private final WeatherGateway weatherGateway;
   private final IBadWeatherChecker badWeatherChecker;
   private final ApplicationEventPublisher eventPublisher;
   private final ActivityStatusTransitionService transitionService;
   private final Duration votationDuration;
+  private final double minQuorum;
+  private final boolean weatherCheckOnStartup;
+  private final String appMode;
 
   public ActivityAnticipationCheckScheduler(
       IActivityRepository activityRepository,
       IVotationRepository votationRepository,
-      IWeatherAdapter weatherAdapter,
+      WeatherGateway weatherGateway,
       IBadWeatherChecker badWeatherChecker,
       ApplicationEventPublisher eventPublisher,
       ActivityStatusTransitionService transitionService,
-      @Value("${votation.duration:24h}") Duration votationDuration) {
+      @Value("${votation.duration:24h}") Duration votationDuration,
+      @Value("${votation.min-quorum:0.5}") double minQuorum,
+      @Value("${activity.weather-check-on-startup:true}") boolean weatherCheckOnStartup,
+      @Value("${app.mode:}") String appMode) {
     this.activityRepository = activityRepository;
     this.votationRepository = votationRepository;
-    this.weatherAdapter = weatherAdapter;
+    this.weatherGateway = weatherGateway;
     this.badWeatherChecker = badWeatherChecker;
     this.eventPublisher = eventPublisher;
     this.transitionService = transitionService;
     this.votationDuration = votationDuration;
+    this.minQuorum = minQuorum;
+    this.weatherCheckOnStartup = weatherCheckOnStartup;
+    this.appMode = appMode;
   }
 
   /**
-   * Checks due active activities once per hour. For bad weather, alternatives and the resulting
-   * activity state are persisted before notification delivery. Weather-provider failures leave the
-   * activity unchecked so a later execution can retry it.
+   * Checks due active activities once per hour, and once more when the application starts. For bad
+   * weather, alternatives and the resulting activity state are persisted before notification
+   * delivery. Weather-provider failures leave the activity unchecked so a later execution can retry
+   * it.
+   *
+   * <p>Every votation it opens starts with the configured participation quorum ({@code
+   * votation.min-quorum}), which the organizer can then adjust from the app.
    */
   @Scheduled(cron = "${activity.weather-check-cron:0 0 * * * *}")
-  public void checkActivitiesClimate() {
+  public synchronized void checkActivitiesClimate() {
 
     List<Activity> activeActivities = activityRepository.findActive();
     int dueActivities = 0;
@@ -84,9 +108,11 @@ public class ActivityAnticipationCheckScheduler {
       }
 
       dueActivities++;
-      Location location = activity.getLocation();
       try {
-        WeatherForecast weather = weatherAdapter.getFutureClimate(location, activity.getDateTime());
+        WeatherForecast weather =
+            weatherGateway
+                .forecast(activity, activity.getDateTime(), providerOf(activity), null)
+                .forecast();
         boolean badWeather = badWeatherChecker.isBadWeatherForActivity(weather, activity);
         if (badWeather) {
           badWeatherActivities++;
@@ -95,8 +121,6 @@ public class ActivityAnticipationCheckScheduler {
               ActivityNotificationEvent.from(activity, new BadWeatherAlertNotificationType()));
         } else {
           goodWeather++;
-          activity.markWeatherChecked();
-          activityRepository.save(activity);
         }
 
       } catch (Exception exception) {
@@ -111,6 +135,36 @@ public class ActivityAnticipationCheckScheduler {
         goodWeather,
         badWeatherActivities,
         failures);
+  }
+
+  /**
+   * Runs one weather-check pass as soon as the application is ready, so due activities do not have
+   * to wait for the first cron execution. It reuses the same rules as the scheduled pass: only the
+   * activities for which {@link Activity#isTimeToCheckWeatherConditions()} holds are queried, and
+   * the whole pass runs synchronously before the application reports itself as started.
+   *
+   * <p>The pass is skipped when {@code activity.weather-check-on-startup=false}, and also when
+   * {@code app.mode=scheduled-jobs}: in that mode {@link ScheduledJobRunner} runs this very pass
+   * from a {@code CommandLineRunner} and closes the context afterwards, so running it again here
+   * would duplicate the work against an already closed context.
+   *
+   * <p>A failure of the pass is logged and swallowed: a provider, database or scheduling problem
+   * must never prevent the application from starting, and the cron execution retries later.
+   */
+  @EventListener(ApplicationReadyEvent.class)
+  public void checkActivitiesOnStartup() {
+    if (!weatherCheckOnStartup || "scheduled-jobs".equals(appMode)) {
+      log.info(
+          "Startup weather check skipped: weatherCheckOnStartup={} appMode={}",
+          weatherCheckOnStartup,
+          appMode.isEmpty() ? "<unset>" : appMode);
+      return;
+    }
+    try {
+      checkActivitiesClimate();
+    } catch (RuntimeException exception) {
+      log.error("Startup weather check failed", exception);
+    }
   }
 
   private void openActivityVotation(Activity activity) {
@@ -141,8 +195,14 @@ public class ActivityAnticipationCheckScheduler {
       }
     }
 
+    // The votation needs time to collect votes and must close before its earliest alternative,
+    // so alternatives that start too soon are not offered.
+    LocalDateTime creationDate = activity.now();
+    LocalDateTime earliestAllowed = creationDate.plus(MIN_VOTING_TIME).plus(CLOSING_MARGIN);
+    candidateTimes.removeIf(candidate -> !candidate.isAfter(earliestAllowed));
+
     List<WeatherForecast> forecasts =
-        weatherAdapter.getForecastRange(activity.getLocation(), candidateTimes);
+        weatherGateway.forecastRange(activity, candidateTimes, providerOf(activity));
     if (forecasts.size() != candidateTimes.size()) {
       throw new WeatherUnavailableException("Provider returned an incomplete forecast range");
     }
@@ -158,7 +218,6 @@ public class ActivityAnticipationCheckScheduler {
       }
     }
 
-    activity.markWeatherChecked();
     if (options.isEmpty()) {
       transitionService.transition(
           activity, ActivityStatus.CANCELLED, ActivityTransitionReason.NO_WEATHER_ALTERNATIVES);
@@ -171,9 +230,9 @@ public class ActivityAnticipationCheckScheduler {
     Votation votation = new Votation();
     votation.setActivity(activity);
     votation.setStatus(VotationStatus.ACTIVE);
-    LocalDateTime creationDate = LocalDateTime.now();
     votation.setCreationDate(creationDate);
-    votation.setClosingDate(creationDate.plus(votationDuration));
+    votation.setClosingDate(closingDate(creationDate, options.getFirst().getDateTime()));
+    votation.setMinQuorum(minQuorum);
     votation.setOptions(options);
     votationRepository.save(votation);
     transitionService.transition(
@@ -183,5 +242,27 @@ public class ActivityAnticipationCheckScheduler {
         activity.getId(),
         options.size(),
         votation.getClosingDate());
+  }
+
+  /**
+   * Chooses when the votation closes: after the configured duration, but never later than {@link
+   * #CLOSING_MARGIN} before the earliest alternative. Otherwise a short anticipation window could
+   * leave the votation open past its own options and reschedule the activity to a past date.
+   *
+   * @param creationDate when the votation opens, in the activity's zone
+   * @param earliestOption earliest alternative offered
+   * @return the closing date, always after {@code creationDate}
+   */
+  private LocalDateTime closingDate(LocalDateTime creationDate, LocalDateTime earliestOption) {
+    LocalDateTime byDuration = creationDate.plus(votationDuration);
+    LocalDateTime beforeEarliestOption = earliestOption.minus(CLOSING_MARGIN);
+    return byDuration.isBefore(beforeEarliestOption) ? byDuration : beforeEarliestOption;
+  }
+
+  /** Weather provider of the activity's organizer, who decides how the activity is monitored. */
+  private static WeatherProvider providerOf(Activity activity) {
+    return activity.getOrganizer() == null
+        ? WeatherProvider.OPEN_METEO
+        : activity.getOrganizer().effectiveWeatherProvider();
   }
 }

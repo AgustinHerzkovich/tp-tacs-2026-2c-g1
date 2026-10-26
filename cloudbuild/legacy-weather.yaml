@@ -1,0 +1,26 @@
+steps:
+  # The binary is not versioned (it embeds the course's OAuth client); it lives in a private bucket.
+  - id: fetch-binary
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: bash
+    args:
+      - -c
+      - mkdir -p bin/bin && gcloud storage cp gs://${PROJECT_ID}-planazo-prod-legacy-binary/tacs-linux-amd64 bin/bin/tacs-linux-amd64
+
+  - id: build
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --file
+      - legacy-weather/Dockerfile
+      - --tag
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/legacy-weather:$COMMIT_SHA
+      - .
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/legacy-weather:$COMMIT_SHA
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+timeout: 1800s

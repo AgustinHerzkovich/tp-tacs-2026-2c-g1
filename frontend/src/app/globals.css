@@ -187,6 +187,25 @@
   display: none;
 }
 
+/* Keeps a thin, on-brand scrollbar so long lists (dates, options) are obviously
+   scrollable instead of being silently cut off at the edge. */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted-foreground) transparent;
+}
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: var(--muted-foreground);
+  opacity: 0.45;
+}
+
 .planazo-map-marker span {
   display: block;
   width: 30px;

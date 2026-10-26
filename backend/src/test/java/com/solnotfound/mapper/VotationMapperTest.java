@@ -16,6 +16,7 @@ class VotationMapperTest {
   @Test
   void mapsVotationToDTO() {
     LocalDateTime creationDate = LocalDateTime.of(2026, 8, 28, 19, 30);
+    LocalDateTime closingDate = LocalDateTime.of(2026, 8, 29, 19, 30);
     LocalDateTime optionDate = LocalDateTime.of(2026, 8, 29, 10, 0);
     Votation votation = new Votation();
     votation.setId("1");
@@ -25,6 +26,8 @@ class VotationMapperTest {
     votation.setActivity(activity);
     assertThat(votation.getActivity()).isSameAs(activity);
     votation.setCreationDate(creationDate);
+    votation.setClosingDate(closingDate);
+    votation.setMinQuorum(0.75);
     votation.setStatus(VotationStatus.ACTIVE);
     votation.setOptions(List.of(option(optionDate, user("2", "Jane Doe", "jane@example.com"))));
 
@@ -33,6 +36,8 @@ class VotationMapperTest {
     assertThat(dto.id()).isEqualTo("1");
     assertThat(dto.activityId()).isEqualTo("activity-1");
     assertThat(dto.creationDate()).isEqualTo(creationDate);
+    assertThat(dto.closingDate()).isEqualTo(closingDate);
+    assertThat(dto.minQuorum()).isEqualTo(0.75);
     assertThat(dto.status()).isEqualTo(VotationStatus.ACTIVE);
     assertThat(dto.options()).hasSize(1);
     assertThat(dto.options().getFirst().dateTime()).isEqualTo(optionDate);
@@ -47,7 +52,7 @@ class VotationMapperTest {
   }
 
   @Test
-  void voterNamesFallsBackToUserIdWhenNameIsMissing() {
+  void voterNamesUseAGenericLabelInsteadOfTheUserIdWhenNameIsMissing() {
     LocalDateTime optionDate = LocalDateTime.of(2026, 8, 29, 10, 0);
     User unnamed = user("participant-1", null, null);
     Votation votation = new Votation();
@@ -60,7 +65,7 @@ class VotationMapperTest {
 
     VotationDTO dto = VotationMapper.toDTO(votation, "someone-else");
 
-    assertThat(dto.options().getFirst().voterNames()).containsExactly("participant-1");
+    assertThat(dto.options().getFirst().voterNames()).containsExactly("Participante");
     assertThat(dto.votedOption()).isNull();
   }
 

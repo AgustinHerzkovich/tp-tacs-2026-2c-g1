@@ -26,6 +26,12 @@ variable "resource_prefix" {
   default     = "planazo"
 }
 
+variable "legacy_weather_image" {
+  description = "Legacy weather provider image URI. Leave empty until the first image is pushed."
+  type        = string
+  default     = ""
+}
+
 variable "backend_image" {
   description = "Backend image URI. Leave empty until the first image is pushed."
   type        = string
@@ -118,4 +124,10 @@ variable "atlas_access_cidrs" {
   description = "CIDRs allowed to reach Atlas. Cloud Run requires 0.0.0.0/0 without static egress."
   type        = set(string)
   default     = ["0.0.0.0/0"]
+}
+
+variable "activity_legacy_time_zone" {
+  description = "IANA time zone assigned on startup to activities created before the zone was stored. Empty skips the step."
+  type        = string
+  default     = "America/Argentina/Buenos_Aires"
 }

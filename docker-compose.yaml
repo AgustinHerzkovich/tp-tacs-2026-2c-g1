@@ -15,12 +15,15 @@ services:
       backend:
         condition: service_healthy
     healthcheck:
+      # Checks only the frontend itself (the landing page needs no backend). Probing
+      # /api/healthcheck, which proxies to the backend, marked the frontend unhealthy whenever the
+      # backend was being recreated and made `docker compose up --wait` fail.
       test:
         [
           "CMD",
           "node",
           "-e",
-          "fetch('http://127.0.0.1:3000/api/healthcheck').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+          "fetch('http://127.0.0.1:3000/').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
         ]
       interval: 5s
       timeout: 5s
@@ -53,7 +56,13 @@ services:
       APP_SEED_ENABLED: ${APP_SEED_ENABLED:-false}
       APP_DEV_SEED_ENABLED: ${APP_DEV_SEED_ENABLED:-false}
       APP_DEV_SEED_USER_ID: ${APP_DEV_SEED_USER_ID:-}
-      TELEGRAM_API_TOKEN: ${TELEGRAM_API_TOKEN:-}
+      TELEGRAM_API_TOKEN: ${TELEGRAM_API_TOKEN:-local-telegram-api-token}
+      LEGACY_WEATHER_URL: http://legacy-weather:9978
+      LEGACY_WEATHER_TOKEN: ${LEGACY_WEATHER_TOKEN:-}
+      LEGACY_WEATHER_TOKEN_FILE: /legacy-token/api-token
+      LEGACY_WEATHER_USER_REQUESTS_PER_MINUTE: ${LEGACY_WEATHER_USER_REQUESTS_PER_MINUTE:-30}
+    volumes:
+      - legacy-weather-token:/legacy-token:ro
     depends_on:
       minio:
         condition: service_healthy
@@ -81,7 +90,9 @@ services:
       - "8081:8080"
     environment:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
-      TELEGRAM_API_TOKEN: ${TELEGRAM_API_TOKEN:-}
+      TELEGRAM_API_TOKEN: ${TELEGRAM_API_TOKEN:-local-telegram-api-token}
+      # Secret que Telegram manda en cada update; sin el, el bot rechaza todos los updates.
+      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-local-webhook-secret}
       # Dentro de la red de Compose el backend es "backend"; localhost seria el propio bot.
       BACKEND_URL: http://backend:8080
       # URL del frontend tal como la abre el usuario desde Telegram (no la de la red de Compose).
@@ -228,6 +239,15 @@ services:
       KEYCLOAK_PUBLIC_URL: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8090}
       TELEGRAM_BOT_CLIENT_ID: ${KEYCLOAK_TELEGRAM_BOT_CLIENT_ID:-solnotfoundTelegramBot}
       TELEGRAM_BOT_CLIENT_SECRET: ${KEYCLOAK_TELEGRAM_BOT_CLIENT_SECRET:-solnotfound-telegram-bot-client-secret}
+      # Cantidad de usuarios loadtestNN que crea configure-local.sh (ver docs/LOAD_TEST.md).
+      LOADTEST_USERS: ${LOADTEST_USERS:-10}
+      # configure-local.sh llama a kcadm.sh decenas de veces y cada llamada levanta una JVM que
+      # vive un par de segundos: se prioriza el arranque (JIT C1, GC serial y un archivo de clases
+      # compartido que la primera llamada crea y las siguientes reutilizan). Al crear ese archivo
+      # la JVM imprime cientos de avisos inofensivos, por eso se silencia su log.
+      KC_OPTS: >-
+        -XX:TieredStopAtLevel=1 -XX:+UseSerialGC
+        -XX:+AutoCreateSharedArchive -XX:SharedArchiveFile=/tmp/kcadm.jsa -Xlog:cds*=off
     depends_on:
       keycloak:
         condition: service_healthy
@@ -237,7 +257,21 @@ services:
     networks:
       - tacs-network
 
+  legacy-weather:
+    build:
+      context: .
+      dockerfile: legacy-weather/Dockerfile
+    restart: unless-stopped
+    init: true
+    volumes:
+      - legacy-weather-session:/data
+      - legacy-weather-token:/token
+    networks:
+      - tacs-network
+
 volumes:
+  legacy-weather-session:
+  legacy-weather-token:
   mongodb-data:
   mongodb-config:
   minio-data:

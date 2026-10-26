@@ -5,6 +5,7 @@ import com.solnotfound.entity.weather.WeatherCondition;
 import com.solnotfound.exception.ErrorCode;
 import com.solnotfound.exception.IllegalStateActivityException;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -45,7 +46,13 @@ public class Activity {
   @Setter @Getter private ReprogramationRange reprogramationRange;
   @Indexed @Getter private ActivityStatus status = ActivityStatus.CONFIRMED;
   private List<ActivityStatus> statusHistory = new ArrayList<>(List.of(ActivityStatus.CONFIRMED));
-  @Setter @Getter private Boolean weatherChecked = false;
+
+  /**
+   * IANA zone in which {@link #dateTime} is a wall-clock reading (the organizer's zone when the
+   * activity was created). Null for activities created before this field existed.
+   */
+  @Getter @Setter private String timeZone;
+
   @Getter private LocalDateTime startingSoonNotificationDateTime;
 
   @DocumentReference(lazy = true)
@@ -169,22 +176,33 @@ public class Activity {
   }
 
   /**
-   * Indicates whether the activity is inside its anticipation window and has not yet had its
-   * forecast checked.
+   * Current wall-clock time in the activity's own zone, the only "now" that can be compared with
+   * {@link #dateTime}. The server clock runs in UTC in containers, so comparing against it shifted
+   * every deadline by the organizer's offset. Activities without a stored zone fall back to the JVM
+   * default zone.
+   *
+   * @return the current local date-time where the activity takes place
+   */
+  public LocalDateTime now() {
+    return LocalDateTime.now(timeZone == null ? ZoneId.systemDefault() : ZoneId.of(timeZone));
+  }
+
+  /**
+   * Indicates whether the forecast must be evaluated now: the activity is inside its anticipation
+   * window and is still going ahead on its current date. It stays {@code true} on every run inside
+   * the window, so a forecast that worsens after a first good check is still detected, and a
+   * rescheduled activity is watched again on its new date. A proposed activity is excluded because
+   * its votation is already deciding the new date.
    *
    * @return {@code true} when the weather check should run
    */
   public boolean isTimeToCheckWeatherConditions() {
-    LocalDateTime now = LocalDateTime.now();
+    if (status != ActivityStatus.CONFIRMED && status != ActivityStatus.RESCHEDULED) {
+      return false;
+    }
+    LocalDateTime now = now();
     LocalDateTime windowStart = dateTime.minusHours(anticipationWindow);
-
-    boolean withinAnticipationWindow = !windowStart.isAfter(now) && !dateTime.isBefore(now);
-
-    return (withinAnticipationWindow && !weatherChecked);
-  }
-
-  public void markWeatherChecked() {
-    this.weatherChecked = true;
+    return !windowStart.isAfter(now) && !dateTime.isBefore(now);
   }
 
   /**
@@ -210,6 +228,10 @@ public class Activity {
 
   public synchronized boolean isAParticipant(User user) {
     return participants.contains(user);
+  }
+
+  public synchronized Optional<User> findParticipant(String userId) {
+    return participants.stream().filter(user -> user.getId().equals(userId)).findFirst();
   }
 
   /**

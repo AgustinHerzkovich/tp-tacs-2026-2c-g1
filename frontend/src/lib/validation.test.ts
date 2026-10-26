@@ -23,6 +23,7 @@ function baseForm(overrides: Partial<WizardFormState> = {}): WizardFormState {
     reschedule: "3",
     reprogramStart: "09:00",
     reprogramEnd: "21:00",
+    joinAsParticipant: true,
     ...overrides,
   };
 }

@@ -25,9 +25,13 @@ const MESSAGES_BY_CODE: Record<string, string> = {
   NOT_ORGANIZER: "Solo el organizador puede hacer esto.",
   INVALID_VOTATION_OPTIONS: "Algunas fechas están fuera del rango permitido o tienen mal clima pronosticado.",
   INVALID_VOTATION_SETTINGS: "La votación tiene que cerrar antes de la primera alternativa.",
+  VOTATION_VOTES_AT_RISK: "Algunas alternativas que quitás ya tienen votos. Revisá la lista y confirmá si querés perderlos.",
+  CONCURRENT_UPDATE: "Alguien más cambió la votación al mismo tiempo. Probá de nuevo.",
   ACCESS_DENIED: "No tenés permiso para hacer esto.",
   RESOURCE_NOT_FOUND: "No encontramos lo que buscabas.",
+  TELEGRAM_LINK_CODE_INVALID: "El link para vincular Telegram venció o ya se usó. Pedí uno nuevo mandando /start al bot.",
   WEATHER_UNAVAILABLE: "No pudimos consultar el pronóstico. Probá de nuevo en unos minutos.",
+  FORECAST_NOT_YET_AVAILABLE: "Todavía es pronto para el pronóstico de esa fecha.",
   STATISTICS_UNAVAILABLE: "No pudimos cargar las estadísticas. Probá de nuevo en unos minutos.",
 };
 

@@ -31,6 +31,7 @@ const ACTIVITY: ActivityResponse = {
   type: "OUTDOOR",
   location: { city: "CABA", latitude: null, longitude: null },
   dateTime: "2026-09-20T14:00:00",
+  timeZone: "America/Argentina/Buenos_Aires",
   availability: true,
   minParticipants: 4,
   maxParticipants: 12,
@@ -158,6 +159,10 @@ describe("api client", () => {
     const [, init] = requestArgs(0);
     expect(init?.method).toBe("POST");
     expect(init?.body).toBe(form);
-    expect(init?.headers).toBeUndefined();
+    // Only the zone header: setting content-type by hand would break the
+    // multipart boundary the browser has to generate.
+    expect(init?.headers).toEqual({
+      "X-Time-Zone": Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
   });
 });
