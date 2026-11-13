@@ -6,6 +6,7 @@
 import { authFetch } from "@/lib/authFetch";
 import { errorCodeOf, userMessageFor } from "@/lib/errorMessages";
 import { beginRequest, endRequest } from "@/lib/loading";
+import { startTracedRequest } from "@/lib/telemetry/searchTrace";
 import type {
   ActivityFilterParams,
   ActivityResponse,
@@ -36,10 +37,19 @@ export class ApiError extends Error {
   }
 }
 
+function withTraceHeaders(init: RequestInit | undefined, headers: Record<string, string>): RequestInit {
+  const merged = new Headers(init?.headers);
+  for (const [name, value] of Object.entries(headers)) merged.set(name, value);
+  return { ...init, headers: merged };
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  // Started before any await, while the caller's span (if any) is still the active one.
+  const traced = startTracedRequest(init?.method ?? "GET", `/api${path.split("?")[0]}`);
   beginRequest();
   try {
-    const res = await authFetch(`/api${path}`, init);
+    const res = await authFetch(`/api${path}`, traced ? withTraceHeaders(init, traced.headers) : init);
+    traced?.end(res.status);
     if (!res.ok) {
       const body: unknown = await res.json().catch(() => null);
       const code = errorCodeOf(body);
@@ -47,6 +57,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     }
     if (res.status === 204) return undefined as T;
     return (await res.json()) as T;
+  } catch (error) {
+    // Only a request that never got a response is still open here.
+    traced?.fail(error);
+    throw error;
   } finally {
     endRequest();
   }

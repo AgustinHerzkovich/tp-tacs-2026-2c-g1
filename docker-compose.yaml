@@ -7,13 +7,18 @@ services:
         NEXT_PUBLIC_KEYCLOAK_URL: ${NEXT_PUBLIC_KEYCLOAK_URL:-http://localhost:8090}
         NEXT_PUBLIC_KEYCLOAK_REALM: ${NEXT_PUBLIC_KEYCLOAK_REALM:-solnotfound}
         NEXT_PUBLIC_KEYCLOAK_CLIENT_ID: ${NEXT_PUBLIC_KEYCLOAK_CLIENT_ID:-solnotfoundFrontend}
+        NEXT_PUBLIC_OTEL_ENABLED: ${NEXT_PUBLIC_OTEL_ENABLED:-true}
+        NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT: ${NEXT_PUBLIC_OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318}
     ports:
       - "3000:3000"
     environment:
       BACKEND_URL: http://backend:8080
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
     depends_on:
       backend:
         condition: service_healthy
+      otel-collector:
+        condition: service_started
     healthcheck:
       # Checks only the frontend itself (the landing page needs no backend). Probing
       # /api/healthcheck, which proxies to the backend, marked the frontend unhealthy whenever the
@@ -61,9 +66,19 @@ services:
       LEGACY_WEATHER_TOKEN: ${LEGACY_WEATHER_TOKEN:-}
       LEGACY_WEATHER_TOKEN_FILE: /legacy-token/api-token
       LEGACY_WEATHER_USER_REQUESTS_PER_MINUTE: ${LEGACY_WEATHER_USER_REQUESTS_PER_MINUTE:-30}
+      # Observability: the agent instruments HTTP and MongoDB and exports to the
+      # collector; OBSERVABILITY_SEARCH_DELAY adds a controlled delay to the search (0ms = off).
+      JAVA_TOOL_OPTIONS: -javaagent:/otel/opentelemetry-javaagent.jar
+      OTEL_SERVICE_NAME: planazo-backend
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_METRIC_EXPORT_INTERVAL: 5000
+      OTEL_LOGS_EXPORTER: none
+      OBSERVABILITY_SEARCH_DELAY: ${OBSERVABILITY_SEARCH_DELAY:-0ms}
     volumes:
       - legacy-weather-token:/legacy-token:ro
     depends_on:
+      otel-collector:
+        condition: service_started
       minio:
         condition: service_healthy
       mongodb:
@@ -269,6 +284,81 @@ services:
     networks:
       - tacs-network
 
+  # Observability: see docs/OBSERVABILIDAD.md.
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.162.0
+    restart: unless-stopped
+    command: ["--config=/etc/otelcol/config.yaml"]
+    ports:
+      # OTLP over HTTP, published because the browser posts its spans here.
+      - "4318:4318"
+    volumes:
+      - ./observability/collector/config.yaml:/etc/otelcol/config.yaml:ro
+    mem_limit: 256m
+    depends_on:
+      - jaeger
+    networks:
+      - tacs-network
+
+  jaeger:
+    image: jaegertracing/jaeger:2.22.0
+    restart: unless-stopped
+    ports:
+      - "16686:16686"
+    mem_limit: 512m
+    networks:
+      - tacs-network
+
+  prometheus:
+    image: prom/prometheus:v3.15.1
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=15d
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:9090/-/ready"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    depends_on:
+      - otel-collector
+    networks:
+      - tacs-network
+
+  grafana:
+    image: grafana/grafana:13.2.4
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      # Development credentials only; visitors can read the dashboards without signing in.
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/busqueda-actividades.json
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    mem_limit: 256m
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/api/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    networks:
+      - tacs-network
+
 volumes:
   legacy-weather-session:
   legacy-weather-token:
@@ -276,6 +366,8 @@ volumes:
   mongodb-config:
   minio-data:
   keycloak-postgres-data:
+  prometheus-data:
+  grafana-data:
 
 networks:
   tacs-network:
