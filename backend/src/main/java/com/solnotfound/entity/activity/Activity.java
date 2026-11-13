@@ -22,6 +22,11 @@ import org.springframework.data.mongodb.core.mapping.DocumentReference;
 // the filter and the sort (their prefix also covers the plain organizer/participant lookups).
 @CompoundIndex(name = "organizer_date_time", def = "{'organizer': 1, 'dateTime': 1}")
 @CompoundIndex(name = "participants_date_time", def = "{'participants': 1, 'dateTime': 1}")
+// The activity search filters by status, and often by type, and sorts by dateTime:
+// these let MongoDB read the page in order from the index instead of filtering by status and then
+// sorting. Text filters (title, city) are case-insensitive substrings and cannot use an index.
+@CompoundIndex(name = "status_date_time", def = "{'status': 1, 'dateTime': 1}")
+@CompoundIndex(name = "type_status_date_time", def = "{'type': 1, 'status': 1, 'dateTime': 1}")
 public class Activity {
 
   @Id @Getter @Setter private String id;

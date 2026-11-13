@@ -1,0 +1,10 @@
+# Prometheus pulls the metrics the OpenTelemetry Collector exposes. A short interval keeps the
+# load test stages (a few minutes each) visible in detail.
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  - job_name: otel-collector
+    static_configs:
+      - targets: ["otel-collector:8889"]
