@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
 # Load test for the Planazo backend using Vegeta.
 #
-# Usage: loadtest/run.sh <smoke|read|mixed|legacy> [rate ...]
+# Usage: loadtest/run.sh <smoke|read|mixed|legacy|search> [stage ...]
 #   loadtest/run.sh read            # default stages: 10/s 50/s 100/s
 #   loadtest/run.sh mixed 20/s 40/s
 #   loadtest/run.sh legacy          # users of the legacy weather provider (Entrega 4)
+#   DURATION=3m loadtest/run.sh search 5c 50c   # activity search at 5 and 50 concurrent users
+#
+# A stage is a request rate (50/s) or a number of concurrent users (50c: each one sends its next
+# request as soon as the previous answers).
 #
 # Every stage gets fresh tokens, runs `vegeta attack`, writes its reports under
 # loadtest/results/<timestamp>-<scenario>/<rate>/ and is checked against the thresholds below.
@@ -32,7 +36,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BOUNDARY="planazo-loadtest-boundary"
 
 usage() {
-  sed -n '2,15p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  sed -n '2,19p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
   exit 2
 }
 
@@ -46,6 +50,7 @@ configure_target() {
   if is_local_url "$BASE_URL" && is_local_url "$KEYCLOAK_URL"; then
     REMOTE=false
     DEFAULT_RATES="${RATES:-10/s 50/s 100/s}"
+    [[ "$SCENARIO" == search ]] && DEFAULT_RATES="${RATES:-5c 50c}"
     INCLUDE_WEATHER="${INCLUDE_WEATHER:-true}"
     return
   fi
@@ -190,6 +195,19 @@ read_targets() {
   target GET "/notifications" "$token"
 }
 
+# The instrumented activity search: the Explorar feed with each filter it offers and a
+# few pages, with search terms from a fixed set so every run sends the same requests.
+search_targets() {
+  local i="$1" token="${TOKENS[$1]}"
+  local terms=(Caminata Kayak Asado Yoga Trekking Feria)
+  local term="${terms[$(((i - 1) % ${#terms[@]}))]}"
+  target GET "/activities?page=0&size=12" "$token"
+  target GET "/activities?title=$term&page=0&size=12" "$token"
+  target GET "/activities?city=Buenos%20Aires&availability=true&page=0&size=12" "$token"
+  target GET "/activities?type=OUTDOOR&status=CONFIRMED&page=1&size=12" "$token"
+  target GET "/activities?title=$term&type=MIXED&page=0&size=12" "$token"
+}
+
 # Makes every load test user a user of the legacy weather provider, so their weather lookups and
 # the monitoring of their activities go through it (and through its fallback when it is down).
 choose_legacy_provider() {
@@ -229,6 +247,11 @@ write_targets() {
     legacy)
       for ((i = 1; i <= LOADTEST_USERS; i++)); do
         legacy_targets "$i" >>"$file"
+      done
+      ;;
+    search)
+      for ((i = 1; i <= LOADTEST_USERS; i++)); do
+        search_targets "$i" >>"$file"
       done
       ;;
     mixed)
@@ -273,14 +296,26 @@ run_stage() {
   write_targets "$stage_dir/targets.jsonl" "$stage_dir"
   log "stage $rate for $DURATION ($(wc -l <"$stage_dir/targets.jsonl" | tr -d ' ') targets)"
 
+  # "50c" means 50 concurrent users (closed model): no fixed rate, 50 workers that each send the next
+  # request when the previous one answers.
+  local pacing=(-rate="$rate")
+  if [[ "$rate" =~ ^([0-9]+)c$ ]]; then
+    pacing=(-rate=0 -workers="${BASH_REMATCH[1]}" -max-workers="${BASH_REMATCH[1]}")
+  fi
+
+  # The window of the stage, to select it in Grafana and Jaeger.
+  local started_at ended_at
+  started_at="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
   vegeta attack \
     -format=json \
     -targets="$stage_dir/targets.jsonl" \
-    -rate="$rate" \
+    "${pacing[@]}" \
     -duration="$DURATION" \
     -timeout="$TIMEOUT" \
     -name="$SCENARIO-$rate" \
     -output="$stage_dir/results.bin"
+  ended_at="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+  printf 'stage=%s from=%s to=%s\n' "$rate" "$started_at" "$ended_at" | tee "$stage_dir/window.txt" >&2
 
   vegeta report "$stage_dir/results.bin" >"$stage_dir/report.txt"
   vegeta report -type=json "$stage_dir/results.bin" >"$stage_dir/report.json"
@@ -289,6 +324,11 @@ run_stage() {
   cat "$stage_dir/report.txt" "$stage_dir/histogram.txt" >&2
 
   if ! check_report "$stage_dir/report.json" >&2; then
+    if [[ "$SCENARIO" == search ]]; then
+      # The search scenario observes the degradation instead of gating on it: keep going.
+      log "stage $rate did not meet the thresholds (ok >= $MIN_OK_RATIO, no 5xx, p95 < ${MAX_P95_MS}ms)"
+      return 0
+    fi
     log "stage $rate did not meet the thresholds (ok >= $MIN_OK_RATIO, no 5xx, p95 < ${MAX_P95_MS}ms); stopping"
     return 1
   fi
@@ -297,7 +337,7 @@ run_stage() {
 main() {
   SCENARIO="${1:-}"
   case "$SCENARIO" in
-    smoke | read | mixed | legacy) shift ;;
+    smoke | read | mixed | legacy | search) shift ;;
     *) usage ;;
   esac
   configure_target
@@ -316,15 +356,22 @@ main() {
   mkdir -p "$RUN_DIR"
   log "scenario=$SCENARIO base_url=$BASE_URL remote=$REMOTE weather=$INCLUDE_WEATHER rates=${rates[*]} duration=$DURATION results=$RUN_DIR"
 
-  if [[ "$SCENARIO" != smoke ]]; then
+  # The search scenario creates nothing, so every run searches exactly the same data.
+  if [[ "$SCENARIO" != smoke && "$SCENARIO" != search ]]; then
     warm_up
   fi
   if [[ "$SCENARIO" == legacy ]]; then
     choose_legacy_provider
   fi
 
-  local rate
+  local rate first=true
   for rate in "${rates[@]}"; do
+    # A pause between search stages keeps them apart in the dashboard.
+    if [[ "$SCENARIO" == search && "$first" == false ]]; then
+      log "pausing ${STAGE_PAUSE:-30s} before the next stage"
+      sleep "${STAGE_PAUSE:-30s}"
+    fi
+    first=false
     run_stage "$rate" || exit 1
   done
   log "all stages passed; reports in $RUN_DIR"

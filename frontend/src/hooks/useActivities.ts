@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { toExploreActivity } from "@/lib/activityMapping";
+import { initBrowserTracing } from "@/lib/telemetry/browserTracing";
+import { ActivitySearchTrace } from "@/lib/telemetry/searchTrace";
 import type { ActivityFilterParams } from "@/types/backend";
 import type { ExploreActivity } from "@/types/domain";
 
@@ -50,17 +52,35 @@ export function useActivities(filters?: ActivityFilterParams, enabled = true): U
     if (!enabled) return;
     let cancelled = false;
 
-    api.activities
-      .list({ type, title, city, dateFrom, dateTo, availability, status, page: explorePage, size })
+    // The whole search is one span, from the request until its result is in state.
+    // Filters are recorded only as "used or not"; the searched text never leaves the browser.
+    initBrowserTracing();
+    const search = new ActivitySearchTrace({
+      "search.filter.type": type ?? "any",
+      "search.filter.text": Boolean(title),
+      "search.filter.city": Boolean(city),
+      "search.filter.dates": Boolean(dateFrom || dateTo),
+      "search.filter.availability": availability !== undefined,
+      "search.filter.status": Boolean(status),
+      "search.page": explorePage,
+      "search.page_size": size,
+    });
+
+    search
+      .run(() =>
+        api.activities.list({ type, title, city, dateFrom, dateTo, availability, status, page: explorePage, size }),
+      )
       .then((all) => {
         if (cancelled) return;
         setExploreFeed(all.content.map(toExploreActivity));
         setExploreTotalPages(all.totalPages);
         setError(null);
+        search.succeed(all.content.length);
       })
       .catch((err: unknown) => {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : "No pudimos cargar las actividades.");
+          search.fail(err);
         }
       })
       .finally(() => {
@@ -72,6 +92,7 @@ export function useActivities(filters?: ActivityFilterParams, enabled = true): U
 
     return () => {
       cancelled = true;
+      search.cancel();
     };
   }, [availability, city, dateFrom, dateTo, enabled, explorePage, reloadKey, requestKey, size, status, title, type]);
 

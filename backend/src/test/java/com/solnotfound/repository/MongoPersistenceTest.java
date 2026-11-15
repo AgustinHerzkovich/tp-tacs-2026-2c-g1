@@ -338,6 +338,67 @@ class MongoPersistenceTest {
     assertThat(linkCodes.consume("expired-hash", now)).isEmpty();
   }
 
+  @Test
+  void searchResolvesThePeopleOfTheWholePageAtOnce() {
+    userRepository.rememberName("organizer", "Orga");
+    userRepository.rememberName("ana", "Ana");
+    userRepository.rememberName("beto", "Beto");
+    User organizer = userRepository.findOrCreate("organizer");
+    Activity first = activity(organizer, userRepository.findOrCreate("ana"));
+    activityRepository.save(first);
+    Activity second = activity(User.withId("missing-organizer"), User.withId("ana"));
+    second.setId("activity-2");
+    second.setParticipants(
+        List.of(User.withId("beto"), User.withId("ghost"), userRepository.findOrCreate("ana")));
+    activityRepository.save(second);
+
+    List<Activity> page = activityRepository.search(noFilter(), PageRequest.of(0, 10)).getContent();
+
+    assertThat(page).extracting(Activity::getId).containsExactly("activity-1", "activity-2");
+    assertThat(page.get(0).getOrganizer().getName()).isEqualTo("Orga");
+    assertThat(page.get(0).getParticipants()).extracting(User::getName).containsExactly("Ana");
+    assertThat(page.get(1).getOrganizer().getId()).isEqualTo("missing-organizer");
+    assertThat(page.get(1).getParticipants())
+        .extracting(User::getName)
+        .containsExactly("Beto", "Ana");
+  }
+
+  @Test
+  void searchReusesARecentTotalUntilAnActivityChanges() {
+    User organizer = userRepository.findOrCreate("organizer");
+    User participant = userRepository.findOrCreate("participant");
+    for (int i = 1; i <= 3; i++) {
+      Activity activity = activity(organizer, participant);
+      activity.setId("activity-" + i);
+      activityRepository.save(activity);
+    }
+    assertThat(activityRepository.search(noFilter(), PageRequest.of(0, 2)).getTotalElements())
+        .isEqualTo(3);
+
+    Activity insertedBehindTheRepository = activity(organizer, participant);
+    insertedBehindTheRepository.setId("activity-4");
+    mongoTemplate.insert(insertedBehindTheRepository);
+
+    assertThat(activityRepository.search(noFilter(), PageRequest.of(0, 2)).getTotalElements())
+        .as("a full page takes the recent total")
+        .isEqualTo(3);
+    assertThat(activityRepository.search(noFilter(), PageRequest.of(0, 10)).getTotalElements())
+        .as("a short page tells its own total")
+        .isEqualTo(4);
+
+    Activity savedThroughTheRepository = activity(organizer, participant);
+    savedThroughTheRepository.setId("activity-5");
+    activityRepository.save(savedThroughTheRepository);
+
+    assertThat(activityRepository.search(noFilter(), PageRequest.of(0, 2)).getTotalElements())
+        .as("a write clears the recent totals")
+        .isEqualTo(5);
+  }
+
+  private static ActivityFilterDTO noFilter() {
+    return new ActivityFilterDTO(null, null, null, null, null, List.of(), null, List.of());
+  }
+
   private Activity activity(User organizer, User participant) {
     Activity activity = new Activity();
     activity.setId("activity-1");
