@@ -76,6 +76,21 @@ La sesión queda guardada en un volumen y sobrevive a reinicios. Mientras el leg
 la aplicación funciona igual: los usuarios que lo eligieron reciben el clima del proveedor
 principal. El detalle está en [`docs/PROVEEDOR_LEGACY.md`](docs/PROVEEDOR_LEGACY.md).
 
+El mismo comando levanta también la observabilidad de la Entrega 5 (OpenTelemetry Collector,
+Prometheus, Grafana y Jaeger):
+
+| Herramienta | Dirección |
+| --- | --- |
+| Aplicación | <http://localhost:3000> |
+| API del backend | <http://localhost:8080> |
+| Grafana (dashboard de la búsqueda) | <http://localhost:3001>: se ve sin login; `admin` / `admin` para editar (solo desarrollo) |
+| Jaeger | <http://localhost:16686> |
+| Prometheus | <http://localhost:9090> |
+| OpenTelemetry Collector | OTLP/HTTP en `:4318` (lo usa el navegador); OTLP/gRPC `:4317` solo dentro de la red de Compose |
+
+Qué se instrumentó, las métricas, el dashboard, las pruebas de carga y el análisis están en
+[`docs/OBSERVABILIDAD.md`](docs/OBSERVABILIDAD.md).
+
 ### Con Maven
 
 Se requiere Java 21. El proyecto incluye Maven Wrapper, por lo que no es necesario instalar
@@ -129,6 +144,7 @@ y PostgreSQL en lugar de Atlas, Cloud Storage y Cloud SQL (ver [Componentes](#co
 | Bot de Telegram | Contenedor `telegram` (Functions Framework) | Cloud Function HTTP (gen2) que recibe el webhook de Telegram |
 | Proveedor de clima legacy | Contenedor `legacy-weather`, sin puertos publicados | Cloud Run privado (solo lo invoca el backend), una instancia, sesión en Secret Manager |
 | Secretos | `.env` local (no versionado) | Secret Manager |
+| Observabilidad (Entrega 5) | OpenTelemetry Collector, Prometheus, Grafana y Jaeger | No se despliega: el agente y el SDK del navegador quedan apagados |
 | Imágenes de contenedor | Build local | Artifact Registry, etiquetadas con el SHA del commit |
 
 ### Portabilidad
@@ -225,6 +241,18 @@ Telegram
   validación de respuestas y fallback al proveedor principal. Fallas descubiertas, ADRs y puesta
   en marcha en [`docs/PROVEEDOR_LEGACY.md`](docs/PROVEEDOR_LEGACY.md); el despliegue completo, en el
   [diagrama de despliegue](#diagrama-de-despliegue).
+- **Entrega 5:** observabilidad de la búsqueda de actividades con OpenTelemetry.
+  - Una sola traza va del navegador al servidor Next.js, al backend y a MongoDB, combinando
+    instrumentación automática (agente Java, Next.js, `@vercel/otel`) y manual (spans de la
+    búsqueda, contador de búsquedas e histograma de acceso a la base).
+  - Collector, Prometheus, Grafana y Jaeger corren en Docker Compose, solo en local.
+  - Dashboard con solicitudes, errores, p95 y tiempos de la base.
+  - Dos escenarios de carga comparados: con 50 usuarios la búsqueda se saturaba en el `count` de
+    MongoDB.
+  - Se corrigió reutilizando el total, cargando los participantes en una sola consulta (había un
+    N+1) y agregando índices. Con el mismo experimento, el throughput con 50 usuarios pasó de 79 a
+    576 solicitudes por segundo y el p95, de 1,7 s a 0,23 s.
+  - Detalle en [`docs/OBSERVABILIDAD.md`](docs/OBSERVABILIDAD.md).
 
 La trazabilidad vigente entre user stories, implementación y pruebas está en
 [Trazabilidad de user stories](#trazabilidad-de-user-stories);
@@ -533,6 +561,16 @@ enviaron secretos deliberadamente a los asistentes. Su uso se concentró en las 
   propuesta y justificación de los parámetros de resiliencia, y revisión de los tests con stub.
   El binario siempre se ejecutó dentro de contenedores, y el inicio de sesión con la cuenta
   institucional lo hizo un integrante del equipo.
+- En la Entrega 5:
+  - lectura de la documentación de OpenTelemetry y de la guía de Next.js para elegir el mecanismo
+    de cada componente;
+  - armado de la configuración del Collector, Prometheus y Grafana, y de las consultas PromQL;
+  - instrumentación manual y sus tests;
+  - análisis de las corridas de carga, cruzando métricas, trazas, `explain` de MongoDB y
+    `docker stats`.
+
+  Cada conclusión del análisis se contrastó con los datos medidos (Vegeta, Prometheus, Jaeger) y
+  no con estimaciones. La traza completa y la ejecución fallida se verificaron desde el navegador.
 
 Las respuestas de estas herramientas se tomaron como sugerencias y no como resultados definitivos.
 El equipo revisó las propuestas, las adaptó al diseño y las convenciones del proyecto, y validó los
@@ -582,6 +620,14 @@ Las rutas de backend son relativas a `backend/src/main/java/com/solnotfound/` y 
 | E4.3 Seguir usable sin el legacy | Fallback en `WeatherGateway`, campo `fallback` de la respuesta | Aviso en `WeatherWidget` | `WeatherGatewayTest`, `LegacyWeatherProviderTest`, `StatisticsEventRecorderTest`, `WeatherWidget.test.tsx`, prueba de carga con el legacy caído |
 | E4.4 Estadísticas por proveedor | `WeatherProviderMonitor`, `StatisticsService.providerStatistics` | `components/statistics/ProviderHealthCard.tsx` | `StatisticsServiceTest`, `WeatherProviderMonitorTest`, `StatisticsPage.test.tsx` |
 
+### Entrega 5
+
+| US | Backend | Frontend | Evidencia |
+| --- | --- | --- | --- |
+| E5.1 Seguir el recorrido de una búsqueda | Agente Java (HTTP y MongoDB), span manual en `observability/ActivitySearchTelemetry.java` | `lib/telemetry/` (span de la búsqueda y del pedido HTTP), `src/instrumentation.ts` (servidor Next) | `ActivitySearchTelemetryTest`, `searchTrace.test.ts`, trazas completa y fallida en [`docs/OBSERVABILIDAD.md`](docs/OBSERVABILIDAD.md) |
+| E5.2 Dashboard del recorrido | `http.server.request.duration` (agente), `planazo.activities.search.completed` y `planazo.activities.search.db.duration` (manuales) | — | `observability/grafana/dashboards/busqueda-actividades.json` |
+| E5.3 Comparar escenarios de carga | Demora controlada `OBSERVABILITY_SEARCH_DELAY` | — | `loadtest/run.sh search 5c 50c`, `loadtest/search-volume.js`, resultados y análisis en [`docs/OBSERVABILIDAD.md`](docs/OBSERVABILIDAD.md#pruebas-de-carga) |
+
 
 ## Trazabilidad de requisitos no funcionales
 
@@ -601,6 +647,8 @@ Las rutas de backend son relativas a `backend/src/main/java/com/solnotfound/` y 
 | Frontend amigable con framework CSS | Next.js responsive con Tailwind CSS v4 y componentes shadcn/ui.                                                                          |
 | Proveedor legacy: resiliencia | Timeouts, reintentos con backoff y jitter, circuit breaker, caché, rate limiting, bulkhead, validación y fallback; ver [`docs/PROVEEDOR_LEGACY.md`](docs/PROVEEDOR_LEGACY.md). |
 | Proveedor legacy: hosting | Servicio en Compose y Cloud Run privado, reinicio automático, sesión fuera del repositorio. |
+| Observabilidad con OpenTelemetry | La app manda trazas y métricas por OTLP al Collector, que exporta las trazas a Jaeger y expone las métricas a Prometheus; Grafana usa Prometheus. Configuración y dashboard versionados en [`observability/`](observability/). |
+| Observabilidad: un solo comando | `docker compose up --build --wait` levanta la aplicación y la observabilidad; ver [`docs/OBSERVABILIDAD.md`](docs/OBSERVABILIDAD.md). |
 | Integración con Telegram (promoción) | Bot serverless en [`telegram/`](telegram/README.md), con vinculación de cuenta y consulta de actividades.                                |
 | Uso de IA                           | Herramientas, tareas, criterio y ejemplos documentados en [Uso de inteligencia artificial](#uso-de-inteligencia-artificial).             |
 

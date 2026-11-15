@@ -16,7 +16,8 @@ reschedule or cancel. The statement is in `TP-TACS-2026C2.md` (not versioned).
 | `backend/` | Java 21 / Spring Boot 4.1 REST API (Maven module `server`). |
 | `frontend/` | Next.js App Router + React + TypeScript UI. |
 | `keycloak-import/`, `keycloak-theme/`, `keycloak/` | Realm export, login theme, cloud image and local configuration script. |
-| `docker-compose.yaml` | Full local stack: frontend, backend, MongoDB, MinIO, Keycloak and its Postgres. |
+| `docker-compose.yaml` | Full local stack: frontend, backend, MongoDB, MinIO, Keycloak and its Postgres, plus Collector, Prometheus, Grafana and Jaeger. |
+| `observability/` | OpenTelemetry Collector, Prometheus and Grafana configuration (Entrega 5, local only). |
 | `terraform/`, `cloudbuild/`, `.github/workflows/` | GCP infrastructure, image builds, CI and deploys. |
 | `docs/` | Traceability matrix, Swagger test cases, load test and Cloud Build notes. |
 

@@ -39,7 +39,28 @@ class MongoIndexTest {
             .toList();
 
     assertThat(indexNames)
-        .contains("organizer_date_time", "participants_date_time", "dateTime", "status");
+        .contains(
+            "organizer_date_time",
+            "participants_date_time",
+            "dateTime",
+            "status",
+            "status_date_time",
+            "type_status_date_time");
+  }
+
+  @Test
+  void theActivitySearchByStatusAndTypeReadsThePageInOrderFromAnIndex() {
+    Document sort = new Document("dateTime", 1);
+    assertThat(planStages(new Document("status", new Document("$in", List.of("CONFIRMED"))), sort))
+        .contains("IXSCAN")
+        .doesNotContain("COLLSCAN", "SORT");
+    assertThat(
+            planStages(
+                new Document("type", "OUTDOOR")
+                    .append("status", new Document("$in", List.of("CONFIRMED"))),
+                sort))
+        .contains("IXSCAN")
+        .doesNotContain("COLLSCAN", "SORT");
   }
 
   @Test

@@ -27,6 +27,7 @@ import com.solnotfound.exception.ActivityNotFoundException;
 import com.solnotfound.exception.ErrorCode;
 import com.solnotfound.exception.IllegalStateActivityException;
 import com.solnotfound.exception.InvalidActivityException;
+import com.solnotfound.observability.ActivitySearchTelemetry;
 import com.solnotfound.repository.IActivityRepository;
 import com.solnotfound.repository.IUserRepository;
 import com.solnotfound.repository.IVotationRepository;
@@ -56,6 +57,7 @@ public class ActivityService {
   private final StatisticsEventRecorder statisticsRecorder;
   private final ImageStorage imageStorage;
   private final IVotationRepository votationRepository;
+  private final ActivitySearchTelemetry searchTelemetry;
   private static final int MAX_IMAGES = 5;
   private static final int MAX_JOIN_ATTEMPTS = 3;
   private static final long MAX_IMAGE_SIZE = 5L * 1024 * 1024;
@@ -73,13 +75,32 @@ public class ActivityService {
       IUserRepository userRepository,
       StatisticsEventRecorder statisticsRecorder,
       IVotationRepository votationRepository,
-      ImageStorage imageStorage) {
+      ImageStorage imageStorage,
+      ActivitySearchTelemetry searchTelemetry) {
     this.activityRepository = activityRepository;
     this.weatherGateway = weatherGateway;
     this.userRepository = userRepository;
     this.statisticsRecorder = statisticsRecorder;
     this.votationRepository = votationRepository;
     this.imageStorage = imageStorage;
+    this.searchTelemetry = searchTelemetry;
+  }
+
+  public ActivityService(
+      IActivityRepository activityRepository,
+      WeatherGateway weatherGateway,
+      IUserRepository userRepository,
+      StatisticsEventRecorder statisticsRecorder,
+      IVotationRepository votationRepository,
+      ImageStorage imageStorage) {
+    this(
+        activityRepository,
+        weatherGateway,
+        userRepository,
+        statisticsRecorder,
+        votationRepository,
+        imageStorage,
+        ActivitySearchTelemetry.noop());
   }
 
   public ActivityService(
@@ -265,11 +286,21 @@ public class ActivityService {
         .toList();
   }
 
-  /** Searches activities in MongoDB and returns one page with inclusive date filtering. */
+  /**
+   * Searches activities in MongoDB and returns one page with inclusive date filtering. The whole
+   * search, validation included, runs inside the {@code activities.search} span (see {@link
+   * ActivitySearchTelemetry}), so an invalid date range shows as a failed search.
+   */
   public PageResponse<ActivityResponse> search(ActivityFilterDTO filter, Pageable pageable) {
-    validateSearchDates(filter);
-    Page<ActivityResponse> page = activityRepository.search(filter, pageable).map(this::toResponse);
-    return PageResponse.from(page);
+    return searchTelemetry.traceSearch(
+        filter,
+        pageable,
+        () -> {
+          validateSearchDates(filter);
+          Page<ActivityResponse> page =
+              activityRepository.search(filter, pageable).map(this::toResponse);
+          return PageResponse.from(page);
+        });
   }
 
   private void validateSearchDates(ActivityFilterDTO filter) {
